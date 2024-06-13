@@ -28,8 +28,8 @@ const FREE_LINKS_HOURS = Number(process.env.FREE_LINKS_TIME_SECONDS) / 60 / 60
 const MONTHLY_PLAN_FREE_DOMAINS = Number(process.env.MONTHLY_PLAN_FREE_DOMAINS)
 
 const discountOn = {}
-discountOn['FREE5'] = 5 // Percent
-discountOn['BUY5'] = 5 // Percent
+discountOn['SAVE10'] = 10 // Percent
+discountOn['BUY333'] = 5 // Percent
 discountOn['START158'] = 15 // Percent
 discountOn['FR10'] = 10 // Percent
 discountOn['GLK5'] = 5 // Percent
