@@ -392,7 +392,7 @@ ${bal(usd, ngn)}`,
   validatorSelectSmsVoice: n =>
     `${n} phone numbers found. Please choose the option for SMS or voice call leads validation.`,
   validatorSelectCarrier: 'Please select carrier',
-  validatorSelectCnam: 'You want to search the owners name? CNAME costs extra 13$ per 1000 leads',
+  validatorSelectCnam: 'You want to search the owners name? CNAME costs extra 15$ per 1000 leads',
   validatorSelectAmount: (min, max) =>
     `How much from the numbers you want to validate? Select or type a number. Minimum is ${min} and Maximum is ${max}`,
   validatorSelectFormat: 'Choose format i.e Local (212) or International (+1212)',
@@ -424,7 +424,7 @@ ${bal(usd, ngn)}`,
 const phoneNumberLeads = ['🙎‍♂️ Buy PhoneLeads', '☎️ Validate PhoneLeads']
 
 const buyLeadsSelectCountry = Object.keys(areasOfCountry)
-const buyLeadsSelectSmsVoice = ['SMS (Price 15$ for 1000)', 'Voice (Price 0$ for 1000)']
+const buyLeadsSelectSmsVoice = ['SMS (Price 20$ for 1000)', 'Voice (Price 0$ for 1000)']
 const buyLeadsSelectArea = country => Object.keys(areasOfCountry?.[country])
 const buyLeadsSelectAreaCode = (country, area) => {
   const codes = areasOfCountry?.[country]?.[area].map(c => format(countryCodeOf[country], c))
