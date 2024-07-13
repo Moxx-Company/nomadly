@@ -60,7 +60,7 @@ const alcazar = {
 
 // Note: these button labels must not mix with each other, other wise it may mess up bot
 const admin = {
-  viewAnalytics: '📈 View Analytics',
+  viewAnalytics: '📊 View Analytics',
   viewUsers: '👀 View Users',
   blockUser: '✋ Block User',
   unblockUser: '👌 Unblock User',
@@ -68,31 +68,31 @@ const admin = {
 }
 const user = {
   // main keyboard
-  joinChannel: '✅ Join Channel',
-  phoneNumberLeads: '☎️ HQ SMS Lead',
-  wallet: '💰 My Wallet',
-  urlShortenerMain: '🔗 URL Shortener',
-  buyPlan: '📋 Subscribe Here',
+  joinChannel: '📢 Join Channel',
+  phoneNumberLeads: '📲 HQ SMS Lead',
+  wallet: '👛 My Wallet',
+  urlShortenerMain: '🔗✂️ URL Shortener',
+  buyPlan: '🔔 Subscribe Here',
   domainNames: '🌐 Domain Names',
-  viewPlan: '🔍 My Plan',
-  becomeReseller: "👨‍💼 Become A Reseller",
-  getSupport: '🛠️ Get Support',
-  freeTrialAvailable: '📩 BulkSMS -Trial',
+  viewPlan: '🔔 My Plan',
+  becomeReseller: "💼 Become A Reseller",
+  getSupport: '💬 Get Support',
+  freeTrialAvailable: '📧🆓 BulkSMS -Trial',
 
   // Sub Menu 1: urlShortenerMain
-  redSelectUrl: '🔗 Redirect & Shorten',
-  urlShortener: '🔗 Custom Domain Shortener',
-  viewShortLinks: '🔍 View Shortlink Analytics',
+  redSelectUrl: '🔀✂️ Redirect & Shorten',
+  urlShortener: '✂️🌐 Custom Domain Shortener',
+  viewShortLinks: '📊 View Shortlink Analytics',
 
   // Sub Menu 2: domainNames
-  buyDomainName: '🌐 Buy Domain Names',
-  viewDomainNames: '👀 My Domain Names',
-  dnsManagement: '😎 DNS Management',
+  buyDomainName: '🛒🌐 Buy Domain Names',
+  viewDomainNames: '📂 My Domain Names',
+  dnsManagement: '🔧 DNS Management',
 }
 const u = {
   // other key boards
-  deposit: '💵 Deposit',
-  withdraw: '💸 Withdraw',
+  deposit: '➕💵 Deposit',
+  withdraw: '➖💵 Withdraw',
 
   // wallet
   usd: 'USD',
@@ -421,7 +421,7 @@ ${bal(usd, ngn)}`,
   redNewPrice: (price, newPrice) => `Price is now $${view(newPrice)} <s>($${price})</s> Please choose payment method.`,
 }
 
-const phoneNumberLeads = ['🙎‍♂️ Buy PhoneLeads', '☎️ Validate PhoneLeads']
+const phoneNumberLeads = ['💰📲 Buy PhoneLeads', '✅📲 Validate PhoneLeads']
 
 const buyLeadsSelectCountry = Object.keys(areasOfCountry)
 const buyLeadsSelectSmsVoice = ['SMS (Price 20$ for 1000)', 'Voice (Price 0$ for 1000)']
@@ -464,8 +464,8 @@ const _bc = ['Back', 'Cancel']
 
 const payIn = {
   crypto: 'Crypto',
-  ...(HIDE_BANK_PAYMENT !== 'true' && { bank: 'Bank ₦aira + Card🌐︎' }),
-  wallet: '💰 Wallet',
+  ...(HIDE_BANK_PAYMENT !== 'true' && { bank: 'Bank ₦aira + Card🏦💳' }),
+  wallet: '👛 Wallet',
 }
 
 const tickerViews = Object.keys(tickerOf)
