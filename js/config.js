@@ -68,6 +68,7 @@ const admin = {
 }
 const user = {
   // main keyboard
+  cPanelWebHostingPlans: '📦 cPanel Web Hosting Plans',
   joinChannel: '📢 Join Channel',
   phoneNumberLeads: '📲 HQ SMS Lead',
   wallet: '👛 My Wallet',
@@ -75,7 +76,7 @@ const user = {
   buyPlan: '🔔 Subscribe Here',
   domainNames: '🌐 Domain Names',
   viewPlan: '🔔 My Plan',
-  becomeReseller: "💼 Become A Reseller",
+  becomeReseller: '💼 Become A Reseller',
   getSupport: '💬 Get Support',
   freeTrialAvailable: '📧🆓 BulkSMS -Trial',
 
@@ -88,6 +89,33 @@ const user = {
   buyDomainName: '🛒🌐 Buy Domain Names',
   viewDomainNames: '📂 My Domain Names',
   dnsManagement: '🔧 DNS Management',
+
+  // Sub Menu 3: cPanelWebHostingPlansMain
+  freeTrial: '💡 Free Trial',
+  starterPlan: '🔷 Starter Plan',
+  businessPlan: '🔼 Business Plan',
+  proPlan: '👑 Pro Plan',
+  contactSupport: '📞 Contact Support',
+
+  // Free Trial
+  freeTrialMenuButton: '🚀 Free Trial (12 Hours)',
+  getFreeTrialPlanNow: '🛒 Get Trial Plan Now',
+  continueWithDomainNameSBS: (websiteName) => `➡️ Continue with ${websiteName}`,
+  searchAnotherDomain: `🔍 Search Another Domain`,
+  backToFreeTrial: '⬅️ Back To Free Trial',
+  viewHostingPlans: '🖥️ View Hosting Plans',
+
+  //Starter Plan
+  buyStarterPlan: '🛒 Buy Starter Plan',
+  viewBusinessPlan: '🔼 View Business Plan',
+  viewProPlan: '👑 View Pro Plan',
+  backToHostingPlans: '⬅️ Back To Hosting Plans',
+  registerANewDomain: '🌐 Register a New Domain',
+  useExistingDomain: '🔄 Use Existing Domain',
+  backToStarterPlanDetails: '⬅️ Back to Starter Plan Details',
+  continueWithStarterPlanDomain: (websiteName) => `➡️ Continue with ${websiteName}`,
+  enterAnotherDomain: '🔍 Enter Another Domain',
+  backToStaterPlanPurchaseOptions: '⬅️ Back to Purchase Options',
 }
 const u = {
   // other key boards
@@ -130,6 +158,81 @@ ${CHAT_BOT_BRAND} Team
   resetLoginDeny: 'Ok sure. No further action required.',
   resetLogin: `${CHAT_BOT_BRAND}SMS: Are you trying to log out of your previous device?`,
   select: `Please select an option:`,
+
+// cPanel Plans initial select plan text
+  selectPlan: `Please select a plan:`,
+  backButton: '⬅️ Back',
+  yesProceedWithThisEmail: (email) => `➡️ Proceed with ${email}`,
+// Free Plan
+  trialAlreadyUsed: `You have already utilized your free trial. If you need more access, please consider subscribing to one of our paid plans.`,
+  oneHourLeftToExpireTrialPlan: `Your Freedom Plan will expire in 1 hour. If you’d like to continue using our services, consider upgrading to a paid plan!`,
+  freePlanExpired: `🚫 Your Freedom Plan has expired. We hope you enjoyed your trial, 
+To continue using our services, please buy one of our premium plans.`,
+  freeTrialPlanSelected: `
+- Try our <b>Freedom Plan</b> for free! This plan includes a free domain
+  ending in .sbs and will be active for 12 hours.
+
+🚀 <b>Freedom Plan:</b>
+<b>- Storage:</b> 1 GB SSD
+<b>- Bandwidth:</b> 10 GB
+<b>- Domains:</b> 1 free .sbs domain
+<b>- Email Accounts:</b> 1 email account
+<b>- Databases:</b> 1 MySQL database
+<b>- Free SSL:</b> Yes
+<b>- cPanel Features:</b> Full access to cPanel for managing files,
+  database & emails etc.
+<b>- Duration:</b> Active for 12 hours
+<b>- Ideal for:</b> Testing and short-term projects.
+  `,
+  getFreeTrialPlan: `Please enter your desired domain name (e.g., example.sbs) and send it as a message. This domain will end in .sbs and is free with your trial plan.`,
+  trialPlanContinueWithDomainNameSBSMatched: (websiteName) => `The domain ${websiteName} is available!`,
+  trialPlanSBSDomainNotMatched: `The domain you entered could not be found. Please ensure the right domain or try using a different one.`,
+  trialPlanSBSDomainIsPremium: `Domain is premium price and available only with a paid plan. Please search for another domain.`,
+  trialPlanGetNowInvalidDomain: 'Please enter a valid domain name that ends with \'.sbs\'. The domain should look like \'example.sbs\' and is free with your trial plan.',
+  trialPlanDomainNameMatched: `Please provide your email address so we can proceed with creating your account & sending you the cPanel login details on your email.`,
+  confirmEmailBeforeProceedingSBS: (email) => `Are you sure you want to proceed with this ${email} email for the Freedom Plan subscription?`,
+  trialPlanInValidEmail: 'Please provide a valid email',
+  trialPlanActivationConfirmation: `Thank you! Your free trial plan will be activated shortly. Please note, this plan will be active for 12 hours only.`,
+  trialPlanActivationInProgress: `Your free trial plan is being activated. This may take a few moments…`,
+  trialPlanEmailText: `Please log in to your cPanel to manage your website and services. Remember, your plan will expire in 12 hours. If you like our service, consider upgrading to one of our premium plans!`,
+  trialPlanSuccessText: (username, email, password, URL) =>
+    `
+Here are your cPanel Credentials:
+
+Username: ${username}
+Email: ${email}
+Password: ${password}
+URL: ${URL}
+
+Your cPanel credentials has been successfully sent to your email ${email} as well
+`,
+  //
+  // Starter Plan:
+  starterPlanSelected: `
+🚀 <b>Starter Plan:</b>
+<b>- Storage:</b> 10 GB SSD
+<b>- Bandwidth:</b> 100 GB
+<b>- Domains:</b> 1 domain
+<b>- Email Accounts:</b> 5 email accounts
+<b>- Databases:</b> 1 MySQL database
+<b>- Firewall Rules:</b> Country, IP, Device
+<b>- Free SSL:</b> Yes
+<b>- cPanel Features:</b> Full access to cPanel for managing files,
+  database & emails etc.
+<b>- Ideal for:</b> Personal blogs, small business websites, or portfolios.`,
+  starterPlanBuyText: `
+Great choice! To proceed with your purchase, please follow the steps below:
+1. Choose Your Domain: Do you need a new domain or want to use an existing one?`,
+  registerANewDomainText: `Please enter the domain name you want to register (e.g., example.com).`,
+  starterPlanDomainNotFound: `The domain you entered could not be found. Please ensure the right domain or try using a different one.`,
+  starterPlanUseExistingDomainNotFound: `The domain you entered is not associated with your account. Please ensure you are using the correct domain or contact support for assistance.`,
+  starterPlanCreateANewDomainMatched: (websiteName, price) => `The domain ${websiteName} is available!. The cost is $${price}.`,
+  starterPlanUseExistingDomain: `Please enter your existing domain name (e.g., example.com).`,
+  starterPlanUseExistingDomainMatched: (websiteName) => `You have selected ${websiteName} as your domain.`,
+  starterPlanProceedContinueWithDomain: `Please provide your email address to create your account and send your receipt.`,
+  confirmEmailBeforeProceedingStarterPlan: (email) => `Are you sure you want to proceed with this ${email} email for the Starter Plan subscription?`,
+//
+
   what: `Please choose option from keyboard`,
   whatNum: `Please choose valid number`,
   phoneGenTimeout: 'Timeout',
@@ -222,6 +325,8 @@ Discover more: ${TG_CHANNEL}`,
   unknownCommand: `Command not found. Press /start or Please contact support ${SUPPORT_USERNAME}. Discover more ${TG_HANDLE}.`,
 
   support: `Please contact support ${SUPPORT_USERNAME}. Discover more ${TG_HANDLE}.`,
+
+  cPanelSupport: `Something went wrong while setting up cPanel Account. Please contact support ${SUPPORT_USERNAME}. Discover more ${TG_HANDLE}.`,
 
   joinChannel: `Please Join Channel ${TG_CHANNEL}`,
 
@@ -474,7 +579,13 @@ const tickerViewOf = reverseObject(tickerOf)
 
 const kOf = list => ({
   reply_markup: {
-    keyboard: [...list.map(a => [a]), _bc],
+    // Handle if there are multiples buttons in a row
+    keyboard: [
+      ...list.map(a => Array.isArray(a) ? a : [a]),
+      ...(list.some(a => Array.isArray(a)
+        && a.some(item => typeof item === 'string' && (item.includes(t.backButton) || item.includes(user.backToHostingPlans) || item.includes(user.backToStarterPlanDetails) || item.includes(user.backToStaterPlanPurchaseOptions))),
+      ) ? [] : [_bc]),
+    ],
   },
   parse_mode: 'HTML',
 })
@@ -534,6 +645,7 @@ const adminKeyboard = {
 const userKeyboard = {
   reply_markup: {
     keyboard: [
+      [user.cPanelWebHostingPlans],
       [user.joinChannel, user.wallet],
       [user.phoneNumberLeads],
       HIDE_SMS_APP === 'true' ? [user.buyPlan] : [user.freeTrialAvailable, user.buyPlan],

@@ -7,6 +7,9 @@ const { t, timeOf, freeDomainsOf, o } = require('./config')
 const { getAll, get, set } = require('./db')
 const { log } = require('console')
 const resolveDns = require('./resolve-cname.js')
+const checkDomainAvailable = require('./cr-check-domain-available')
+const { checkDomainPriceOnline } = require('./cr-domain-price-get.js')
+const TELEGRAM_DEV_CHAT_ID = process.env.TELEGRAM_DEV_CHAT_ID
 
 const HIDE_SMS_APP = process.env.HIDE_SMS_APP
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
@@ -44,6 +47,7 @@ async function usdToNgn(amountInUSD) {
     return error.message
   }
 }
+
 // usdToNgn(1).then(log);
 
 async function ngnToUsd(ngn) {
@@ -59,6 +63,7 @@ async function ngnToUsd(ngn) {
     return error.message
   }
 }
+
 // ngnToUsd(1000).then(log);
 const addZero = number => (number < 10 ? '0' + number : number)
 const date = () => {
@@ -72,6 +77,7 @@ const date = () => {
 
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
+
 function today() {
   const currentDate = new Date()
   const day = currentDate.getDate()
@@ -81,6 +87,7 @@ function today() {
   const formattedDate = `${day}-${month}-${year}`
   return formattedDate
 }
+
 function week() {
   const currentDate = new Date()
   const startDate = new Date(currentDate.getFullYear(), 0, 1)
@@ -94,6 +101,7 @@ function month() {
   const currentDate = new Date()
   return year() + ' Month ' + (currentDate.getMonth() + 1)
 }
+
 function year() {
   const currentDate = new Date()
   return 'Year ' + currentDate.getFullYear()
@@ -102,6 +110,10 @@ function year() {
 function isValidEmail(email) {
   const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return regex.test(email)
+}
+
+function removeProtocolFromDomain(domain) {
+  return domain.toLowerCase().replace('https://', '').replace('http://', '')
 }
 
 const regularCheckDns = (bot, chatId, domain) => {
@@ -185,12 +197,12 @@ const subscribePlan = async (planEndingTime, freeDomainNamesAvailableFor, planOf
   log('reply:\t' + t.planSubscribed.replace('{{plan}}', plan) + '\tto: ' + chatId)
 
   HIDE_SMS_APP !== 'true' &&
-    sendQr(
-      bot,
-      chatId,
-      `${chatId}`,
-      `Scan QR with sms marketing app to login. You can also use this code to login: ${chatId}`,
-    )
+  sendQr(
+    bot,
+    chatId,
+    `${chatId}`,
+    `Scan QR with sms marketing app to login. You can also use this code to login: ${chatId}`,
+  )
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
@@ -238,7 +250,72 @@ const sendMessage = async (chatId, message, reply_markup) => {
     console.error('Error sending message:', { code: error?.message, data: error?.response?.data, chatId, message })
   }
 }
+
 // sendMessage(6687923716, 'Hello, world!') // unit test
+
+async function checkFreeTrialTaken(c, chatId) {
+  const result = await c.findOne({ _id: chatId })
+
+  // Check if current package is a free plan
+  const currentPackage = result?.currentPackage
+  if (currentPackage && currentPackage.name === 'Freedom Plan') {
+    return 'already-used'
+  }
+
+  // Check if any previous package was a free plan
+  const previousPackages = result?.previousPackages || []
+  const hasUsedFreePlan = previousPackages.some(pkg => pkg.name === 'Freedom Plan')
+
+  if (hasUsedFreePlan) {
+    return 'already-used'
+  }
+
+  return 'not_taken' // If neither current nor previous packages are 'Freedom Plan'
+}
+
+const checkDomainAvailability = (domainName) => (checkDomainAvailable(domainName))
+
+async function fetchDomainPrice(message, chatId, send, saveInfo, starterPlanDomainNotFound) {
+  try {
+    let modifiedDomain = removeProtocolFromDomain(message)
+
+    const { available, price, originalPrice } = await checkDomainPriceOnline(modifiedDomain)
+
+    if (!available) {
+      await send(chatId, starterPlanDomainNotFound)
+      return { modifiedDomain: null, price: null }
+    }
+
+    if (!originalPrice) {
+      await send(TELEGRAM_DEV_CHAT_ID, 'Some issue in getting price')
+      await send(chatId, 'Some issue in getting price')
+      return { modifiedDomain: null, price: null }
+    }
+
+    saveInfo('price', price)
+    saveInfo('domain', modifiedDomain)
+    saveInfo('originalPrice', originalPrice)
+
+    return { modifiedDomain, price }
+  } catch (error) {
+    return { modifiedDomain: null, price: null }
+  }
+}
+
+async function isDomainAssociatedWithUser(domain, chatId, domainsOf) {
+  try {
+    let ans = await get(domainsOf, chatId);
+    if (!ans) return false;
+
+    const sanitizedDomain = domain.replaceAll('.', '@');
+
+    return ans.hasOwnProperty(sanitizedDomain);
+  } catch (error) {
+    console.error('Error checking domain association:', error);
+    return false;
+  }
+}
+
 
 // log(format('1', '4'))
 // log(format('1', '20'))
@@ -276,6 +353,11 @@ module.exports = {
   isNormalUser,
   subscribePlan,
   regularCheckDns,
+  fetchDomainPrice,
+  checkFreeTrialTaken,
   extractPhoneNumbers,
   sendMessageToAllUsers,
+  checkDomainAvailability,
+  removeProtocolFromDomain,
+  isDomainAssociatedWithUser,
 }

@@ -73,6 +73,65 @@ async function set(c, key, value, valueInside) {
   }
 }
 
+async function assignPackageToUser(c, chatId, packageName, totalExpireHoursDuration = 1) {
+  const now = new Date()
+  const expiresAt = new Date(now.getTime() + totalExpireHoursDuration * 60 * 60 * 1000)
+
+  const newPackage = {
+    name: packageName,
+    startDate: now,
+    expiresAt: expiresAt,
+    isActive: true,
+  }
+
+  const newReminders = {
+    beforeExpireReminderSent: false,
+    expireReminderSent: false,
+  }
+
+  try {
+    const user = await c.findOne({ _id: chatId })
+
+    if (user && user.currentPackage) {
+      const updatedPreviousPackages = user.previousPackages || []
+      updatedPreviousPackages.push({
+        name: user.currentPackage.name,
+        startDate: user.currentPackage.startDate,
+        expireDate: user.currentPackage.expiresAt,
+        status: 'expired',
+      })
+
+      await c.updateOne(
+        { _id: chatId },
+        {
+          $set: {
+            currentPackage: newPackage,
+            reminders: newReminders,
+            previousPackages: updatedPreviousPackages,
+          },
+        },
+        { upsert: true },
+      )
+    } else {
+      await c.updateOne(
+        { _id: chatId },
+        {
+          $set: {
+            currentPackage: newPackage,
+            reminders: newReminders,
+            previousPackages: user?.previousPackages || [],
+          },
+        },
+        { upsert: true },
+      )
+    }
+
+    console.log(`${packageName} package set for user:`, chatId)
+  } catch (error) {
+    console.error(`Error setting ${packageName} package for ${chatId}:`, error)
+  }
+}
+
 async function del(c, _id) {
   try {
     const result = await c.deleteOne({ _id })
@@ -84,4 +143,4 @@ async function del(c, _id) {
   }
 }
 
-module.exports = { increment, decrement, get, set, del, getAll }
+module.exports = { increment, decrement, get, set, del, getAll, assignPackageToUser }

@@ -47,7 +47,7 @@ const {
   payOpts,
 } = require('./config.js')
 const createShortBitly = require('./bitly.js')
-const { createShortUrlApi, analyticsCuttly } = require('./cuttly.js');
+const { createShortUrlApi, analyticsCuttly } = require('./cuttly.js')
 const {
   week,
   year,
@@ -70,6 +70,11 @@ const {
   sendQr,
   sleep,
   sendMessage,
+  fetchDomainPrice,
+  checkFreeTrialTaken,
+  checkDomainAvailability,
+  removeProtocolFromDomain,
+  isDomainAssociatedWithUser,
 } = require('./utils.js')
 const fs = require('fs')
 require('dotenv').config()
@@ -95,6 +100,9 @@ const { validateBulkNumbers } = require('./validatePhoneBulk.js')
 const { countryCodeOf, areasOfCountry } = require('./areasOfCountry.js')
 const { validatePhoneBulkFile } = require('./validatePhoneBulkFile.js')
 const createCustomShortUrlCuttly = require('./customCuttly.js')
+const schedule = require('node-schedule')
+const { registerDomainAndCreateCpanel } = require('./cr-register-domain-&-create-cpanel.js')
+const { isEmail } = require('validator')
 
 process.env['NTBA_FIX_350'] = 1
 const DB_NAME = process.env.DB_NAME
@@ -125,7 +133,13 @@ if (!DB_NAME || !RATE_LEAD_VALIDATOR || !HOSTED_ON || !TELEGRAM_BOT_ON || !REST_
 let bot
 
 if (TELEGRAM_BOT_ON === 'true') bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true })
-else bot = { on: () => { }, sendMessage: () => { }, sendPhoto: () => { }, sendDocument: () => { } }
+else bot = {
+  on: () => {
+  }, sendMessage: () => {
+  }, sendPhoto: () => {
+  }, sendDocument: () => {
+  },
+}
 
 log('TELEGRAM_BOT_ON: ' + TELEGRAM_BOT_ON)
 log('Bot ran away!' + new Date())
@@ -188,7 +202,7 @@ const loadData = async () => {
   totalShortLinks = db.collection('totalShortLinks')
   freeShortLinksOf = db.collection('freeShortLinksOf')
   freeSmsCountOf = db.collection('freeSmsCountOf')
-  clicksOfSms = db.collection('clicksOfSms');
+  clicksOfSms = db.collection('clicksOfSms')
   freeDomainNamesAvailableFor = db.collection('freeDomainNamesAvailableFor')
 
   // variables to view system information
@@ -244,6 +258,61 @@ client
   .then(loadData)
   .catch(err => log('DB Error bro', err, err?.message))
 
+
+async function sendRemindersForExpiringPackages() {
+  const now = new Date()
+  const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000)
+
+  try {
+    const users = await state.find({
+      'currentPackage.name': 'Freedom Plan',
+      'currentPackage.expiresAt': { $lte: oneHourFromNow, $gt: now },
+      'reminders.beforeExpireReminderSent': false,
+    }).toArray()
+
+    for (const user of users) {
+
+      set(state, user._id, 'action', 'displayMainMenuButtons')
+      send(user._id, t.oneHourLeftToExpireTrialPlan, k.of([[user.viewHostingPlans], [user.contactSupport]]))
+
+      await state.updateOne(
+        { _id: user._id },
+        { $set: { 'reminders.beforeExpireReminderSent': true } },
+      )
+    }
+
+    const expiredUsers = await state.find({
+      'currentPackage.name': 'Freedom Plan',
+      'currentPackage.expiresAt': { $lte: now },
+      'reminders.expireReminderSent': false,
+      'currentPackage.isActive': true,
+    }).toArray()
+
+    for (const user of expiredUsers) {
+
+      set(state, user._id, 'action', 'displayMainMenuButtons')
+      send(user._id, t.freePlanExpired, k.of([[user.viewHostingPlans], [user.contactSupport]]))
+
+      await state.updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            'reminders.expireReminderSent': true,
+            'currentPackage.isActive': false,
+          },
+        },
+      )
+    }
+
+  } catch (error) {
+    console.error('Error sending reminders:', error)
+  }
+}
+
+schedule.scheduleJob('* * * * *', function() {
+  sendRemindersForExpiringPackages()
+})
+
 bot?.on('message', async msg => {
   const chatId = msg?.chat?.id
   const message = msg?.text || ''
@@ -292,6 +361,25 @@ bot?.on('message', async msg => {
     // submenu
     submenu1: 'submenu1',
     submenu2: 'submenu2',
+
+    // cPanel Plans SubMenu
+    submenu3: 'submenu3',
+    // Free Trial Actions
+    freeTrial: 'freeTrial',
+    getPlanNow: 'getPlanNow',
+    domainAvailableContinue: 'domainAvailableContinue',
+    continueWithDomainNameSBS: 'continueWithDomainNameSBS',
+    proceedSearchAnotherDomain: 'proceedSearchAnotherDomain',
+    confirmEmailBeforeProceedingSBS: 'confirmEmailBeforeProceedingSBS',
+    // Starter Plan Actions
+    starterPlan: 'starterPlan',
+    starterPlanRegisterANewDomain: 'starterPlanRegisterANewDomain',
+    starterPlanCreateANewDomainMatched: 'starterPlanCreateANewDomainMatched',
+    starterPlanUseExistingDomain: 'starterPlanUseExistingDomain',
+    starterPlanUseExistingDomainMatched: 'starterPlanUseExistingDomainMatched',
+    starterPlanProceedContinueDomain: 'starterPlanProceedContinueDomain',
+    starterPlanConfirmEmailBeforeProceeding: 'starterPlanConfirmEmailBeforeProceeding',
+    proceedWithPaymentProcess: 'proceedWithPaymentProcess',
 
     askDomainToUseWithShortener: 'askDomainToUseWithShortener',
 
@@ -352,6 +440,9 @@ bot?.on('message', async msg => {
 
     a.submenu1,
     a.submenu2,
+    // cPanel Plans SubMenu
+    a.submenu3,
+    'displayMainMenuButtons',
   ]
   const goto = {
     askCoupon: action => {
@@ -696,6 +787,102 @@ bot?.on('message', async msg => {
       set(state, chatId, 'action', a.submenu2)
       send(chatId, t.select, k.of([user.buyDomainName, user.viewDomainNames, user.dnsManagement]))
     },
+
+    // cPanel Plans SubMenu
+    submenu3: () => {
+      set(state, chatId, 'action', a.submenu3)
+      send(chatId, t.selectPlan, k.of([[user.freeTrial, user.starterPlan], [user.businessPlan, user.proPlan], user.contactSupport]))
+    },
+
+    displayEmailValidationError: () => {
+      send(chatId, t.trialPlanInValidEmail, k.of([[t.backButton]]))
+    },
+
+    //free Trial Package
+    freeTrialMenu: () => {
+      set(state, chatId, 'action', a.freeTrial)
+      send(chatId, 'Your have selected Free Trial Plan', k.of([user.freeTrialMenuButton, user.contactSupport]))
+    },
+    freeTrial: () => {
+      set(state, chatId, 'action', a.freeTrial)
+      send(chatId, t.freeTrialPlanSelected, k.of([[user.getFreeTrialPlanNow, t.backButton]]))
+    },
+    getFreeTrialPlanNow: () => {
+      set(state, chatId, 'action', a.getPlanNow)
+      send(chatId, t.getFreeTrialPlan, k.of([[user.backToFreeTrial]]))
+    },
+    inValidSBSDomainName: () => {
+      send(chatId, t.trialPlanGetNowInvalidDomain, k.of([[user.backToFreeTrial]]))
+    },
+    SBSDomainNotFound: () => {
+      send(chatId, t.trialPlanSBSDomainNotMatched)
+    },
+    SBSDomainIsPremium: () => {
+      send(chatId, t.trialPlanSBSDomainIsPremium)
+    },
+    continueWithDomainNameSBS: (websiteName) => {
+      set(state, chatId, 'action', a.domainAvailableContinue)
+      saveInfo('website_name', websiteName)
+      send(chatId, t.trialPlanContinueWithDomainNameSBSMatched(websiteName), k.of([[user.continueWithDomainNameSBS(websiteName)], [user.searchAnotherDomain], [t.backButton]]))
+    },
+    proceedContinueWithDomainNameSBS: () => {
+      set(state, chatId, 'action', a.continueWithDomainNameSBS)
+      send(chatId, t.trialPlanDomainNameMatched, k.of([[t.backButton]]))
+    },
+    confirmEmailBeforeProceedingSBS: (email) => {
+      saveInfo('email', email)
+      set(state, chatId, 'action', a.confirmEmailBeforeProceedingSBS)
+      send(chatId, t.confirmEmailBeforeProceedingSBS(email), k.of([[t.yesProceedWithThisEmail(email)], [t.backButton]]))
+    },
+    sendcPanelCredentialsAsEmailToUser: async (receiverEmail) => {
+      try {
+        await send(chatId, t.trialPlanActivationConfirmation)
+        await send(chatId, t.trialPlanActivationInProgress, o)
+        return await registerDomainAndCreateCpanel(send, info.website_name, receiverEmail, o, 'Freedom Plan', username, state, chatId, t.trialPlanSuccessText, t.trialPlanEmailText)
+      } catch (error) {
+        console.error('Error in sending messages or email:', error)
+      }
+    },
+
+    //Starter Plan
+    starterPlan: () => {
+      set(state, chatId, 'action', a.starterPlan)
+      send(chatId, t.starterPlanSelected, k.of([[user.buyStarterPlan], [user.viewProPlan, user.viewBusinessPlan], [user.backToHostingPlans]]))
+    },
+    buyStarterPlan: () => {
+      set(state, chatId, 'action', a.starterPlan)
+      send(chatId, t.starterPlanBuyText, k.of([user.registerANewDomain, user.useExistingDomain, [user.backToStarterPlanDetails]]))
+    },
+    starterPlanRegisterANewDomain: () => {
+      set(state, chatId, 'action', a.starterPlanRegisterANewDomain)
+      send(chatId, t.registerANewDomainText, bc)
+    },
+    starterPlanCreateANewDomainMatched: (websiteName, price) => {
+      set(state, chatId, 'action', a.starterPlanCreateANewDomainMatched)
+      saveInfo('website_name', websiteName)
+      send(chatId, t.starterPlanCreateANewDomainMatched(websiteName, price), k.of([[user.continueWithStarterPlanDomain(websiteName)], [user.searchAnotherDomain], [user.backToStaterPlanPurchaseOptions]]))
+    },
+    starterPlanUseExistingDomain: () => {
+      set(state, chatId, 'action', a.starterPlanUseExistingDomain)
+      send(chatId, t.starterPlanUseExistingDomain, bc)
+    },
+    starterPlanUseExistingDomainMatched: (websiteName) => {
+      set(state, chatId, 'action', a.starterPlanUseExistingDomainMatched)
+      saveInfo('website_name', websiteName)
+      send(chatId, t.starterPlanUseExistingDomainMatched(websiteName), k.of([[user.continueWithStarterPlanDomain(websiteName)], [user.searchAnotherDomain], [user.backToStaterPlanPurchaseOptions]]))
+    },
+    starterPlanProceedContinueWithDomain: () => {
+      set(state, chatId, 'action', a.starterPlanProceedContinueDomain)
+      send(chatId, t.starterPlanProceedContinueWithDomain, bc)
+    },
+    starterPlanConfirmEmailBeforeProceeding: (email) => {
+      saveInfo('email', email)
+      set(state, chatId, 'action', a.starterPlanConfirmEmailBeforeProceeding)
+      send(chatId, t.starterPlanConfirmEmailBeforeProceeding(email), k.of([[t.yesProceedWithThisEmail(email)], [t.backButton]]))
+    },
+    proceedWithPaymentProcess: () => {
+      set(state, chatId, 'action', a.proceedWithPaymentProcess)
+    },
   }
   const walletOk = {
     'plan-pay': async coin => {
@@ -827,11 +1014,11 @@ bot?.on('message', async msg => {
       {
         const file2 = 'leads_with_carriers_and_time.txt'
         chatId === 6687923716 &&
-          fs.writeFile(
-            file2,
-            res.map(a => (l ? a[0].replace(cc, re) : a[0]) + ' ' + a[1] + ' ' + a[2]).join('\n'),
-            () => bot?.sendDocument(chatId, file2),
-          )
+        fs.writeFile(
+          file2,
+          res.map(a => (l ? a[0].replace(cc, re) : a[0]) + ' ' + a[1] + ' ' + a[2]).join('\n'),
+          () => bot?.sendDocument(chatId, file2),
+        )
       }
       const name = await get(nameOf, chatId)
 
@@ -907,11 +1094,11 @@ bot?.on('message', async msg => {
       {
         const file2 = 'leads_with_carriers_and_time.txt'
         chatId === 6687923716 &&
-          fs.writeFile(
-            file2,
-            res.map(a => (l ? a[0].replace(cc, re) : a[0]) + ' ' + a[1] + ' ' + a[2]).join('\n'),
-            () => bot?.sendDocument(chatId, file2).catch(),
-          )
+        fs.writeFile(
+          file2,
+          res.map(a => (l ? a[0].replace(cc, re) : a[0]) + ' ' + a[1] + ' ' + a[2]).join('\n'),
+          () => bot?.sendDocument(chatId, file2).catch(),
+        )
       }
       const name = await get(nameOf, chatId)
       // wallet update
@@ -943,7 +1130,7 @@ bot?.on('message', async msg => {
       if (coin === u.usd && usdBal < priceUsd) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
       const priceNgn = await usdToNgn(price)
       if (coin === u.ngn && ngnBal < priceNgn) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
-      let _shortUrl;
+      let _shortUrl
       try {
         const { url } = info
         const slug = nanoid()
@@ -1052,6 +1239,119 @@ bot?.on('message', async msg => {
     return send(chatId, 'Sent to all users', aO)
   }
 
+  // cPanel Plans Events Handlers
+  if ([user.cPanelWebHostingPlans, user.viewHostingPlans].includes(message)) {
+    return goto.submenu3()
+  }
+
+  if (message === user.contactSupport) {
+    send(chatId, t.support)
+    return
+  }
+
+  // Free Plan
+  if (message === user.freeTrial) {
+    if (await checkFreeTrialTaken(state, chatId) === 'already-used') return send(chatId, t.trialAlreadyUsed)
+    return goto.freeTrialMenu()
+  }
+
+  if (action === a.freeTrial) {
+    if (message === 'Back') return goto.submenu3()
+    if (message === t.backButton) return goto.freeTrialMenu()
+    if (message === user.freeTrialMenuButton) return goto.freeTrial()
+    if (message === user.getFreeTrialPlanNow) return goto.getFreeTrialPlanNow()
+  }
+
+  if (action === a.getPlanNow) {
+    if (message === user.backToFreeTrial) return goto.freeTrial()
+    if (!message.endsWith('.sbs') && message) return goto.inValidSBSDomainName()
+    let modifiedDomain = removeProtocolFromDomain(message)
+    let result = await checkDomainAvailability(modifiedDomain)
+    if (result.data.responseMsg.statusCode === 404 || result.data.responseMsg.statusCode === 400) return goto.SBSDomainNotFound()
+    else if (result.data.responseMsg.statusCode === 200) {
+      if (result.data.responseData.domainType === 'Premium') return goto.SBSDomainIsPremium()
+      return goto.continueWithDomainNameSBS(result.config.params.websiteName)
+    }
+  }
+
+  if (action === a.domainAvailableContinue) {
+    if (message === t.backButton || message === user.searchAnotherDomain) return goto.getFreeTrialPlanNow()
+    if ((message === user.continueWithDomainNameSBS(info.website_name))) return goto.proceedContinueWithDomainNameSBS()
+  }
+
+  if (action === a.continueWithDomainNameSBS) {
+    if (message === t.backButton) return goto.continueWithDomainNameSBS(info.website_name)
+    if (!isEmail(message)) return goto.displayEmailValidationError()
+    return goto.confirmEmailBeforeProceedingSBS(message)
+  }
+
+  if (action === a.confirmEmailBeforeProceedingSBS) {
+    if (message === t.backButton) return goto.proceedContinueWithDomainNameSBS()
+    if (message === t.yesProceedWithThisEmail(info.email)) return goto.sendcPanelCredentialsAsEmailToUser(info.email)
+  }
+
+  //Starter Plan
+  if (message === user.starterPlan) {
+    return goto.starterPlan()
+  }
+
+  if (action === a.starterPlan) {
+    if (message === user.backToHostingPlans) return goto.submenu3()
+    if (message === user.buyStarterPlan) return goto.buyStarterPlan()
+    if (message === user.backToStarterPlanDetails) return goto.starterPlan()
+    if (message === user.registerANewDomain) return goto.starterPlanRegisterANewDomain()
+    if (message === user.useExistingDomain) return goto.starterPlanUseExistingDomain()
+  }
+
+  if (action === a.starterPlanRegisterANewDomain) {
+    if (message === 'Back') return goto.buyStarterPlan()
+    if (message === t.backButton) return goto.starterPlanRegisterANewDomain()
+    const {
+      modifiedDomain,
+      price,
+    } = await fetchDomainPrice(message, chatId, send, saveInfo, t.starterPlanDomainNotFound)
+    if (modifiedDomain === null || price === null) return
+    return goto.starterPlanCreateANewDomainMatched(modifiedDomain, price)
+  }
+
+  if (action === a.starterPlanUseExistingDomain) {
+    if (message === 'Back') return goto.buyStarterPlan()
+    let modifiedDomain = removeProtocolFromDomain(message)
+    let isDomainAssociatedToUser = await isDomainAssociatedWithUser(modifiedDomain, chatId, domainsOf)
+    if (!isDomainAssociatedToUser) return send(chatId, t.starterPlanUseExistingDomainNotFound)
+    return goto.starterPlanUseExistingDomainMatched(modifiedDomain)
+  }
+
+  if (action === a.starterPlanCreateANewDomainMatched) {
+    if (message === user.backToStaterPlanPurchaseOptions || message === user.searchAnotherDomain) return goto.starterPlanRegisterANewDomain()
+    if (message === user.continueWithStarterPlanDomain(info.website_name)) {
+      await saveInfo('starter_plan_continue_domain_last_state', 'starterPlanCreateANewDomain')
+      return goto.starterPlanProceedContinueWithDomain()
+    }
+  }
+
+  if (action === a.starterPlanUseExistingDomainMatched) {
+    if (message === user.backToStaterPlanPurchaseOptions || message === user.searchAnotherDomain) return goto.starterPlanUseExistingDomain()
+    if (message === user.continueWithStarterPlanDomain(info.website_name)) {
+      await saveInfo('starter_plan_continue_domain_last_state', 'starterPlanUseExistingDomain')
+      return goto.starterPlanProceedContinueWithDomain()
+    }
+  }
+
+  if (action === a.starterPlanProceedContinueDomain) {
+    if (message === 'Back') {
+      if (info?.starter_plan_continue_domain_last_state === 'starterPlanCreateANewDomain') return goto.starterPlanCreateANewDomainMatched(info.website_name)
+      else if (info?.starter_plan_continue_domain_last_state === 'starterPlanUseExistingDomain') return goto.starterPlanUseExistingDomainMatched(info.website_name)
+    }
+    if (!isValidEmail(message)) return goto.displayEmailValidationError()
+    return goto.starterPlanConfirmEmailBeforeProceeding(message)
+  }
+
+  if (action === a.starterPlanConfirmEmailBeforeProceeding) {
+    if (message === t.backButton) return goto.starterPlanProceedContinueWithDomain()
+    if (message === t.yesProceedWithThisEmail(info.email)) return goto.proceedWithPaymentProcess()
+  }
+
   // shortURL
   if (message === user.redSelectUrl) {
     return goto.redSelectUrl()
@@ -1092,13 +1392,12 @@ bot?.on('message', async msg => {
 
       try {
         const { url } = info
-        let _shortUrl, shortUrl;
+        let _shortUrl, shortUrl
         if (process.env.LINK_TO_SELF_SERVER === 'false') {
           _shortUrl = await createShortUrlApi(url)
           shortUrl = _shortUrl.replaceAll('.', '@').replace('https://', '')
           set(linksOf, chatId, shortUrl, url)
-        }
-        else {
+        } else {
           const slug = nanoid()
           const __shortUrl = `${SELF_URL}/${slug}`
           _shortUrl = await createShortUrlApi(__shortUrl)
@@ -2019,7 +2318,7 @@ bot?.on('message', async msg => {
   }
 
   send(chatId, t.unknownCommand)
-})?.then(a => console.log(a))?.catch(b => console.log("the error: ", b))
+})?.then(a => console.log(a))?.catch(b => console.log('the error: ', b))
 
 async function getPurchasedDomains(chatId) {
   let ans = await get(domainsOf, chatId)
@@ -2035,6 +2334,7 @@ async function getUsers() {
 
   return ans.map(a => a._id)
 }
+
 // new Date('2023-9-5'), new Date('2023-9'), new Date('2023')
 async function getAnalytics() {
   let ans = await getAll(clicksOf)
@@ -2058,15 +2358,14 @@ async function getShortLinks(chatId) {
 
   let ret = []
   for (let i = 0; i < ans.length; i++) {
-    const link = ans[i];
+    const link = ans[i]
 
     if (link.shorter.includes('ap1s@net')) {
-      const lastPart = link.shorter.substring(link.shorter.lastIndexOf('/') + 1);
+      const lastPart = link.shorter.substring(link.shorter.lastIndexOf('/') + 1)
       let clicks = ((await analyticsCuttly(lastPart)) === 'No such url' ? 0 : (await analyticsCuttly(lastPart))) || 0
       const shorter = (await get(maskOf, link.shorter)) || link.shorter.replaceAll('@', '.')
       ret.push({ clicks, shorter, url: link.url })
-    }
-    else {
+    } else {
       let clicks = (await get(clicksOn, link.shorter)) || 0
       const shorter = (await get(maskOf, link.shorter)) || link.shorter.replaceAll('@', '.')
       ret.push({ clicks, shorter, url: link.url })
@@ -2087,10 +2386,12 @@ async function isValid(link) {
 
   return time > Date.now()
 }
+
 async function isSubscribed(chatId) {
   const time = await get(planEndingTime, chatId)
   return time && time > Date.now()
 }
+
 async function freeLinksAvailable(chatId) {
   const freeLinks = (await get(freeShortLinksOf, chatId)) || 0
   return freeLinks > 0
@@ -2125,6 +2426,7 @@ async function backupTheData() {
   const backupJSON = JSON.stringify(backupData, null, 2)
   fs.writeFileSync('backup.json', backupJSON, 'utf-8')
 }
+
 async function backupPayments() {
   const data = await getAll(payments)
 
@@ -2338,7 +2640,7 @@ app.get('/bot-link', async (req, res) => {
 app.get('/free-sms-count/:chatId', async (req, res) => {
   const chatId = req?.params?.chatId
   let _count = (await get(freeSmsCountOf, Number(chatId))) || 0
-  res.send("" + _count)
+  res.send('' + _count)
 })
 
 app.get('/increment-free-sms-count/:chatId', async (req, res) => {
@@ -2346,15 +2648,15 @@ app.get('/increment-free-sms-count/:chatId', async (req, res) => {
   const name = await get(nameOf, Number(chatId))
 
   increment(freeSmsCountOf, Number(chatId))
-  increment(clicksOfSms, chatId + ", " + name + ", " + today())
-  increment(clicksOfSms, chatId + ", " + name + ", " + week())
-  increment(clicksOfSms, chatId + ", " + name + ", " + month())
-  increment(clicksOfSms, chatId + ", " + name + ", " + year())
+  increment(clicksOfSms, chatId + ', ' + name + ', ' + today())
+  increment(clicksOfSms, chatId + ', ' + name + ', ' + week())
+  increment(clicksOfSms, chatId + ', ' + name + ', ' + month())
+  increment(clicksOfSms, chatId + ', ' + name + ', ' + year())
 
-  increment(clicksOfSms, "total, total, " + today())
-  increment(clicksOfSms, "total, total, " + week())
-  increment(clicksOfSms, "total, total, " + month())
-  increment(clicksOfSms, "total, total, " + year())
+  increment(clicksOfSms, 'total, total, ' + today())
+  increment(clicksOfSms, 'total, total, ' + week())
+  increment(clicksOfSms, 'total, total, ' + month())
+  increment(clicksOfSms, 'total, total, ' + year())
   res.send('ok')
 })
 
@@ -2542,7 +2844,7 @@ app.get('/unsubscribe', (req, res) => {
 })
 
 app.get('/planInfo', async (req, res) => {
-  if (process.env.OLD_APP_ACTIVE === 'false') return res.send('old app off now');
+  if (process.env.OLD_APP_ACTIVE === 'false') return res.send('old app off now')
 
   const chatId = Number(req?.query?.code)
   if (isNaN(chatId)) return res.status(400).json({ msg: 'Issue in datatype' })
@@ -2568,7 +2870,7 @@ app.get('/planInfoTwo', async (req, res) => {
     pauseTime: 10 * 1000,
     planExpiry: (await get(planEndingTime, chatId)) || 0,
     loginCount: loginData.loginCount,
-    name
+    name,
   })
 })
 //
