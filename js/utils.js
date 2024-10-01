@@ -302,20 +302,6 @@ async function fetchDomainPrice(message, chatId, send, saveInfo, starterPlanDoma
   }
 }
 
-async function isDomainAssociatedWithUser(domain, chatId, domainsOf) {
-  try {
-    let ans = await get(domainsOf, chatId);
-    if (!ans) return false;
-
-    const sanitizedDomain = domain.replaceAll('.', '@');
-
-    return ans.hasOwnProperty(sanitizedDomain);
-  } catch (error) {
-    console.error('Error checking domain association:', error);
-    return false;
-  }
-}
-
 
 // log(format('1', '4'))
 // log(format('1', '20'))
@@ -359,5 +345,4 @@ module.exports = {
   sendMessageToAllUsers,
   checkDomainAvailability,
   removeProtocolFromDomain,
-  isDomainAssociatedWithUser,
 }

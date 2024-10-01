@@ -107,15 +107,20 @@ const user = {
 
   //Starter Plan
   buyStarterPlan: '🛒 Buy Starter Plan',
+  buyBusinessPlan: '🛒 Buy Business Plan',
+  buyProPlan: '🛒 Buy Pro Plan',
+  viewStarterPlan: '🔼 View Starter Plan',
   viewBusinessPlan: '🔼 View Business Plan',
   viewProPlan: '👑 View Pro Plan',
   backToHostingPlans: '⬅️ Back To Hosting Plans',
   registerANewDomain: '🌐 Register a New Domain',
   useExistingDomain: '🔄 Use Existing Domain',
   backToStarterPlanDetails: '⬅️ Back to Starter Plan Details',
-  continueWithStarterPlanDomain: (websiteName) => `➡️ Continue with ${websiteName}`,
+  backToBusinessPlanDetails: '⬅️ Back to Business Plan Details',
+  backToProPlanDetails: '⬅️ Back to Pro Plan Details',
+  continueWithDomain: (websiteName) => `➡️ Continue with ${websiteName}`,
   enterAnotherDomain: '🔍 Enter Another Domain',
-  backToStaterPlanPurchaseOptions: '⬅️ Back to Purchase Options',
+  backToPurchaseOptions: '⬅️ Back to Purchase Options',
 }
 const u = {
   // other key boards
@@ -144,7 +149,7 @@ Key Details:
 
 Profit Share: Earn a competitive 65/35% split on each sale.
 
-Set-up Fee: Contact support for details 
+Set-up Fee: Contact support for details
 
 Interested? Reach out to us at ${SUPPORT_HANDLE} to learn more about this lucrative partnership.
 
@@ -163,10 +168,12 @@ ${CHAT_BOT_BRAND} Team
   selectPlan: `Please select a plan:`,
   backButton: '⬅️ Back',
   yesProceedWithThisEmail: (email) => `➡️ Proceed with ${email}`,
+  proceedWithPayment: '➡️ Proceed with Payment',
+  iHaveSentThePayment: `I Have Sent the Payment ✅`,
 // Free Plan
   trialAlreadyUsed: `You have already utilized your free trial. If you need more access, please consider subscribing to one of our paid plans.`,
   oneHourLeftToExpireTrialPlan: `Your Freedom Plan will expire in 1 hour. If you’d like to continue using our services, consider upgrading to a paid plan!`,
-  freePlanExpired: `🚫 Your Freedom Plan has expired. We hope you enjoyed your trial, 
+  freePlanExpired: `🚫 Your Freedom Plan has expired. We hope you enjoyed your trial,
 To continue using our services, please buy one of our premium plans.`,
   freeTrialPlanSelected: `
 - Try our <b>Freedom Plan</b> for free! This plan includes a free domain
@@ -194,6 +201,8 @@ To continue using our services, please buy one of our premium plans.`,
   trialPlanInValidEmail: 'Please provide a valid email',
   trialPlanActivationConfirmation: `Thank you! Your free trial plan will be activated shortly. Please note, this plan will be active for 12 hours only.`,
   trialPlanActivationInProgress: `Your free trial plan is being activated. This may take a few moments…`,
+  trialPlanActivationConfirmationPlan: (plan) => `Thank you! Your ${plan} will be activated shortly. Please note, this plan will be active for 12 hours only.`,
+  trialPlanActivationInProgressPlan: (plan) => `Your ${plan} is being activated. This may take a few moments…`,
   trialPlanEmailText: `Please log in to your cPanel to manage your website and services. Remember, your plan will expire in 12 hours. If you like our service, consider upgrading to one of our premium plans!`,
   trialPlanSuccessText: (username, email, password, URL) =>
     `
@@ -207,8 +216,8 @@ URL: ${URL}
 Your cPanel credentials has been successfully sent to your email ${email} as well
 `,
   //
-  // Starter Plan:
-  starterPlanSelected: `
+// Starter Plan:
+starterPlanSelected: `
 🚀 <b>Starter Plan:</b>
 <b>- Storage:</b> 10 GB SSD
 <b>- Bandwidth:</b> 100 GB
@@ -221,17 +230,117 @@ Your cPanel credentials has been successfully sent to your email ${email} as wel
   database & emails etc.
 <b>- Ideal for:</b> Personal blogs, small business websites, or portfolios.`,
   starterPlanBuyText: `
-Great choice! To proceed with your purchase, please follow the steps below:
-1. Choose Your Domain: Do you need a new domain or want to use an existing one?`,
+Great choice! Do you need a new domain or want to use an existing one?`,
   registerANewDomainText: `Please enter the domain name you want to register (e.g., example.com).`,
   starterPlanDomainNotFound: `The domain you entered could not be found. Please ensure the right domain or try using a different one.`,
   starterPlanUseExistingDomainNotFound: `The domain you entered is not associated with your account. Please ensure you are using the correct domain or contact support for assistance.`,
   starterPlanCreateANewDomainMatched: (websiteName, price) => `The domain ${websiteName} is available!. The cost is $${price}.`,
   starterPlanUseExistingDomain: `Please enter your existing domain name (e.g., example.com).`,
-  starterPlanUseExistingDomainMatched: (websiteName) => `You have selected ${websiteName} as your domain.`,
+  useExistingDomainFound: (websiteName) => `You have selected ${websiteName} as your domain.`,
   starterPlanProceedContinueWithDomain: `Please provide your email address to create your account and send your receipt.`,
   confirmEmailBeforeProceedingStarterPlan: (email) => `Are you sure you want to proceed with this ${email} email for the Starter Plan subscription?`,
-//
+  starterPlanInValidEmail: 'Please provide a valid email',
+  orderDetailInvoiceSummary: (domain, price) => `<b>Domain Registration</b>
+  <b>- Domain: </b> ${domain}
+  <b>- Price: </b> $${price}
+
+<b>Web Hosting</b>
+  <b>- Plan: </b> cPanel Starter (Priv.host)
+  <b>- Duration: </b> 14 Days
+  <b>- Price: </b> $10.00
+
+<b>Total Amount Due:</b>
+  <b>- USD: </b>$${price + 10.00}
+  <b>- Tax: </b>$0.00
+
+<b>Payment Terms</b>
+This is a prepayment invoice. Please ensure payment is completed within 1 hr to activate your domain and hosting services. Once payment is received, we will proceed with the activation of your service.
+  `,
+  starterPlanPaymentConfirmation: `Please confirm the transaction to proceed with your purchase.`,
+  //
+
+// Pro Plan:
+proPlanSelected: `
+🚀 <b>Pro Plan:</b>
+<b>- Storage:</b> 10 GB SSD
+<b>- Bandwidth:</b> 100 GB
+<b>- Domains:</b> 1 domain
+<b>- Email Accounts:</b> 5 email accounts
+<b>- Databases:</b> 1 MySQL database
+<b>- Firewall Rules:</b> Country, IP, Device
+<b>- Free SSL:</b> Yes
+<b>- cPanel Features:</b> Full access to cPanel for managing files,
+  database & emails etc.
+<b>- Ideal for:</b> Personal blogs, small business websites, or portfolios.`,
+  proPlanBuyText: `
+Great choice! Do you need a new domain or want to use an existing one?`,
+  proRegisterANewDomainText: `Please enter the domain name you want to register (e.g., example.com).`,
+  proPlanDomainNotFound: `The domain you entered could not be found. Please ensure the right domain or try using a different one.`,
+  proPlanUseExistingDomainNotFound: `The domain you entered is not associated with your account. Please ensure you are using the correct domain or contact support for assistance.`,
+  proPlanCreateANewDomainMatched: (websiteName, price) => `The domain ${websiteName} is available!. The cost is $${price}.`,
+  proPlanUseExistingDomain: `Please enter your existing domain name (e.g., example.com).`,
+  proPlanUseExistingDomainMatched: (websiteName) => `You have selected ${websiteName} as your domain.`,
+  proPlanProceedContinueWithDomain: `Please provide your email address to create your account and send your receipt.`,
+  confirmEmailBeforeProceedingProPlan: (email) => `Are you sure you want to proceed with this ${email} email for the Pro Plan subscription?`,
+  proPlanInValidEmail: 'Please provide a valid email',
+  orderDetailInvoiceSummary: (domain, price) => `<b>Domain Registration</b>
+  <b>- Domain: </b> ${domain}
+  <b>- Price: </b> $${price}
+
+<b>Web Hosting</b>
+  <b>- Plan: </b> cPanel Pro (Priv.host)
+  <b>- Duration: </b> 14 Days
+  <b>- Price: </b> $10.00
+
+<b>Total Amount Due:</b>
+  <b>- USD: </b>$${price + 10.00}
+  <b>- Tax: </b>$0.00
+
+<b>Payment Terms</b>
+This is a prepayment invoice. Please ensure payment is completed within 1 hr to activate your domain and hosting services. Once payment is received, we will proceed with the activation of your service.
+  `,
+  //
+  // Business Plan:
+businessPlanSelected: `
+🚀 <b>BusinessPlan:</b>
+<b>- Storage:</b> 10 GB SSD
+<b>- Bandwidth:</b> 100 GB
+<b>- Domains:</b> 1 domain
+<b>- Email Accounts:</b> 5 email accounts
+<b>- Databases:</b> 1 MySQL database
+<b>- Firewall Rules:</b> Country, IP, Device
+<b>- Free SSL:</b> Yes
+<b>- cPanel Features:</b> Full access to cPanel for managing files,
+  database & emails etc.
+<b>- Ideal for:</b> Personal blogs, small business websites, or portfolios.`,
+  businessPlanBuyText: `
+Great choice! Do you need a new domain or want to use an existing one?`,
+  proRegisterANewDomainText: `Please enter the domain name you want to register (e.g., example.com).`,
+  businessPlanDomainNotFound: `The domain you entered could not be found. Please ensure the right domain or try using a different one.`,
+  businessPlanUseExistingDomainNotFound: `The domain you entered is not associated with your account. Please ensure you are using the correct domain or contact support for assistance.`,
+  businessPlanCreateANewDomainMatched: (websiteName, price) => `The domain ${websiteName} is available!. The cost is $${price}.`,
+  businessPlanUseExistingDomain: `Please enter your existing domain name (e.g., example.com).`,
+  businessPlanUseExistingDomainMatched: (websiteName) => `You have selected ${websiteName} as your domain.`,
+  businessPlanProceedContinueWithDomain: `Please provide your email address to create your account and send your receipt.`,
+  confirmEmailBeforeProceedingBusinessPlan: (email) => `Are you sure you want to proceed with this ${email} email for the BusinessPlan subscription?`,
+  businessPlanInValidEmail: 'Please provide a valid email',
+  orderDetailInvoiceSummary: (domain, price) => `<b>Domain Registration</b>
+  <b>- Domain: </b> ${domain}
+  <b>- Price: </b> $${price}
+
+<b>Web Hosting</b>
+  <b>- Plan: </b> cPanel Business(Priv.host)
+  <b>- Duration: </b> 14 Days
+  <b>- Price: </b> $10.00
+
+<b>Total Amount Due:</b>
+  <b>- USD: </b>$${price + 10.00}
+  <b>- Tax: </b>$0.00
+
+<b>Payment Terms</b>
+This is a prepayment invoice. Please ensure payment is completed within 1 hr to activate your domain and hosting services. Once payment is received, we will proceed with the activation of your service.
+  `,
+  //
 
   what: `Please choose option from keyboard`,
   whatNum: `Please choose valid number`,
@@ -273,6 +382,7 @@ ${CHAT_BOT_NAME}`,
 
   askCoupon: usd =>
     `The price is $${usd}. Would you like to apply a coupon code? If you have one, please enter it now. Otherwise, you can press 'Skip'.`,
+  planAskCoupon: `Would you like to apply a coupon code? If you have one, please enter it now. Otherwise, you can press 'Skip'.`,
   enterCoupon: `Please enter a coupon code:`,
   planPrice: (plan, price) => `Price of ${plan} subscription is $${price} Please choose payment method.`,
   planNewPrice: (plan, price, newPrice) =>
@@ -312,8 +422,8 @@ ${CHAT_BOT_NAME}`,
 
 Support ${SUPPORT_USERNAME} at Telegram.`,
 
-  linkExpired: `Your ${CHAT_BOT_BRAND} trial has ended and your short link is deactivated. We invite you to subscribe to maintain access to our URL service and free domain names. Choose a suitable plan and follow the instructions to subscribe. Please Contact us for any queries.  
-Best,  
+  linkExpired: `Your ${CHAT_BOT_BRAND} trial has ended and your short link is deactivated. We invite you to subscribe to maintain access to our URL service and free domain names. Choose a suitable plan and follow the instructions to subscribe. Please Contact us for any queries.
+Best,
 ${CHAT_BOT_BRAND} Team
 Discover more: ${TG_CHANNEL}`,
 
@@ -419,17 +529,17 @@ ${CHAT_BOT_NAME}`,
 
   showDepositCryptoInfoPlan: (priceCrypto, tickerView, address, plan) =>
     `Please remit ${priceCrypto} ${tickerView} to\n\n<code>${address}</code>
-    
+
 Please note, crypto transactions can take up to 30 minutes to complete. Once the transaction has been confirmed, you will be promptly notified, and your ${plan} plan will be seamlessly activated.
-    
+
 Best regards,
 ${CHAT_BOT_NAME}`,
 
   showDepositCryptoInfoDomain: (priceCrypto, tickerView, address, domain) =>
     `Please remit ${priceCrypto} ${tickerView} to\n\n<code>${address}</code>
-    
+
 Please note, crypto transactions can take up to 30 minutes to complete. Once the transaction has been confirmed, you will be promptly notified, and your ${domain} domain will be seamlessly activated.
-    
+
 Best regards,
 ${CHAT_BOT_NAME}`,
 
@@ -583,7 +693,7 @@ const kOf = list => ({
     keyboard: [
       ...list.map(a => Array.isArray(a) ? a : [a]),
       ...(list.some(a => Array.isArray(a)
-        && a.some(item => typeof item === 'string' && (item.includes(t.backButton) || item.includes(user.backToHostingPlans) || item.includes(user.backToStarterPlanDetails) || item.includes(user.backToStaterPlanPurchaseOptions))),
+        && a.some(item => typeof item === 'string' && (item.includes(t.backButton) || item.includes(user.backToHostingPlans) || item.includes(user.backToStarterPlanDetails) || item.includes(user.backToPurchaseOptions))),
       ) ? [] : [_bc]),
     ],
   },

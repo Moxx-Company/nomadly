@@ -93,7 +93,7 @@ const { saveServerInDomain } = require('./cr-dns-record-add.js')
 const { updateDNSRecord } = require('./cr-dns-record-update.js')
 const { checkDomainPriceOnline } = require('./cr-domain-price-get.js')
 const { saveDomainInServerRailway, saveDomainInServerRender } = require('./rl-save-domain-in-server.js')
-const { get, set, del, increment, getAll, decrement } = require('./db.js')
+const { get, set, del, increment, getAll, decrement, insert } = require('./db.js')
 const { getRegisteredDomainNames } = require('./cr-domain-purchased-get.js')
 const { getCryptoDepositAddress, convert } = require('./pay-blockbee.js')
 const { validateBulkNumbers } = require('./validatePhoneBulk.js')
@@ -103,6 +103,7 @@ const createCustomShortUrlCuttly = require('./customCuttly.js')
 const schedule = require('node-schedule')
 const { registerDomainAndCreateCpanel } = require('./cr-register-domain-&-create-cpanel.js')
 const { isEmail } = require('validator')
+const { generatePlanText, generatePlanStepText, generateDomainFoundText, generateInvoiceText, confirmEmailBeforeProceeding, generateExistingDomainText, showCryptoPaymentInfo } = require('./hosting/plans.js')
 
 process.env['NTBA_FIX_350'] = 1
 const DB_NAME = process.env.DB_NAME
@@ -125,6 +126,11 @@ const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID
 const FREE_LINKS_TIME_SECONDS = Number(process.env.FREE_LINKS_TIME_SECONDS) * 1000 // to milliseconds
 const TELEGRAM_DOMAINS_SHOW_CHAT_ID = Number(process.env.TELEGRAM_DOMAINS_SHOW_CHAT_ID)
 const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 5)
+
+// HOSTING ENVIRONMENT
+const STARTER_PLAN_HOSTING_PRICE = parseFloat(process.env.STARTER_PLAN_HOSTING_PRICE)
+const BUSINESS_PLAN_HOSTING_PRICE = parseFloat(process.env.BUSINESS_PLAN_HOSTING_PRICE)
+const PRO_PLAN_HOSTING_PRICE = parseFloat(process.env.PRO_PLAN_HOSTING_PRICE)
 
 if (!DB_NAME || !RATE_LEAD_VALIDATOR || !HOSTED_ON || !TELEGRAM_BOT_ON || !REST_APIS_ON || !CHAT_BOT_NAME) {
   return log('Service is paused because some ENV variable is missing')
@@ -164,7 +170,9 @@ let state = {},
   freeShortLinksOf = {},
   freeSmsCountOf = {},
   clicksOfSms = {},
-  freeDomainNamesAvailableFor = {}
+  freeDomainNamesAvailableFor = {},
+  hostingTransactions = {}
+
 
 // variables to view system information
 let nameOf = {},
@@ -203,6 +211,8 @@ const loadData = async () => {
   freeShortLinksOf = db.collection('freeShortLinksOf')
   freeSmsCountOf = db.collection('freeSmsCountOf')
   clicksOfSms = db.collection('clicksOfSms')
+  hostingTransactions = db.collection('hostingTransactions')
+
   freeDomainNamesAvailableFor = db.collection('freeDomainNamesAvailableFor')
 
   // variables to view system information
@@ -355,6 +365,13 @@ bot?.on('message', async msg => {
     await set(state, chatId, label, data)
     info = await get(state, chatId)
   }
+
+  let transactionInfo = await get(hostingTransactions, chatId)
+  const saveTransaction = async (key, value) => {
+    await insert(hostingTransactions, chatId, key, value)
+    transactionInfo = await get(hostingTransactions, chatId)
+  }
+
   const action = info?.action
   // actions
   const a = {
@@ -371,15 +388,23 @@ bot?.on('message', async msg => {
     continueWithDomainNameSBS: 'continueWithDomainNameSBS',
     proceedSearchAnotherDomain: 'proceedSearchAnotherDomain',
     confirmEmailBeforeProceedingSBS: 'confirmEmailBeforeProceedingSBS',
-    // Starter Plan Actions
+
+    // Plans
     starterPlan: 'starterPlan',
-    starterPlanRegisterANewDomain: 'starterPlanRegisterANewDomain',
-    starterPlanCreateANewDomainMatched: 'starterPlanCreateANewDomainMatched',
-    starterPlanUseExistingDomain: 'starterPlanUseExistingDomain',
-    starterPlanUseExistingDomainMatched: 'starterPlanUseExistingDomainMatched',
-    starterPlanProceedContinueDomain: 'starterPlanProceedContinueDomain',
-    starterPlanConfirmEmailBeforeProceeding: 'starterPlanConfirmEmailBeforeProceeding',
+    businessPlan: 'businessPlan',
+    proPlan: 'proPlan',
+
+    // Plan Actions
+    registerNewDomain: 'registerNewDomain',
+    registerNewDomainFound: 'registerNewDomainFound',
+    useExistingDomain: 'useExistingDomain',
+    useExistingDomainFound: 'useExistingDomainFound',
+    enterYourEmail: 'enterYourEmail',
+    confirmEmailBeforeProceeding: 'confirmEmailBeforeProceeding',
+    proceedWithEmail: 'proceedWithEmail',
     proceedWithPaymentProcess: 'proceedWithPaymentProcess',
+    plansAskCoupon: 'plansAskCoupon',
+    skipCoupon: 'skipCoupon',
 
     askDomainToUseWithShortener: 'askDomainToUseWithShortener',
 
@@ -455,6 +480,19 @@ bot?.on('message', async msg => {
         ? send(chatId, t.domainNewPrice(domain, price, newPrice), k.pay)
         : send(chatId, t.domainPrice(domain, price), k.pay)
       set(state, chatId, 'action', 'domain-pay')
+    },
+    'domain-pay-by-plan': () => {
+      const payload = {
+        domainName: info.website_name,
+        domainPrice: info.price,
+        couponDiscount: info.couponDiscount,
+        totalPrice: info.totalPrice,
+        couponApplied: info.couponApplied,
+        hostingPrice: info.hostingPrice,
+        newPrice: info.newPrice,
+      }
+      set(state, chatId, 'action', 'domain-pay-by-plan')
+      send(chatId, generateInvoiceText(payload), k.pay)
     },
     'choose-domain-to-buy': async () => {
       let text = ``
@@ -643,16 +681,24 @@ bot?.on('message', async msg => {
     },
     //
     //
-    walletSelectCurrency: async () => {
+    walletSelectCurrency: async (plan = false) => {
       if (
         action.includes(a.buyLeadsSelectFormat) ||
         action.includes(a.validatorSelectFormat) ||
         action.includes(a.redSelectRandomCustom)
       ) {
-        const { amount, price, couponApplied, newPrice } = info
-        couponApplied
+        if (plan) {
+          const { amount, totalPrice, couponApplied, newPrice } = info
+          couponApplied
+          ? send(chatId, t.buyLeadsNewPrice(amount, totalPrice, newPrice), payOpts)
+          : send(chatId, t.buyLeadsPrice(amount, totalPrice), payOpts)
+        } else {
+          const { amount, price, couponApplied, newPrice } = info
+          couponApplied
           ? send(chatId, t.buyLeadsNewPrice(amount, price, newPrice), payOpts)
           : send(chatId, t.buyLeadsPrice(amount, price), payOpts)
+        }
+
       }
 
       set(state, chatId, 'action', a.walletSelectCurrency)
@@ -844,44 +890,172 @@ bot?.on('message', async msg => {
       }
     },
 
-    //Starter Plan
-    starterPlan: () => {
-      set(state, chatId, 'action', a.starterPlan)
-      send(chatId, t.starterPlanSelected, k.of([[user.buyStarterPlan], [user.viewProPlan, user.viewBusinessPlan], [user.backToHostingPlans]]))
+    sendcPanelCredentialsAsEmailToUserPlan: async (receiverEmail, plan) => {
+      try {
+        await send(chatId, t.trialPlanActivationConfirmationPlan)
+        await send(chatId, t.trialPlanActivationInProgressPlan, o)
+        return await registerDomainAndCreateCpanel(send, info.website_name, receiverEmail, o, plan, username, state, chatId, t.trialPlanSuccessText, t.trialPlanEmailText)
+      } catch (error) {
+        console.error('Error in sending messages or email:', error)
+      }
     },
-    buyStarterPlan: () => {
-      set(state, chatId, 'action', a.starterPlan)
-      send(chatId, t.starterPlanBuyText, k.of([user.registerANewDomain, user.useExistingDomain, [user.backToStarterPlanDetails]]))
+
+
+    // Step 1: Select Plan
+    selectPlan: plan => {
+      let planName = 'Starter Plan';
+
+      if (plan === a.businessPlan) {
+        planName = 'Business Plan';
+      } else if (plan === a.proPlan) {
+        planName = 'Pro Plan';
+      }
+
+      saveInfo('plan', planName)
+      set(state, chatId, 'action', plan)
+      const message = generatePlanText(plan);
+
+      let actions = [[user.buyStarterPlan], [user.viewProPlan, user.viewBusinessPlan], [user.backToHostingPlans]];;
+      if (plan === a.businessPlan) {
+        actions = [[user.buyBusinessPlan], [user.viewProPlan, user.viewStarterPlan], [user.backToHostingPlans]];
+      } else if (plan === a.proPlan) {
+        actions = [[user.buyProPlan], [user.viewBusinessPlan, user.viewStarterPlan], [user.backToHostingPlans]];
+      }
+
+      send(chatId, message, k.of(actions))
     },
-    starterPlanRegisterANewDomain: () => {
-      set(state, chatId, 'action', a.starterPlanRegisterANewDomain)
-      send(chatId, t.registerANewDomainText, bc)
+
+    // Step 1.1: View Plan
+    viewPlan: plan => {
+      set(state, chatId, 'action', plan)
+      const message = generatePlanText(plan);
+      send(chatId, message, bc)
     },
-    starterPlanCreateANewDomainMatched: (websiteName, price) => {
-      set(state, chatId, 'action', a.starterPlanCreateANewDomainMatched)
+
+    // Step 2: Buy Plan
+    buyPlan: plan => {
+      set(state, chatId, 'action', plan)
+      console.log("buyPlan", plan)
+      const message = generatePlanStepText("buyText");
+      let actions = [user.registerANewDomain, user.useExistingDomain, [user.backToStarterPlanDetails]];
+
+      if (plan === a.businessPlan) {
+        actions = [user.registerANewDomain, user.useExistingDomain, [user.backToBusinessPlanDetails]];
+      } else if (plan === a.proPlan) {
+        actions = [user.registerANewDomain, user.useExistingDomain, [user.backToProPlanDetails]];
+      }
+
+      send(chatId, message, k.of(actions))
+    },
+
+    // Step 2.1: Register New Domain
+    registerNewDomain: () => {
+      set(state, chatId, 'action', a.registerNewDomain)
+      const message = generatePlanStepText("registerNewDomainText");
+      send(chatId, message, bc)
+    },
+
+    // Step 2.2: Register New Domain - Found
+    registerNewDomainFound: (websiteName, price) => {
+      set(state, chatId, 'action', a.registerNewDomainFound)
       saveInfo('website_name', websiteName)
-      send(chatId, t.starterPlanCreateANewDomainMatched(websiteName, price), k.of([[user.continueWithStarterPlanDomain(websiteName)], [user.searchAnotherDomain], [user.backToStaterPlanPurchaseOptions]]))
+      saveInfo('existingDomain', false)
+      const domainFoundText = generateDomainFoundText(websiteName, price);
+      send(chatId, domainFoundText, k.of([[user.continueWithDomain(websiteName)], [user.searchAnotherDomain], [user.backToPurchaseOptions]]))
     },
-    starterPlanUseExistingDomain: () => {
-      set(state, chatId, 'action', a.starterPlanUseExistingDomain)
-      send(chatId, t.starterPlanUseExistingDomain, bc)
+
+    // Step 2.3: Use Existing Domain
+    useExistingDomain: () => {
+      set(state, chatId, 'action', a.useExistingDomain)
+      const message = generatePlanStepText("useExistingDomainText");
+      send(chatId, message, bc)
     },
-    starterPlanUseExistingDomainMatched: (websiteName) => {
-      set(state, chatId, 'action', a.starterPlanUseExistingDomainMatched)
+
+    // Step 2.4: Use Existing Domain - Found
+    useExistingDomainFound: (websiteName) => {
+      set(state, chatId, 'action', a.useExistingDomainFound)
       saveInfo('website_name', websiteName)
-      send(chatId, t.starterPlanUseExistingDomainMatched(websiteName), k.of([[user.continueWithStarterPlanDomain(websiteName)], [user.searchAnotherDomain], [user.backToStaterPlanPurchaseOptions]]))
+      saveInfo('existingDomain', true)
+      send(chatId, generateExistingDomainText(websiteName), k.of([[user.continueWithDomain(websiteName)], [user.searchAnotherDomain], [user.backToPurchaseOptions]]))
     },
-    starterPlanProceedContinueWithDomain: () => {
-      set(state, chatId, 'action', a.starterPlanProceedContinueDomain)
-      send(chatId, t.starterPlanProceedContinueWithDomain, bc)
+
+    // Step 2.5: Enter your email
+    enterYourEmail: () => {
+      set(state, chatId, 'action', a.enterYourEmail)
+      send(chatId, generatePlanStepText('enterYourEmail'), bc)
     },
-    starterPlanConfirmEmailBeforeProceeding: (email) => {
+
+    // Step 3: Confirm Email
+    confirmEmailBeforeProceeding: (email) => {
       saveInfo('email', email)
-      set(state, chatId, 'action', a.starterPlanConfirmEmailBeforeProceeding)
-      send(chatId, t.starterPlanConfirmEmailBeforeProceeding(email), k.of([[t.yesProceedWithThisEmail(email)], [t.backButton]]))
+      set(state, chatId, 'action', a.confirmEmailBeforeProceeding)
+      send(chatId, confirmEmailBeforeProceeding(email), k.of([t.yesProceedWithThisEmail(email)]))
     },
+
+    // Step 3.1: Proceed with Email
+    proceedWithEmail: (domainName, domainPrice) => {
+      let hostingPrice = parseFloat(STARTER_PLAN_HOSTING_PRICE)
+
+      if (info.plan === a.businessPlan) {
+        hostingPrice = parseFloat(STARTER_PLAN_HOSTING_PRICE)
+      } else if (info.plan === a.proPlan) {
+        hostingPrice = parseFloat(PRO_PLAN_HOSTING_PRICE)
+      }
+
+      if (info.existingDomain) {
+        domainPrice = 0
+      }
+      const totalPrice = domainPrice + hostingPrice;
+
+      saveInfo("couponApplied", false);
+      saveInfo("couponDiscount", 0);
+      saveInfo("hostingPrice", hostingPrice);
+      saveInfo("totalPrice", totalPrice);
+
+      const payload = {
+        domainName: domainName,
+        domainPrice: domainPrice,
+        hostingPrice: hostingPrice,
+        couponDiscount: 0,
+        totalPrice: totalPrice,
+        existingDomain: info.existingDomain
+      }
+
+      set(state, chatId, 'action', a.proceedWithEmail)
+      send(chatId, generateInvoiceText(payload), k.of([t.proceedWithPayment]),
+      )
+    },
+
+    // Step 4: Ask Coupon
+    plansAskCoupon: action => {
+      saveInfo('couponApplied', false)
+      saveInfo('couponDiscount', 0)
+      send(chatId, t.planAskCoupon, k.of(['Skip']))
+      set(state, chatId, 'action', a.askCoupon + action)
+    },
+
+    // Step 4.1: Skip Coupon
+    skipCoupon: (action) => {
+      set(state, chatId, 'action', a.skipCoupon)
+      saveInfo('couponApplied', false)
+      saveInfo('couponDiscount', 0)
+      goto[action]()
+    },
+
+    // Step 5: Proceed with Payment
     proceedWithPaymentProcess: () => {
       set(state, chatId, 'action', a.proceedWithPaymentProcess)
+      send(chatId, generatePlanStepText('paymentConfirmation'), k.of([t.iHaveSentThePayment]))
+    },
+
+    // Step 5.1: I have sent the payment
+    iHaveSentThePayment: () => {
+      set(state, chatId, 'action', a.iHaveSentThePayment)
+      if (info?.ref == transactionInfo?.ref) {
+        send(chatId, generatePlanStepText('paymentSuccess'), k.of([t.iHaveSentThePayment]))
+      } else {
+        send(chatId, generatePlanStepText('paymentFailed'), k.of([t.iHaveSentThePayment]))
+      }
     },
   }
   const walletOk = {
@@ -918,6 +1092,40 @@ bot?.on('message', async msg => {
     'domain-pay': async coin => {
       set(state, chatId, 'action', 'none')
       const price = info?.couponApplied ? info?.newPrice : info?.price
+      const wallet = await get(walletOf, chatId)
+      const { usdBal, ngnBal } = await getBalance(walletOf, chatId)
+
+      if (![u.usd, u.ngn].includes(coin)) return send(chatId, 'Some Issue')
+
+      // price validate
+      const priceUsd = price
+      if (coin === u.usd && usdBal < priceUsd) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
+      const priceNgn = await usdToNgn(price)
+      if (coin === u.ngn && ngnBal < priceNgn) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
+
+      // buy domain
+      const domain = info?.domain
+      const error = await buyDomainFullProcess(chatId, domain)
+      if (error) return
+      const name = await get(nameOf, chatId)
+
+      // wallet update
+      if (coin === u.usd) {
+        set(payments, nanoid(), `Wallet,Domain,${domain},$${priceUsd},${chatId},${name},${new Date()}`)
+        const usdOut = (wallet?.usdOut || 0) + priceUsd
+        await set(walletOf, chatId, 'usdOut', usdOut)
+      }
+      if (coin === u.ngn) {
+        set(payments, nanoid(), `Wallet,Domain,${domain},$${priceUsd},${chatId},${name},${new Date()},${priceNgn} NGN`)
+        const ngnOut = isNaN(wallet?.ngnOut) ? 0 : Number(wallet?.ngnOut)
+        await set(walletOf, chatId, 'ngnOut', ngnOut + priceNgn)
+      }
+      const { usdBal: usd, ngnBal: ngn } = await getBalance(walletOf, chatId)
+      send(chatId, t.showWallet(usd, ngn), o)
+    },
+    'domain-pay-by-plan': async coin => {
+      set(state, chatId, 'action', 'none')
+      const price = info?.couponApplied ? info?.newPrice : info?.totalPrice
       const wallet = await get(walletOf, chatId)
       const { usdBal, ngnBal } = await getBalance(walletOf, chatId)
 
@@ -1290,66 +1498,112 @@ bot?.on('message', async msg => {
     if (message === t.yesProceedWithThisEmail(info.email)) return goto.sendcPanelCredentialsAsEmailToUser(info.email)
   }
 
+
+
+ //Business Plan
+  if (message === user.businessPlan) {
+    return goto.selectPlan(a.businessPlan)
+  }
+
+  if (action === a.businessPlan) {
+    if (message === user.backToHostingPlans) return goto.submenu3()
+    if (message === user.buyBusinessPlan) return goto.buyPlan(action)
+    if (message === user.backToBusinessPlanDetails) return goto.selectPlan(a.businessPlan)
+    if (message === user.registerANewDomain) return goto.registerNewDomain()
+    if (message === user.useExistingDomain) return goto.useExistingDomain()
+    if (message === user.viewStarterPlan) return goto.selectPlan(a.starterPlan)
+    if (message === user.viewProPlan) return goto.selectPlan(a.proPlan)
+  }
+
+
+   //Pro Plan
+   if (message === user.proPlan) {
+    return goto.selectPlan(a.proPlan)
+  }
+
+  if (action === a.proPlan) {
+    if (message === user.backToHostingPlans) return goto.submenu3()
+    if (message === user.buyProPlan) return goto.buyPlan(action)
+    if (message === user.backToProPlanDetails) return goto.selectPlan(a.proPlan)
+    if (message === user.registerANewDomain) return goto.registerNewDomain()
+    if (message === user.useExistingDomain) return goto.useExistingDomain()
+    if (message === user.viewBusinessPlan) return goto.selectPlan(a.businessPlan)
+    if (message === user.viewStarterPlan) return goto.selectPlan(a.starterPlan)
+  }
+
+
   //Starter Plan
   if (message === user.starterPlan) {
-    return goto.starterPlan()
+    return goto.selectPlan(a.starterPlan)
   }
 
   if (action === a.starterPlan) {
     if (message === user.backToHostingPlans) return goto.submenu3()
-    if (message === user.buyStarterPlan) return goto.buyStarterPlan()
-    if (message === user.backToStarterPlanDetails) return goto.starterPlan()
-    if (message === user.registerANewDomain) return goto.starterPlanRegisterANewDomain()
-    if (message === user.useExistingDomain) return goto.starterPlanUseExistingDomain()
+    if (message === user.buyStarterPlan) return goto.buyPlan(action)
+    if (message === user.backToStarterPlanDetails) return goto.selectPlan(a.starterPlan)
+    if (message === user.registerANewDomain) return goto.registerNewDomain()
+    if (message === user.useExistingDomain) return goto.useExistingDomain()
+    if (message === user.viewProPlan) return goto.selectPlan(a.proPlan)
+    if (message === user.viewBusinessPlan) return goto.selectPlan(a.businessPlan)
   }
 
-  if (action === a.starterPlanRegisterANewDomain) {
-    if (message === 'Back') return goto.buyStarterPlan()
-    if (message === t.backButton) return goto.starterPlanRegisterANewDomain()
-    const {
-      modifiedDomain,
-      price,
-    } = await fetchDomainPrice(message, chatId, send, saveInfo, t.starterPlanDomainNotFound)
+  if (action === a.registerNewDomain) {
+    if (message === 'Back') return goto.buyPlan(a.starterPlan)
+    const planMessage = generatePlanStepText("domainNotFound");
+    const { modifiedDomain, price } = await fetchDomainPrice(message, chatId, send, saveInfo, planMessage);
     if (modifiedDomain === null || price === null) return
-    return goto.starterPlanCreateANewDomainMatched(modifiedDomain, price)
+    return goto.registerNewDomainFound(modifiedDomain, price)
   }
 
-  if (action === a.starterPlanUseExistingDomain) {
-    if (message === 'Back') return goto.buyStarterPlan()
+  if (action === a.useExistingDomain) {
+    if (message === 'Back') return goto.buyPlan(a.starterPlan)
     let modifiedDomain = removeProtocolFromDomain(message)
-    let isDomainAssociatedToUser = await isDomainAssociatedWithUser(modifiedDomain, chatId, domainsOf)
-    if (!isDomainAssociatedToUser) return send(chatId, t.starterPlanUseExistingDomainNotFound)
-    return goto.starterPlanUseExistingDomainMatched(modifiedDomain)
+    return goto.useExistingDomainFound(modifiedDomain)
   }
 
-  if (action === a.starterPlanCreateANewDomainMatched) {
-    if (message === user.backToStaterPlanPurchaseOptions || message === user.searchAnotherDomain) return goto.starterPlanRegisterANewDomain()
-    if (message === user.continueWithStarterPlanDomain(info.website_name)) {
-      await saveInfo('starter_plan_continue_domain_last_state', 'starterPlanCreateANewDomain')
-      return goto.starterPlanProceedContinueWithDomain()
+  if (action === a.registerNewDomainFound) {
+    if (message === user.backToPurchaseOptions || message === user.searchAnotherDomain) return goto.registerNewDomain()
+    if (message === user.continueWithDomain(info.website_name)) {
+      await saveInfo('continue_domain_last_state', 'registerNewDomain')
+      return goto.enterYourEmail()
     }
   }
 
-  if (action === a.starterPlanUseExistingDomainMatched) {
-    if (message === user.backToStaterPlanPurchaseOptions || message === user.searchAnotherDomain) return goto.starterPlanUseExistingDomain()
-    if (message === user.continueWithStarterPlanDomain(info.website_name)) {
-      await saveInfo('starter_plan_continue_domain_last_state', 'starterPlanUseExistingDomain')
-      return goto.starterPlanProceedContinueWithDomain()
+  if (action === a.useExistingDomainFound) {
+    if (message === user.backToPurchaseOptions || message === user.searchAnotherDomain) return goto.useExistingDomain()
+    if (message === user.continueWithDomain(info.website_name)) {
+      await saveInfo('continue_domain_last_state', 'useExistingDomain')
+      return goto.enterYourEmail()
     }
   }
 
-  if (action === a.starterPlanProceedContinueDomain) {
+  if (action === a.enterYourEmail) {
     if (message === 'Back') {
-      if (info?.starter_plan_continue_domain_last_state === 'starterPlanCreateANewDomain') return goto.starterPlanCreateANewDomainMatched(info.website_name)
-      else if (info?.starter_plan_continue_domain_last_state === 'starterPlanUseExistingDomain') return goto.starterPlanUseExistingDomainMatched(info.website_name)
+      if (info?.continue_domain_last_state === 'registerNewDomain') return goto.registerNewDomainFound(info.website_name)
+      else if (info?.continue_domain_last_state === 'useExistingDomain') return goto.useExistingDomainFound(info.website_name)
     }
-    if (!isValidEmail(message)) return goto.displayEmailValidationError()
-    return goto.starterPlanConfirmEmailBeforeProceeding(message)
+
+    if (!isValidEmail(message)) {
+      return send(chatId, generatePlanStepText('invalidEmail'), bc)
+    }
+    return goto.confirmEmailBeforeProceeding(message)
   }
 
-  if (action === a.starterPlanConfirmEmailBeforeProceeding) {
-    if (message === t.backButton) return goto.starterPlanProceedContinueWithDomain()
-    if (message === t.yesProceedWithThisEmail(info.email)) return goto.proceedWithPaymentProcess()
+  if (action === a.confirmEmailBeforeProceeding) {
+    if (message === "Back") return goto.enterYourEmail()
+    if (message === t.yesProceedWithThisEmail(info.email)) return goto.proceedWithEmail(info.website_name, info.price)
+  }
+
+  if (action === a.proceedWithEmail) {
+    if (message === "Back") return goto.enterYourEmail()
+    if (message === t.proceedWithPayment)
+      return goto.plansAskCoupon('choose-domain-to-buy-with-plan')
+  }
+
+  // 123456
+  if (action === a.proceedWithPaymentProcess) {
+    if (message === "Back") return goto['domain-pay-by-plan']()
+    if (message === t.iHaveSentThePayment) return goto.iHaveSentThePayment()
   }
 
   // shortURL
@@ -1599,7 +1853,7 @@ bot?.on('message', async msg => {
   }
   if (action === a.askCoupon + 'choose-domain-to-buy') {
     if (message === 'Back') return goto.askDomainToUseWithShortener()
-    if (message === 'Skip') return (await saveInfo('couponApplied', false)) || goto['domain-pay']()
+    if (message === 'Skip') return goto.skipCoupon('domain-pay')
 
     const { price } = info
 
@@ -1612,6 +1866,28 @@ bot?.on('message', async msg => {
     await saveInfo('couponApplied', true)
 
     return goto['domain-pay']()
+  }
+
+  // Coupon for domain
+  if (action === a.askCoupon + 'choose-domain-to-buy-with-plan') {
+    if (message === 'Back') return goto.proceedWithEmail(info.website_name, info.price)
+    if (message === 'Skip') return goto.skipCoupon('domain-pay-by-plan')
+
+    const { totalPrice } = info
+
+    const coupon = message.toUpperCase()
+    const discount = discountOn[coupon]
+
+    if (isNaN(discount)) return send(chatId, t.couponInvalid)
+
+    const couponDiscount = (totalPrice * discount) / 100;
+    const newPrice = totalPrice - couponDiscount;
+
+    await saveInfo('couponApplied', true)
+    await saveInfo('couponDiscount', couponDiscount)
+    await saveInfo('newPrice', newPrice)
+
+    return goto['domain-pay-by-plan']()
   }
   if (action === 'domain-pay') {
     if (message === 'Back') return goto.askCoupon('choose-domain-to-buy')
@@ -1664,12 +1940,74 @@ bot?.on('message', async msg => {
     const ref = nanoid()
     set(chatIdOfPayment, ref, { chatId, price, domain })
     const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-domain?a=b&ref=${ref}&`)
-
+    saveInfo('ref', ref)
     log({ ref })
     sendQrCode(bot, chatId, bb)
     set(state, chatId, 'action', 'none')
     const priceCrypto = await convert(price, 'usd', coin)
     return send(chatId, t.showDepositCryptoInfoDomain(priceCrypto, tickerView, address, domain), o)
+  }
+
+  // paid plans proceed with payment
+  if (action === 'domain-pay-by-plan') {
+    if (message === 'Back') return goto.plansAskCoupon('choose-domain-to-buy-with-plan')
+    const payOption = message
+
+    if (payOption === payIn.crypto) {
+      set(state, chatId, 'action', 'crypto-pay-domain-by-plan')
+      return send(chatId, `Please choose a crypto currency`, k.of(tickerViews))
+    }
+
+    if (payOption === payIn.bank) {
+      set(state, chatId, 'action', 'bank-pay-domain-by-plan')
+      return send(chatId, t.askEmail, bc)
+    }
+
+    if (payOption === payIn.wallet) {
+      set(state, chatId, 'lastStep', 'domain-pay-by-plan')
+      return goto.walletSelectCurrency(true)
+    }
+
+    return send(chatId, t.askValidPayOption)
+  }
+  if (action === 'bank-pay-domain-by-plan') {
+    if (message === 'Back') return goto['domain-pay-by-plan']()
+    const email = message
+    const price = info?.totalPrice
+    const domain = info?.domain
+    if (!isValidEmail(email)) return send(chatId, t.askValidEmail)
+
+    const ref = nanoid()
+
+    log({ ref })
+    set(state, chatId, 'action', a.proceedWithPaymentProcess)
+    const priceNGN = Number(await usdToNgn(price))
+    set(chatIdOfPayment, ref, { chatId, price, domain, endpoint: `/bank-pay-domain` })
+    const { url, error } = await createCheckout(priceNGN, `/ok?a=b&ref=${ref}&`, email, username, ref)
+    if (error) return send(chatId, error, o)
+    send(chatId, `Bank ₦aira + Card 🌐︎`, o)
+    console.log('showDepositNgnInfo', url)
+    return send(chatId, t.bankPayDomain(priceNGN, domain), payBank(url), k.of([t.iHaveSentThePayment]))
+  }
+  if (action === 'crypto-pay-domain-by-plan') {
+    if (message === 'Back') return goto['domain-pay-by-plan']()
+    const tickerView = message
+    const coin = tickerOf[tickerView]
+    const price = info?.couponApplied ? info?.newPrice : info?.totalPrice
+    const domain = info?.domain
+    const plan = info?.plan
+    if (!coin) return send(chatId, t.askValidCrypto)
+
+    const ref = nanoid()
+    set(chatIdOfPayment, ref, { chatId, price, domain })
+    const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-domain-by-plan?a=b&ref=${ref}&`)
+
+    log({ ref })
+    await sendQrCode(bot, chatId, bb)
+    set(state, chatId, 'action', a.proceedWithPaymentProcess)
+    const priceCrypto = await convert(price, 'usd', coin)
+
+    return send(chatId, showCryptoPaymentInfo(priceCrypto, tickerView, address, plan), k.of([t.iHaveSentThePayment]))
   }
   if (action === 'get-free-domain') {
     if (message === 'Back' || message === 'No') return goto['choose-domain-to-buy']()
@@ -2507,7 +2845,7 @@ const auth = async (req, res, next) => {
   log(req.hostname + req.originalUrl)
   const ref = req?.query?.ref || req?.body?.data?.reference // first for crypto and second for webhook fincra
   const pay = await get(chatIdOfPayment, ref)
-  if (!pay) return log(t.payError) || res.send(html(t.payError))
+  // if (!pay) return log(t.payError) || res.send(html(t.payError))
   req.pay = { ...pay, ref }
   next()
 }
@@ -2773,6 +3111,41 @@ app.get('/crypto-pay-domain', auth, async (req, res) => {
   // Buy Domain
   const error = await buyDomainFullProcess(chatId, domain)
   if (error) return res.send(html(error))
+  res.send(html())
+})
+
+// Paid Plan subscription of domains
+app.get('/crypto-pay-domain-by-plan', auth, async (req, res) => {
+  // Validate
+  const { ref, chatId, price } = req.pay
+  const coin = req?.query?.coin
+  const value = req?.query?.value_coin
+  const response = res.req?.query
+  // console.log(res.req?.query)
+
+  if (!ref || !chatId || !price || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
+
+    // Logs
+  del(chatIdOfPayment, ref)
+  await insert(hostingTransactions, chatId, "blockbee", response)
+  // Update Wallet
+  const usdIn = await convert(value, coin, 'usd')
+  if (usdIn * 1.06 < price) {
+    sendMessage(chatId, t.sentLessMoney(`$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn)
+    return res.send(html(t.lowPrice))
+  }
+  if (usdIn > price) {
+    addFundsTo(walletOf, chatId, 'usd', usdIn - price)
+    sendMessage(chatId, t.sentMoreMoney(`$${price}`, `$${usdIn}`))
+  }
+
+  // Buy Domain
+  // const error = await buyDomainFullProcess(chatId, domain)
+  const cPenalCreation = await registerDomainAndCreateCpanel(send, info.website_name, chatId, o, info.plan, username, state, chatId, t.trialPlanSuccessText, t.trialPlanEmailText)
+
+  if (cPenalCreation) return res.send(html(error))
+  send(chatId, usdIn)
   res.send(html())
 })
 app.get('/crypto-wallet', auth, async (req, res) => {

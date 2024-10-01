@@ -26,6 +26,7 @@ async function registerDomainAndCreateCpanel(send, domain, email, keyboardButton
     if (response.request.res.statusCode === 201) {
       send(chatId, successMessage(response.data.data.username, email, response.data.data.password, response.data.data.url), keyboardButtons)
       if (originalPlan === 'Freedom Plan') originalPlan = 'Free Trial Plan'
+
       await sendEmail(originalPlan, username, email, response.data.data.password, emailText, response.data.data.username, response.data.data.url)
       if (plan === 'Freedom Plan') return assignPackageToUser(state, chatId, plan, 12)
       return assignPackageToUser(state, chatId, plan)

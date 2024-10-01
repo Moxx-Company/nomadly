@@ -73,6 +73,15 @@ async function set(c, key, value, valueInside) {
   }
 }
 
+async function insert(collection, chatId, key, value) {
+  try {
+    await collection.insertOne({ _id: chatId, [key]: value });
+  } catch (error) {
+    console.error(`Error setting: ${key} -> ${JSON.stringify(value)} in ${collection.collectionName}:`, error);
+  }
+}
+
+
 async function assignPackageToUser(c, chatId, packageName, totalExpireHoursDuration = 1) {
   const now = new Date()
   const expiresAt = new Date(now.getTime() + totalExpireHoursDuration * 60 * 60 * 1000)
@@ -143,4 +152,4 @@ async function del(c, _id) {
   }
 }
 
-module.exports = { increment, decrement, get, set, del, getAll, assignPackageToUser }
+module.exports = { increment, decrement, get, set, del, getAll, assignPackageToUser, insert }
