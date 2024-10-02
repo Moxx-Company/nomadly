@@ -36,17 +36,27 @@ const createCheckout = async (amount, redirectPath, email, name, ref) => {
 }
 
 const getBusinessId = async () => {
-  const options = {
-    method: 'GET',
-    url: `https://${process.env.FINCRA_ENDPOINT}/profile/business/me`,
-    headers: {
-      accept: 'application/json',
-      'api-key': process.env.FINCRA_PRIVATE_KEY,
-    },
-  }
+  try {
+    const response = await axios.get(
+      `https://${process.env.FINCRA_ENDPOINT}/profile/business/me`,
+      {
+        headers: {
+          Accept: 'application/json',
+          'api-key': process.env.FINCRA_PRIVATE_KEY,
+        },
+      }
+    );
 
-  return (await axios.request(options)).data
-}
+    console.log('Business: ', response.data.message);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching business ID:', error.message);
+    if (error.response) {
+      console.error('Response Data:', error.response.data);
+    }
+    throw error;
+  }
+};
 // getBusinessId().then(log)
 // createCheckout('100', '/uptime?a=b&ref=two_tx__70', 'softmuneeb@gmail.com', 'M', 'two_tx__70').then(console.log)
 // createCheckout('10000', '/uptime?a=b&ref=two_tx__130', 'softmuneeb@gmail.com', 'M', 'two_tx__131').then(console.log)

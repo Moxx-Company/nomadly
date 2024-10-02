@@ -75,6 +75,8 @@ const {
   checkDomainAvailability,
   removeProtocolFromDomain,
   isDomainAssociatedWithUser,
+  planCheckExistingDomain,
+  planGetNewDomain,
 } = require('./utils.js')
 const fs = require('fs')
 require('dotenv').config()
@@ -103,7 +105,7 @@ const createCustomShortUrlCuttly = require('./customCuttly.js')
 const schedule = require('node-schedule')
 const { registerDomainAndCreateCpanel } = require('./cr-register-domain-&-create-cpanel.js')
 const { isEmail } = require('validator')
-const { generatePlanText, generatePlanStepText, generateDomainFoundText, generateInvoiceText, confirmEmailBeforeProceeding, generateExistingDomainText, showCryptoPaymentInfo } = require('./hosting/plans.js')
+const { generatePlanText, generatePlanStepText, generateDomainFoundText, generateInvoiceText, confirmEmailBeforeProceeding, generateExistingDomainText, showCryptoPaymentInfo, domainNotFound, planSuccessText, bankPayDomain } = require('./hosting/plans.js')
 
 process.env['NTBA_FIX_350'] = 1
 const DB_NAME = process.env.DB_NAME
@@ -148,7 +150,7 @@ else bot = {
 }
 
 log('TELEGRAM_BOT_ON: ' + TELEGRAM_BOT_ON)
-log('Bot ran away!' + new Date())
+log('Bot ran away! ' + new Date())
 
 const send = (chatId, message, options) => {
   log('reply: ' + message + ' ' + (options?.reply_markup?.keyboard?.map(i => i) || '') + '\tto: ' + chatId + '\n')
@@ -399,6 +401,7 @@ bot?.on('message', async msg => {
     registerNewDomainFound: 'registerNewDomainFound',
     useExistingDomain: 'useExistingDomain',
     useExistingDomainFound: 'useExistingDomainFound',
+    domainNotFound: 'domainNotFound',
     enterYourEmail: 'enterYourEmail',
     confirmEmailBeforeProceeding: 'confirmEmailBeforeProceeding',
     proceedWithEmail: 'proceedWithEmail',
@@ -836,6 +839,7 @@ bot?.on('message', async msg => {
 
     // cPanel Plans SubMenu
     submenu3: () => {
+      saveInfo('username', username)
       set(state, chatId, 'action', a.submenu3)
       send(chatId, t.selectPlan, k.of([[user.freeTrial, user.starterPlan], [user.businessPlan, user.proPlan], user.contactSupport]))
     },
@@ -855,6 +859,7 @@ bot?.on('message', async msg => {
     },
     getFreeTrialPlanNow: () => {
       set(state, chatId, 'action', a.getPlanNow)
+      saveInfo('plan', 'Freedom Plan')
       send(chatId, t.getFreeTrialPlan, k.of([[user.backToFreeTrial]]))
     },
     inValidSBSDomainName: () => {
@@ -880,25 +885,16 @@ bot?.on('message', async msg => {
       set(state, chatId, 'action', a.confirmEmailBeforeProceedingSBS)
       send(chatId, t.confirmEmailBeforeProceedingSBS(email), k.of([[t.yesProceedWithThisEmail(email)], [t.backButton]]))
     },
-    sendcPanelCredentialsAsEmailToUser: async (receiverEmail) => {
+    sendcPanelCredentialsAsEmailToUser: async () => {
       try {
-        await send(chatId, t.trialPlanActivationConfirmation)
-        await send(chatId, t.trialPlanActivationInProgress, o)
-        return await registerDomainAndCreateCpanel(send, info.website_name, receiverEmail, o, 'Freedom Plan', username, state, chatId, t.trialPlanSuccessText, t.trialPlanEmailText)
+        send(chatId, t.trialPlanActivationConfirmation)
+        send(chatId, t.trialPlanActivationInProgress, o)
+        return await registerDomainAndCreateCpanel(send, info, o, state)
       } catch (error) {
         console.error('Error in sending messages or email:', error)
       }
     },
 
-    sendcPanelCredentialsAsEmailToUserPlan: async (receiverEmail, plan) => {
-      try {
-        await send(chatId, t.trialPlanActivationConfirmationPlan)
-        await send(chatId, t.trialPlanActivationInProgressPlan, o)
-        return await registerDomainAndCreateCpanel(send, info.website_name, receiverEmail, o, plan, username, state, chatId, t.trialPlanSuccessText, t.trialPlanEmailText)
-      } catch (error) {
-        console.error('Error in sending messages or email:', error)
-      }
-    },
 
 
     // Step 1: Select Plan
@@ -951,6 +947,8 @@ bot?.on('message', async msg => {
     // Step 2.1: Register New Domain
     registerNewDomain: () => {
       set(state, chatId, 'action', a.registerNewDomain)
+      saveInfo('existingDomain', false)
+
       const message = generatePlanStepText("registerNewDomainText");
       send(chatId, message, bc)
     },
@@ -959,14 +957,14 @@ bot?.on('message', async msg => {
     registerNewDomainFound: (websiteName, price) => {
       set(state, chatId, 'action', a.registerNewDomainFound)
       saveInfo('website_name', websiteName)
-      saveInfo('existingDomain', false)
       const domainFoundText = generateDomainFoundText(websiteName, price);
-      send(chatId, domainFoundText, k.of([[user.continueWithDomain(websiteName)], [user.searchAnotherDomain], [user.backToPurchaseOptions]]))
+      send(chatId, domainFoundText, k.of([[user.continueWithDomain(websiteName)], [user.searchAnotherDomain]]))
     },
 
     // Step 2.3: Use Existing Domain
     useExistingDomain: () => {
       set(state, chatId, 'action', a.useExistingDomain)
+      saveInfo('existingDomain', true)
       const message = generatePlanStepText("useExistingDomainText");
       send(chatId, message, bc)
     },
@@ -975,8 +973,12 @@ bot?.on('message', async msg => {
     useExistingDomainFound: (websiteName) => {
       set(state, chatId, 'action', a.useExistingDomainFound)
       saveInfo('website_name', websiteName)
-      saveInfo('existingDomain', true)
-      send(chatId, generateExistingDomainText(websiteName), k.of([[user.continueWithDomain(websiteName)], [user.searchAnotherDomain], [user.backToPurchaseOptions]]))
+      send(chatId, generateExistingDomainText(websiteName), k.of([[user.continueWithDomain(websiteName)], [user.searchAnotherDomain]]))
+    },
+
+    domainNotFound: (websiteName) => {
+      set(state, chatId, 'action', a.domainNotFound)
+      send(chatId, domainNotFound(websiteName), bc)
     },
 
     // Step 2.5: Enter your email
@@ -1057,6 +1059,22 @@ bot?.on('message', async msg => {
         send(chatId, generatePlanStepText('paymentFailed'), k.of([t.iHaveSentThePayment]))
       }
     },
+
+    // Step 6: Pay using wallet usd
+    payUsingWalletUsd: () => {
+      set(state, chatId, 'action', a.walletPayUsd)
+      send(chatId, generatePlanStepText('payUsingWallet'), k.of([t.iHaveSentThePayment]))
+    },
+
+    // Step 6.1: Pay using wallet ngn
+    payUsingWalletNgn: () => {
+      set(state, chatId, 'action', a.walletPayNgn)
+      send(chatId, generatePlanStepText('payUsingWallet'), k.of([t.iHaveSentThePayment]))
+    },
+
+    getInfo: () => {
+      return info
+    }
   }
   const walletOk = {
     'plan-pay': async coin => {
@@ -1123,7 +1141,7 @@ bot?.on('message', async msg => {
       const { usdBal: usd, ngnBal: ngn } = await getBalance(walletOf, chatId)
       send(chatId, t.showWallet(usd, ngn), o)
     },
-    'domain-pay-by-plan': async coin => {
+    'wallet-domain-pay-by-plan': async coin => {
       set(state, chatId, 'action', 'none')
       const price = info?.couponApplied ? info?.newPrice : info?.totalPrice
       const wallet = await get(walletOf, chatId)
@@ -1137,20 +1155,22 @@ bot?.on('message', async msg => {
       const priceNgn = await usdToNgn(price)
       if (coin === u.ngn && ngnBal < priceNgn) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
 
-      // buy domain
-      const domain = info?.domain
-      const error = await buyDomainFullProcess(chatId, domain)
-      if (error) return
-      const name = await get(nameOf, chatId)
+      const cPenalCreation = await registerDomainAndCreateCpanel(send, info, o, state)
+
+      if (cPenalCreation) {
+        set(state, chatId, 'action', 'none')
+        return
+      }
+
 
       // wallet update
       if (coin === u.usd) {
-        set(payments, nanoid(), `Wallet,Domain,${domain},$${priceUsd},${chatId},${name},${new Date()}`)
+        set(payments, nanoid(), `Wallet,Domain,${info.domain},$${priceUsd},${chatId},${new Date()}`)
         const usdOut = (wallet?.usdOut || 0) + priceUsd
         await set(walletOf, chatId, 'usdOut', usdOut)
       }
       if (coin === u.ngn) {
-        set(payments, nanoid(), `Wallet,Domain,${domain},$${priceUsd},${chatId},${name},${new Date()},${priceNgn} NGN`)
+        set(payments, nanoid(), `Wallet,Domain,${info.domain},$${priceUsd},${chatId},${new Date()},${priceNgn} NGN`)
         const ngnOut = isNaN(wallet?.ngnOut) ? 0 : Number(wallet?.ngnOut)
         await set(walletOf, chatId, 'ngnOut', ngnOut + priceNgn)
       }
@@ -1495,7 +1515,7 @@ bot?.on('message', async msg => {
 
   if (action === a.confirmEmailBeforeProceedingSBS) {
     if (message === t.backButton) return goto.proceedContinueWithDomainNameSBS()
-    if (message === t.yesProceedWithThisEmail(info.email)) return goto.sendcPanelCredentialsAsEmailToUser(info.email)
+    if (message === t.yesProceedWithThisEmail(info.email)) return goto.sendcPanelCredentialsAsEmailToUser()
   }
 
 
@@ -1549,20 +1569,33 @@ bot?.on('message', async msg => {
 
   if (action === a.registerNewDomain) {
     if (message === 'Back') return goto.buyPlan(a.starterPlan)
-    const planMessage = generatePlanStepText("domainNotFound");
-    const { modifiedDomain, price } = await fetchDomainPrice(message, chatId, send, saveInfo, planMessage);
+    send(chatId, "Checking domain availability...")
+    const { modifiedDomain, price } = await planGetNewDomain(message, chatId, send, saveInfo);
     if (modifiedDomain === null || price === null) return
     return goto.registerNewDomainFound(modifiedDomain, price)
   }
 
   if (action === a.useExistingDomain) {
-    if (message === 'Back') return goto.buyPlan(a.starterPlan)
+    if (message === 'Back') return goto.submenu3()
+    send(chatId, "Checking existing domain availability...")
     let modifiedDomain = removeProtocolFromDomain(message)
+    const { available, chatMessage } = await planCheckExistingDomain(modifiedDomain)
+    if (!available) {
+      send(chatId, chatMessage)
+      return goto.domainNotFound(modifiedDomain)
+    }
+
     return goto.useExistingDomainFound(modifiedDomain)
   }
 
+  if (action === a.domainNotFound) {
+    if (message === 'Back') return goto.buyPlan(a.starterPlan)
+    if (message === user.searchAnotherDomain) return goto.registerNewDomain()
+    if (message === user.continueWithDomain(info.website_name)) return goto.enterYourEmail()
+  }
+
   if (action === a.registerNewDomainFound) {
-    if (message === user.backToPurchaseOptions || message === user.searchAnotherDomain) return goto.registerNewDomain()
+    if (message === "Back" || message === user.searchAnotherDomain) return goto.registerNewDomain()
     if (message === user.continueWithDomain(info.website_name)) {
       await saveInfo('continue_domain_last_state', 'registerNewDomain')
       return goto.enterYourEmail()
@@ -1570,7 +1603,7 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.useExistingDomainFound) {
-    if (message === user.backToPurchaseOptions || message === user.searchAnotherDomain) return goto.useExistingDomain()
+    if (message === "Back" || message === user.searchAnotherDomain) return goto.useExistingDomain()
     if (message === user.continueWithDomain(info.website_name)) {
       await saveInfo('continue_domain_last_state', 'useExistingDomain')
       return goto.enterYourEmail()
@@ -1604,6 +1637,10 @@ bot?.on('message', async msg => {
   if (action === a.proceedWithPaymentProcess) {
     if (message === "Back") return goto['domain-pay-by-plan']()
     if (message === t.iHaveSentThePayment) return goto.iHaveSentThePayment()
+  }
+
+  if (action === a.walletPayUsd) {
+
   }
 
   // shortURL
@@ -1964,7 +2001,7 @@ bot?.on('message', async msg => {
     }
 
     if (payOption === payIn.wallet) {
-      set(state, chatId, 'lastStep', 'domain-pay-by-plan')
+      set(state, chatId, 'lastStep', 'wallet-domain-pay-by-plan')
       return goto.walletSelectCurrency(true)
     }
 
@@ -1982,12 +2019,12 @@ bot?.on('message', async msg => {
     log({ ref })
     set(state, chatId, 'action', a.proceedWithPaymentProcess)
     const priceNGN = Number(await usdToNgn(price))
-    set(chatIdOfPayment, ref, { chatId, price, domain, endpoint: `/bank-pay-domain` })
+    set(chatIdOfPayment, ref, { chatId, price, domain, endpoint: `/bank-pay-domain-hosting` })
     const { url, error } = await createCheckout(priceNGN, `/ok?a=b&ref=${ref}&`, email, username, ref)
     if (error) return send(chatId, error, o)
     send(chatId, `Bank ₦aira + Card 🌐︎`, o)
     console.log('showDepositNgnInfo', url)
-    return send(chatId, t.bankPayDomain(priceNGN, domain), payBank(url), k.of([t.iHaveSentThePayment]))
+    return send(chatId, bankPayDomain(priceNGN, info.plan), payBank(url), k.of([t.iHaveSentThePayment]))
   }
   if (action === 'crypto-pay-domain-by-plan') {
     if (message === 'Back') return goto['domain-pay-by-plan']()
@@ -2845,7 +2882,7 @@ const auth = async (req, res, next) => {
   log(req.hostname + req.originalUrl)
   const ref = req?.query?.ref || req?.body?.data?.reference // first for crypto and second for webhook fincra
   const pay = await get(chatIdOfPayment, ref)
-  // if (!pay) return log(t.payError) || res.send(html(t.payError))
+  if (!pay) return log(t.payError) || res.send(html(t.payError))
   req.pay = { ...pay, ref }
   next()
 }
@@ -2925,6 +2962,38 @@ const bankApis = {
 
     res.send(html())
   },
+  '/bank-pay-domain-hosting': async (req, res, ngnIn) => {
+    // Validate
+    const { ref, chatId, price } = req.pay
+    if (!ref || !chatId || !price) return log(t.argsErr) || res.send(html(t.argsErr))
+
+    // Logs
+    del(chatIdOfPayment, ref)
+    const usdIn = await ngnToUsd(ngnIn)
+    const name = await get(nameOf, chatId)
+    await insert(hostingTransactions, chatId, "bank", response)
+
+    // Update Wallet
+    const ngnPrice = await usdToNgn(price)
+    if (usdIn * 1.06 < price) {
+      sendMessage(chatId, t.sentLessMoney(`${ngnPrice} NGN`, `${ngnIn} NGN`))
+      addFundsTo(walletOf, chatId, 'ngn', ngnIn)
+      return res.send(html(t.lowPrice))
+    }
+    if (ngnIn > ngnPrice) {
+      addFundsTo(walletOf, chatId, 'ngn', ngnIn - ngnPrice)
+      sendMessage(chatId, t.sentMoreMoney(`${ngnPrice} NGN`, `${ngnIn} NGN`))
+    }
+
+    const info = await get(state, chatId)
+
+    // Buy Domain Hosting
+    const cPanelHosting = await registerDomainAndCreateCpanel(send, info, o, state)
+
+    if (cPanelHosting) return res.send(html(cPanelHosting))
+
+    res.send(html())
+  },
   '/bank-wallet': async (req, res, ngnIn) => {
     // Validate
     const { ref, chatId } = req.pay
@@ -2952,8 +3021,6 @@ app.post('/webhook', auth, (req, res) => {
 
   bankApis[endpoint](req, res, Number(value))
 })
-//
-//
 
 app.get('/open-api-key', async (req, res) => {
   const openApiKey = process.env.APP_OPEN_API_KEY
@@ -3121,7 +3188,6 @@ app.get('/crypto-pay-domain-by-plan', auth, async (req, res) => {
   const coin = req?.query?.coin
   const value = req?.query?.value_coin
   const response = res.req?.query
-  // console.log(res.req?.query)
 
   if (!ref || !chatId || !price || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
 
@@ -3140,11 +3206,11 @@ app.get('/crypto-pay-domain-by-plan', auth, async (req, res) => {
     sendMessage(chatId, t.sentMoreMoney(`$${price}`, `$${usdIn}`))
   }
 
-  // Buy Domain
-  // const error = await buyDomainFullProcess(chatId, domain)
-  const cPenalCreation = await registerDomainAndCreateCpanel(send, info.website_name, chatId, o, info.plan, username, state, chatId, t.trialPlanSuccessText, t.trialPlanEmailText)
+  const info = await get(state, chatId)
 
-  if (cPenalCreation) return res.send(html(error))
+  const cPanelCreation = await registerDomainAndCreateCpanel(send, info, o, state)
+
+  if (cPanelCreation) return res.send(html(cPanelCreation))
   send(chatId, usdIn)
   res.send(html())
 })
@@ -3267,7 +3333,7 @@ app.get('/:id', async (req, res) => {
 })
 const startServer = () => {
   const port = process.env.PORT || 4001
-  app.listen(port, () => log(`Server ran away!\nhttp://localhost:${port}`))
+  app.listen(port, () => log(`Server ran away! http://localhost:${port}`))
 }
 
 const tryConnectReseller = async () => {

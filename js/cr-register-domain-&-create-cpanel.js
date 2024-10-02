@@ -4,16 +4,17 @@ const { log } = require('console')
 const sendEmail = require('./send-email')
 const { assignPackageToUser } = require('./db')
 const { t } = require('./config')
+const { cPanelSupport, planSuccessText, successEmailText } = require('./hosting/plans')
 
-async function registerDomainAndCreateCpanel(send, domain, email, keyboardButtons, plan, username, state, chatId, successMessage, emailText = '') {
+async function registerDomainAndCreateCpanel(send, info, keyboardButtons, state) {
   const url = process.env.CPANEL_CREATE_ACCOUNT_URL
-  let originalPlan = plan
   const payload = {
-    telegramId: chatId,
-    name: username,
-    email: email,
-    domain: domain,
-    plan: plan,
+    telegramId: info._id+2,
+    name: info.username,
+    email: info.email,
+    domain: info.website_name,
+    existingDomain: info.existingDomain,
+    plan: info.plan,
   }
   const headers = {
     accept: 'application/json',
@@ -22,20 +23,35 @@ async function registerDomainAndCreateCpanel(send, domain, email, keyboardButton
   }
 
   try {
-    const response = await axios.post(url, payload, { headers })
-    if (response.request.res.statusCode === 201) {
-      send(chatId, successMessage(response.data.data.username, email, response.data.data.password, response.data.data.url), keyboardButtons)
-      if (originalPlan === 'Freedom Plan') originalPlan = 'Free Trial Plan'
+    let response = await axios.post(url, payload, { headers })
 
-      await sendEmail(originalPlan, username, email, response.data.data.password, emailText, response.data.data.username, response.data.data.url)
-      if (plan === 'Freedom Plan') return assignPackageToUser(state, chatId, plan, 12)
-      return assignPackageToUser(state, chatId, plan)
+    if (response.request.res.statusCode === 201) {
+      response = response.data.data
+      send(info._id, planSuccessText(info.plan, response.username, info.email, response.password, response.url), keyboardButtons)
+
+      let emailText = '';
+      if (info.plan === 'Freedom Plan') {
+        emailText = t.trialPlanEmailText;
+        assignPackageToUser(state, info._id, info.plan, 12)
+      } else {
+        emailText = "";
+        assignPackageToUser(state, info._id, info.plan)
+      }
+      await sendEmail(
+        info.plan,
+        info.username,
+        info.email,
+        response.username,
+        response.password,
+        response.url,
+        emailText
+      )
+    } else {
+      return send(info._id, cPanelSupport(info.plan), keyboardButtons)
     }
-    return send(chatId, t.cPanelSupport, keyboardButtons)
   } catch (err) {
-    const error = err?.message
-    log('err registerDomain&CreateCPanel', { url, payload, headers }, err)
-    return send(chatId, t.cPanelSupport, keyboardButtons)
+    log('err registerDomain&CreateCPanel', {url, payload, headers }, err.data, err?.response?.data)
+    return send(info._id, cPanelSupport(info.plan), keyboardButtons)
   }
 }
 

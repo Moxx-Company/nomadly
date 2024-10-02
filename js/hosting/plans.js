@@ -1,4 +1,7 @@
 const CHAT_BOT_NAME = process.env.CHAT_BOT_NAME
+const TG_HANDLE = process.env.TG_HANDLE
+const SUPPORT_USERNAME = process.env.SUPPORT_USERNAME
+
 
 const plans = {
   starterPlan: {
@@ -73,6 +76,7 @@ const generatePlanStepText = step => {
 const generateDomainFoundText = (websiteName, price) =>
   `The domain ${websiteName} is available!. The cost is $${price}.`
 const generateExistingDomainText = websiteName => `You have selected ${websiteName} as your domain.`
+const domainNotFound = websiteName => `The domain ${websiteName} is not available.`
 const confirmEmailBeforeProceeding = email => `Are you sure you want to proceed with this ${email} email?`
 
 const generateInvoiceText = payload => `
@@ -107,6 +111,28 @@ Please note, crypto transactions can take up to 30 minutes to complete. Once the
 Best regards,
 ${CHAT_BOT_NAME}`
 
+const planSuccessText = (plan, username, email, password, URL) =>
+`Here are your cPanel Credentials for ${plan}:
+
+Username: ${username}
+Email: ${email}
+Password: ${password}
+URL: ${URL}
+
+<b>Nameservers</b>
+  - ns1.priv.host
+  - ns2.priv.host
+
+Your cPanel credentials has been successfully sent to your email ${email} as well`
+
+const successEmailText = 'Please log in to your cPanel to manage your website and services.'
+const cPanelSupport = plan => `Something went wrong while setting up ${plan}. Please contact support ${SUPPORT_USERNAME}. Discover more ${TG_HANDLE}.`
+
+const bankPayDomain = (priceNGN, plan) => `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your ${plan} will be seamlessly activated.
+
+Best regards,
+${CHAT_BOT_NAME}`
+
 module.exports = {
   generatePlanText,
   generatePlanStepText,
@@ -115,4 +141,9 @@ module.exports = {
   generateInvoiceText,
   confirmEmailBeforeProceeding,
   showCryptoPaymentInfo,
+  domainNotFound,
+  planSuccessText,
+  successEmailText,
+  cPanelSupport,
+  bankPayDomain,
 }

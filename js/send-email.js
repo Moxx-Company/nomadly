@@ -10,7 +10,8 @@ const transporter = nodemailer.createTransport({
   },
 })
 
-async function sendEmail(plan, receiverName, receiverEmail, cPanelPassword, text, cPanelUserName, cPanelURL) {
+async function sendEmail(plan, receiverName, receiverEmail, cPanelUserName, cPanelPassword, cPanelURL, text) {
+    plan = plan === 'Freedom Plan' ? 'Free Trial Plan' : plan;
   const emailHtml = `
     <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">

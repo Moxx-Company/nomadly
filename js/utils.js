@@ -7,7 +7,7 @@ const { t, timeOf, freeDomainsOf, o } = require('./config')
 const { getAll, get, set } = require('./db')
 const { log } = require('console')
 const resolveDns = require('./resolve-cname.js')
-const checkDomainAvailable = require('./cr-check-domain-available')
+const { checkDomainAvailable, checkExistingDomain, getNewDomain } = require('./cr-check-domain-available')
 const { checkDomainPriceOnline } = require('./cr-domain-price-get.js')
 const TELEGRAM_DEV_CHAT_ID = process.env.TELEGRAM_DEV_CHAT_ID
 
@@ -197,12 +197,12 @@ const subscribePlan = async (planEndingTime, freeDomainNamesAvailableFor, planOf
   log('reply:\t' + t.planSubscribed.replace('{{plan}}', plan) + '\tto: ' + chatId)
 
   HIDE_SMS_APP !== 'true' &&
-  sendQr(
-    bot,
-    chatId,
-    `${chatId}`,
-    `Scan QR with sms marketing app to login. You can also use this code to login: ${chatId}`,
-  )
+    sendQr(
+      bot,
+      chatId,
+      `${chatId}`,
+      `Scan QR with sms marketing app to login. You can also use this code to login: ${chatId}`,
+    )
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
@@ -273,7 +273,8 @@ async function checkFreeTrialTaken(c, chatId) {
   return 'not_taken' // If neither current nor previous packages are 'Freedom Plan'
 }
 
-const checkDomainAvailability = (domainName) => (checkDomainAvailable(domainName))
+const checkDomainAvailability = domainName => checkDomainAvailable(domainName)
+const planCheckExistingDomain = domainName => checkExistingDomain(domainName)
 
 async function fetchDomainPrice(message, chatId, send, saveInfo, starterPlanDomainNotFound) {
   try {
@@ -302,6 +303,32 @@ async function fetchDomainPrice(message, chatId, send, saveInfo, starterPlanDoma
   }
 }
 
+async function planGetNewDomain(message, chatId, send, saveInfo) {
+  try {
+    let modifiedDomain = removeProtocolFromDomain(message)
+
+    const { available, originalPrice, price, chatMessage } = await getNewDomain(modifiedDomain)
+
+    if (!available) {
+      await send(chatId, chatMessage)
+      return { modifiedDomain: null, price: null }
+    }
+
+    if (!originalPrice) {
+      await send(TELEGRAM_DEV_CHAT_ID, 'Some issue in getting price')
+      await send(chatId, 'Some issue in getting price')
+      return { modifiedDomain: null, price: null }
+    }
+
+    saveInfo('price', price)
+    saveInfo('domain', modifiedDomain)
+    saveInfo('originalPrice', originalPrice)
+
+    return { modifiedDomain, price }
+  } catch (error) {
+    return { modifiedDomain: null, price: null }
+  }
+}
 
 // log(format('1', '4'))
 // log(format('1', '20'))
@@ -344,5 +371,7 @@ module.exports = {
   extractPhoneNumbers,
   sendMessageToAllUsers,
   checkDomainAvailability,
+  planGetNewDomain,
+  planCheckExistingDomain,
   removeProtocolFromDomain,
 }
