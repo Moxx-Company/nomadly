@@ -907,8 +907,8 @@ bot?.on('message', async msg => {
         planName = 'Pro Plan';
       }
 
-      set(walletOf, chatId, 'usdIn', 5000)
-      set(walletOf, chatId, 'ngnIn', 5000)
+      // set(walletOf, chatId, 'usdIn', 5000)
+      // set(walletOf, chatId, 'ngnIn', 5000)
 
       saveInfo('plan', planName)
       set(state, chatId, 'action', plan)
