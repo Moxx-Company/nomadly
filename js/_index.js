@@ -130,9 +130,9 @@ const TELEGRAM_DOMAINS_SHOW_CHAT_ID = Number(process.env.TELEGRAM_DOMAINS_SHOW_C
 const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 5)
 
 // HOSTING ENVIRONMENT
-const STARTER_PLAN_HOSTING_PRICE = parseFloat(process.env.STARTER_PLAN_HOSTING_PRICE)
-const BUSINESS_PLAN_HOSTING_PRICE = parseFloat(process.env.BUSINESS_PLAN_HOSTING_PRICE)
-const PRO_PLAN_HOSTING_PRICE = parseFloat(process.env.PRO_PLAN_HOSTING_PRICE)
+const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
+const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
+const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 
 if (!DB_NAME || !RATE_LEAD_VALIDATOR || !HOSTED_ON || !TELEGRAM_BOT_ON || !REST_APIS_ON || !CHAT_BOT_NAME) {
   return log('Service is paused because some ENV variable is missing')
@@ -907,6 +907,9 @@ bot?.on('message', async msg => {
         planName = 'Pro Plan';
       }
 
+      set(walletOf, chatId, 'usdIn', 5000)
+      set(walletOf, chatId, 'ngnIn', 5000)
+
       saveInfo('plan', planName)
       set(state, chatId, 'action', plan)
       const message = generatePlanText(plan);
@@ -996,12 +999,12 @@ bot?.on('message', async msg => {
 
     // Step 3.1: Proceed with Email
     proceedWithEmail: (domainName, domainPrice) => {
-      let hostingPrice = parseFloat(STARTER_PLAN_HOSTING_PRICE)
+      let hostingPrice = parseFloat(HOSTING_STARTER_PLAN_PRICE)
 
       if (info.plan === a.businessPlan) {
-        hostingPrice = parseFloat(STARTER_PLAN_HOSTING_PRICE)
+        hostingPrice = parseFloat(HOSTING_STARTER_PLAN_PRICE)
       } else if (info.plan === a.proPlan) {
-        hostingPrice = parseFloat(PRO_PLAN_HOSTING_PRICE)
+        hostingPrice = parseFloat(HOSTING_PRO_PLAN_PRICE)
       }
 
       if (info.existingDomain) {
