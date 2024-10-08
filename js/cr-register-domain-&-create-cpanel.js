@@ -15,6 +15,7 @@ async function registerDomainAndCreateCpanel(send, info, keyboardButtons, state)
     domain: info.website_name,
     existingDomain: info.existingDomain || false,
     plan: info.plan,
+    nameserver: info.nameserver
   }
   const headers = {
     accept: 'application/json',

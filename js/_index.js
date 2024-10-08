@@ -102,7 +102,18 @@ const createCustomShortUrlCuttly = require('./customCuttly.js')
 const schedule = require('node-schedule')
 const { registerDomainAndCreateCpanel } = require('./cr-register-domain-&-create-cpanel.js')
 const { isEmail } = require('validator')
-const { generatePlanText, generatePlanStepText, generateDomainFoundText, generateInvoiceText, confirmEmailBeforeProceeding, generateExistingDomainText, showCryptoPaymentInfo, domainNotFound, bankPayDomain } = require('./hosting/plans.js')
+const {
+  generatePlanText,
+  generatePlanStepText,
+  generateDomainFoundText,
+  generateInvoiceText,
+  nameserverSelectionText,
+  confirmEmailBeforeProceeding,
+  generateExistingDomainText,
+  showCryptoPaymentInfo,
+  domainNotFound,
+  bankPayDomain,
+} = require('./hosting/plans.js')
 
 process.env['NTBA_FIX_350'] = 1
 const DB_NAME = process.env.DB_NAME
@@ -379,6 +390,7 @@ bot?.on('message', async msg => {
     getPlanNow: 'getPlanNow',
     domainAvailableContinue: 'domainAvailableContinue',
     continueWithDomainNameSBS: 'continueWithDomainNameSBS',
+    nameserverSelectionSBS: 'nameserverSelectionSBS',
     proceedSearchAnotherDomain: 'proceedSearchAnotherDomain',
     confirmEmailBeforeProceedingSBS: 'confirmEmailBeforeProceedingSBS',
 
@@ -393,6 +405,7 @@ bot?.on('message', async msg => {
     useExistingDomain: 'useExistingDomain',
     useExistingDomainFound: 'useExistingDomainFound',
     domainNotFound: 'domainNotFound',
+    nameserverSelection: 'nameserverSelection',
     enterYourEmail: 'enterYourEmail',
     confirmEmailBeforeProceeding: 'confirmEmailBeforeProceeding',
     proceedWithEmail: 'proceedWithEmail',
@@ -859,6 +872,12 @@ bot?.on('message', async msg => {
       saveInfo('website_name', websiteName)
       send(chatId, t.trialPlanContinueWithDomainNameSBSMatched(websiteName), k.of([[user.continueWithDomainNameSBS(websiteName)], [user.searchAnotherDomain], [t.backButton]]))
     },
+    nameserverSelectionSBS: (websiteName) => {
+      set(state, chatId, 'action', a.nameserverSelectionSBS)
+      saveInfo('nameserver', user.privHostNS)
+      const actions = [[user.privHostNS], [user.cloudflareNS], [t.backButton]];
+      send(chatId, t.trialPlanNameserverSelection(websiteName), k.of(actions))
+    },
     proceedContinueWithDomainNameSBS: () => {
       set(state, chatId, 'action', a.continueWithDomainNameSBS)
       send(chatId, t.trialPlanDomainNameMatched, k.of([[t.backButton]]))
@@ -967,20 +986,28 @@ bot?.on('message', async msg => {
       send(chatId, domainNotFound(websiteName), bc)
     },
 
-    // Step 2.5: Enter your email
+    // Step 3: Nameserver Selection
+    nameserverSelection: (websiteName) => {
+      set(state, chatId, 'action', a.nameserverSelection)
+      saveInfo('nameserver', user.privHostNS)
+      const actions = [[user.privHostNS], [user.cloudflareNS]];
+      send(chatId, nameserverSelectionText(websiteName), k.of(actions))
+    },
+
+    // Step 4: Enter your email
     enterYourEmail: () => {
       set(state, chatId, 'action', a.enterYourEmail)
       send(chatId, generatePlanStepText('enterYourEmail'), bc)
     },
 
-    // Step 3: Confirm Email
+    // Step 4.1: Confirm Email
     confirmEmailBeforeProceeding: (email) => {
       saveInfo('email', email)
       set(state, chatId, 'action', a.confirmEmailBeforeProceeding)
       send(chatId, confirmEmailBeforeProceeding(email), k.of([t.yesProceedWithThisEmail(email)]))
     },
 
-    // Step 3.1: Proceed with Email
+    // Step 4.2: Proceed with Email
     proceedWithEmail: (domainName, domainPrice) => {
       let hostingPrice = parseFloat(HOSTING_STARTER_PLAN_PRICE)
 
@@ -1014,7 +1041,7 @@ bot?.on('message', async msg => {
       )
     },
 
-    // Step 4: Ask Coupon
+    // Step 5: Ask Coupon
     plansAskCoupon: action => {
       saveInfo('couponApplied', false)
       saveInfo('couponDiscount', 0)
@@ -1022,7 +1049,7 @@ bot?.on('message', async msg => {
       set(state, chatId, 'action', a.askCoupon + action)
     },
 
-    // Step 4.1: Skip Coupon
+    // Step 5.1: Skip Coupon
     skipCoupon: (action) => {
       set(state, chatId, 'action', a.skipCoupon)
       saveInfo('couponApplied', false)
@@ -1030,12 +1057,12 @@ bot?.on('message', async msg => {
       goto[action]()
     },
 
-    // Step 5: Proceed with Payment
+    // Step 6: Proceed with Payment
     proceedWithPaymentProcess: async () => {
       send(chatId, generatePlanStepText('paymentConfirmation'), k.of([t.iHaveSentThePayment]))
     },
 
-    // Step 5.1: I have sent the payment
+    // Step 6.1: I have sent the payment
     iHaveSentThePayment: async () => {
       set(state, chatId, 'action', a.iHaveSentThePayment)
       send(chatId, generatePlanStepText('paymentSuccess'), k.of([t.iHaveSentThePayment]))
@@ -1478,11 +1505,20 @@ bot?.on('message', async msg => {
 
   if (action === a.domainAvailableContinue) {
     if (message === t.backButton || message === user.searchAnotherDomain) return goto.getFreeTrialPlanNow()
-    if ((message === user.continueWithDomainNameSBS(info.website_name))) return goto.proceedContinueWithDomainNameSBS()
+    if ((message === user.continueWithDomainNameSBS(info.website_name))) return goto.nameserverSelectionSBS(info.website_name)
+  }
+
+  if(action === a.nameserverSelectionSBS) {
+    if (message === t.backButton) return goto.continueWithDomainNameSBS(info.website_name)
+    if (message === user.privHostNS || message === user.cloudflareNS) {
+      let nameserver = message === user.privHostNS ? 'privhost' : 'cloudflare'
+      saveInfo('nameserver', nameserver)
+    }
+    return goto.proceedContinueWithDomainNameSBS()
   }
 
   if (action === a.continueWithDomainNameSBS) {
-    if (message === t.backButton) return goto.continueWithDomainNameSBS(info.website_name)
+    if (message === t.backButton) return goto.nameserverSelectionSBS(info.website_name)
     if (!isEmail(message)) return goto.displayEmailValidationError()
     return goto.confirmEmailBeforeProceedingSBS(message)
   }
@@ -1572,7 +1608,7 @@ bot?.on('message', async msg => {
     if (message === "Back" || message === user.searchAnotherDomain) return goto.registerNewDomain()
     if (message === user.continueWithDomain(info.website_name)) {
       await saveInfo('continue_domain_last_state', 'registerNewDomain')
-      return goto.enterYourEmail()
+      return goto.nameserverSelection(info.website_name)
     }
   }
 
@@ -1584,10 +1620,28 @@ bot?.on('message', async msg => {
     }
   }
 
-  if (action === a.enterYourEmail) {
+  if (action === a.nameserverSelection) {
     if (message === 'Back') {
       if (info?.continue_domain_last_state === 'registerNewDomain') return goto.registerNewDomainFound(info.website_name)
       else if (info?.continue_domain_last_state === 'useExistingDomain') return goto.useExistingDomainFound(info.website_name)
+    }
+
+    if (message === user.privHostNS || message === user.cloudflareNS) {
+      let nameserver = message === user.privHostNS ? 'privhost' : 'cloudflare'
+      saveInfo('nameserver', nameserver)
+    }
+
+    return goto.enterYourEmail()
+  }
+
+  if (action === a.enterYourEmail) {
+    if (message === 'Back') {
+        if (info?.continue_domain_last_state === 'registerNewDomain') {
+          return goto.nameserverSelection(info.website_name)
+        }
+        else if (info?.continue_domain_last_state === 'useExistingDomain') {
+          return goto.useExistingDomainFound(info.website_name)
+        }
     }
 
     if (!isValidEmail(message)) {

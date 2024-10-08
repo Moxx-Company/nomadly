@@ -74,6 +74,7 @@ const generateDomainFoundText = (websiteName, price) =>
   `The domain ${websiteName} is available!. The cost is $${price}.`
 const generateExistingDomainText = websiteName => `You have selected ${websiteName} as your domain.`
 const domainNotFound = websiteName => `The domain ${websiteName} is not available.`
+const nameserverSelectionText = websiteName => `Please select the nameserver provider you would like to use for ${websiteName}.`
 const confirmEmailBeforeProceeding = email => `Are you sure you want to proceed with this ${email} email?`
 
 const generateInvoiceText = payload => `
@@ -135,6 +136,7 @@ module.exports = {
   generateDomainFoundText,
   generateExistingDomainText,
   generateInvoiceText,
+  nameserverSelectionText,
   confirmEmailBeforeProceeding,
   showCryptoPaymentInfo,
   domainNotFound,
