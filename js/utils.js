@@ -297,7 +297,7 @@ async function planGetNewDomain(message, chatId, send, saveInfo, verbose = true)
 
     saveDomainInfo(saveInfo, modifiedDomain, price, originalPrice)
 
-    return { modifiedDomain, price, domainType }
+    return { modifiedDomain, price, domainType, chatMessage }
   } catch (error) {
     return getDefaultDomainResponse()
   }

@@ -1490,10 +1490,10 @@ bot?.on('message', async msg => {
        return send(chatId, t.trialPlanGetNowInvalidDomain, k.of([[user.backToFreeTrial]]))
     }
 
-    const { modifiedDomain, price, domainType } = await planGetNewDomain(message, chatId, send, saveInfo, false);
+    const { modifiedDomain, price, domainType, chatMessage } = await planGetNewDomain(message, chatId, send, saveInfo, false);
 
     if (modifiedDomain === null || price === null) {
-      return send(chatId, t.trialPlanSBSDomainNotMatched)
+      return send(chatId, chatMessage)
     }
 
     if (domainType === 'Premium') {

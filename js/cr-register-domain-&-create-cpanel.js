@@ -29,6 +29,9 @@ async function registerDomainAndCreateCpanel(send, info, keyboardButtons, state)
     if (response.request.res.statusCode === 201) {
       response = response.data.data
 
+      send(info._id, planSuccessText(info, response), keyboardButtons)
+      set(state, info._id, 'action', 'none')
+
       removeKeysFromDocumentById(state, info._id, [
         'plan',
         'existingDomain',
@@ -44,9 +47,6 @@ async function registerDomainAndCreateCpanel(send, info, keyboardButtons, state)
         'totalPrice',
         'newPrice',
       ])
-
-      set(state, info._id, 'action', 'none')
-      send(info._id, planSuccessText(info.plan, response.username, info.email, response.password, response.url), keyboardButtons)
 
       let emailText;
       if (info.plan === 'Freedom Plan') {

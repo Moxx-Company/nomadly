@@ -109,19 +109,20 @@ Please note, crypto transactions can take up to 30 minutes to complete. Once the
 Best regards,
 ${CHAT_BOT_NAME}`
 
-const planSuccessText = (plan, username, email, password, URL) =>
-`Here are your cPanel Credentials for ${plan}:
+const planSuccessText = (info, response) =>
+`Here are your cPanel Credentials for ${info.plan}:
 
-Username: ${username}
-Email: ${email}
-Password: ${password}
-URL: ${URL}
-
+Domain: ${info.website_name}
+Username: ${response.username}
+Email: ${info.email}
+Password: ${response.password}
+URL: ${response.url}
+${info.existingDomain || info.nameserver === 'privhost' ? `
 <b>Nameservers</b>
   - ns1.priv.host
   - ns2.priv.host
-
-Your cPanel credentials has been successfully sent to your email ${email} as well`
+` : ''}
+Your cPanel credentials has been successfully sent to your email ${info.email} as well`
 
 const cPanelSupport = plan => `Something went wrong while setting up ${plan}. Please contact support ${SUPPORT_USERNAME}. Discover more ${TG_HANDLE}.`
 
