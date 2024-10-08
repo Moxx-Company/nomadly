@@ -276,58 +276,43 @@ async function checkFreeTrialTaken(c, chatId) {
 const checkDomainAvailability = domainName => checkDomainAvailable(domainName)
 const planCheckExistingDomain = domainName => checkExistingDomain(domainName)
 
-async function fetchDomainPrice(message, chatId, send, saveInfo, starterPlanDomainNotFound) {
+async function planGetNewDomain(message, chatId, send, saveInfo, verbose = true) {
   try {
     let modifiedDomain = removeProtocolFromDomain(message)
 
-    const { available, price, originalPrice } = await checkDomainPriceOnline(modifiedDomain)
+    const { available, originalPrice, price, chatMessage, domainType } = await getNewDomain(modifiedDomain)
 
     if (!available) {
-      await send(chatId, starterPlanDomainNotFound)
-      return { modifiedDomain: null, price: null }
+      if(verbose) {
+        await send(chatId, chatMessage)
+      }
+      return getDefaultDomainResponse()
     }
 
     if (!originalPrice) {
       await send(TELEGRAM_DEV_CHAT_ID, 'Some issue in getting price')
-      await send(chatId, 'Some issue in getting price')
-      return { modifiedDomain: null, price: null }
+      if(verbose) {
+        await send(chatId, 'Some issue in getting price')
+      }
+      return getDefaultDomainResponse()
     }
 
-    saveInfo('price', price)
-    saveInfo('domain', modifiedDomain)
-    saveInfo('originalPrice', originalPrice)
+    saveDomainInfo(saveInfo, modifiedDomain, price, originalPrice)
 
-    return { modifiedDomain, price }
+    return { modifiedDomain, price, domainType }
   } catch (error) {
-    return { modifiedDomain: null, price: null }
+    return getDefaultDomainResponse()
   }
 }
 
-async function planGetNewDomain(message, chatId, send, saveInfo) {
-  try {
-    let modifiedDomain = removeProtocolFromDomain(message)
+function getDefaultDomainResponse() {
+  return { modifiedDomain: null, price: null, domainType: null }
+}
 
-    const { available, originalPrice, price, chatMessage } = await getNewDomain(modifiedDomain)
-
-    if (!available) {
-      await send(chatId, chatMessage)
-      return { modifiedDomain: null, price: null }
-    }
-
-    if (!originalPrice) {
-      await send(TELEGRAM_DEV_CHAT_ID, 'Some issue in getting price')
-      await send(chatId, 'Some issue in getting price')
-      return { modifiedDomain: null, price: null }
-    }
-
-    saveInfo('price', price)
-    saveInfo('domain', modifiedDomain)
-    saveInfo('originalPrice', originalPrice)
-
-    return { modifiedDomain, price }
-  } catch (error) {
-    return { modifiedDomain: null, price: null }
-  }
+function saveDomainInfo(saveInfo, modifiedDomain, price, originalPrice) {
+  saveInfo('price', price)
+  saveInfo('domain', modifiedDomain)
+  saveInfo('originalPrice', originalPrice)
 }
 
 // log(format('1', '4'))
@@ -366,7 +351,6 @@ module.exports = {
   isNormalUser,
   subscribePlan,
   regularCheckDns,
-  fetchDomainPrice,
   checkFreeTrialTaken,
   extractPhoneNumbers,
   sendMessageToAllUsers,

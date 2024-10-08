@@ -2,18 +2,18 @@ require('dotenv').config()
 const axios = require('axios')
 const { log } = require('console')
 const sendEmail = require('./send-email')
-const { assignPackageToUser } = require('./db')
+const { assignPackageToUser, set, removeKeysFromDocumentById } = require('./db')
 const { t } = require('./config')
-const { cPanelSupport, planSuccessText, successEmailText } = require('./hosting/plans')
+const { cPanelSupport, planSuccessText } = require('./hosting/plans')
 
 async function registerDomainAndCreateCpanel(send, info, keyboardButtons, state) {
   const url = process.env.CPANEL_CREATE_ACCOUNT_URL
   const payload = {
-    telegramId: info._id+2,
+    telegramId: info._id,
     name: info.username,
     email: info.email,
     domain: info.website_name,
-    existingDomain: info.existingDomain,
+    existingDomain: info.existingDomain || false,
     plan: info.plan,
   }
   const headers = {
@@ -27,14 +27,32 @@ async function registerDomainAndCreateCpanel(send, info, keyboardButtons, state)
 
     if (response.request.res.statusCode === 201) {
       response = response.data.data
+
+      removeKeysFromDocumentById(state, info._id, [
+        'plan',
+        'existingDomain',
+        'price',
+        'domain',
+        'website_name',
+        'originalPrice',
+        'continue_domain_last_state',
+        'email',
+        'couponDiscount',
+        'hostingPrice',
+        'couponApplied',
+        'totalPrice',
+        'newPrice',
+      ])
+
+      set(state, info._id, 'action', 'none')
       send(info._id, planSuccessText(info.plan, response.username, info.email, response.password, response.url), keyboardButtons)
 
-      let emailText = '';
+      let emailText;
       if (info.plan === 'Freedom Plan') {
-        emailText = t.trialPlanEmailText;
+        emailText = t.trialPlanEmailText
         assignPackageToUser(state, info._id, info.plan, 12)
       } else {
-        emailText = "";
+        emailText = ''
         assignPackageToUser(state, info._id, info.plan)
       }
       await sendEmail(
@@ -44,7 +62,7 @@ async function registerDomainAndCreateCpanel(send, info, keyboardButtons, state)
         response.username,
         response.password,
         response.url,
-        emailText
+        emailText,
       )
     } else {
       return send(info._id, cPanelSupport(info.plan), keyboardButtons)

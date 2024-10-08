@@ -81,15 +81,13 @@ const getNewDomain = async domainName => {
     response = response.data.data
     console.log('Response:', response);
 
-    let { registrationFee, registrationFees } = response.responseData;
+    let { registrationFee, registrationFees, domainType } = response.responseData;
 
     if (registrationFees) {
       domainPrice = registrationFees
     } else {
       domainPrice = registrationFee
     }
-
-
 
     const price = Math.ceil(domainPrice * PERCENT_INCREASE_DOMAIN)
 
@@ -101,6 +99,7 @@ const getNewDomain = async domainName => {
       originalPrice: domainPrice,
       price: price > 5 ? price : 6,
       chatMessage,
+      domainType
     }
   } catch (error) {
     if (error.response.status === 409) {

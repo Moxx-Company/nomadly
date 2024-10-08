@@ -63,10 +63,7 @@ const generatePlanStepText = step => {
     enterYourEmail: 'Please provide your email address to create your account and send your receipt.',
     invalidEmail: 'Please provide a valid email',
     paymentConfirmation: 'Please confirm the transaction to proceed with your purchase.',
-    paymentSuccess: `Payment successful. Thank you!,
-    Check your email for details.
-    Best regards!
-    ${CHAT_BOT_NAME}`,
+    paymentSuccess: `We are verifying your payment. You will be promptly notified as soon as it is confirmed. Thank you for choosing us!`,
     paymentFailed: 'Payment failed. Please try again.',
   }
 
@@ -125,7 +122,6 @@ URL: ${URL}
 
 Your cPanel credentials has been successfully sent to your email ${email} as well`
 
-const successEmailText = 'Please log in to your cPanel to manage your website and services.'
 const cPanelSupport = plan => `Something went wrong while setting up ${plan}. Please contact support ${SUPPORT_USERNAME}. Discover more ${TG_HANDLE}.`
 
 const bankPayDomain = (priceNGN, plan) => `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your ${plan} will be seamlessly activated.
@@ -143,7 +139,6 @@ module.exports = {
   showCryptoPaymentInfo,
   domainNotFound,
   planSuccessText,
-  successEmailText,
   cPanelSupport,
   bankPayDomain,
 }

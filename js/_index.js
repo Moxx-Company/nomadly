@@ -70,11 +70,8 @@ const {
   sendQr,
   sleep,
   sendMessage,
-  fetchDomainPrice,
   checkFreeTrialTaken,
-  checkDomainAvailability,
   removeProtocolFromDomain,
-  isDomainAssociatedWithUser,
   planCheckExistingDomain,
   planGetNewDomain,
 } = require('./utils.js')
@@ -105,7 +102,7 @@ const createCustomShortUrlCuttly = require('./customCuttly.js')
 const schedule = require('node-schedule')
 const { registerDomainAndCreateCpanel } = require('./cr-register-domain-&-create-cpanel.js')
 const { isEmail } = require('validator')
-const { generatePlanText, generatePlanStepText, generateDomainFoundText, generateInvoiceText, confirmEmailBeforeProceeding, generateExistingDomainText, showCryptoPaymentInfo, domainNotFound, planSuccessText, bankPayDomain } = require('./hosting/plans.js')
+const { generatePlanText, generatePlanStepText, generateDomainFoundText, generateInvoiceText, confirmEmailBeforeProceeding, generateExistingDomainText, showCryptoPaymentInfo, domainNotFound, bankPayDomain } = require('./hosting/plans.js')
 
 process.env['NTBA_FIX_350'] = 1
 const DB_NAME = process.env.DB_NAME
@@ -368,12 +365,6 @@ bot?.on('message', async msg => {
     info = await get(state, chatId)
   }
 
-  let transactionInfo = await get(hostingTransactions, chatId)
-  const saveTransaction = async (key, value) => {
-    await insert(hostingTransactions, chatId, key, value)
-    transactionInfo = await get(hostingTransactions, chatId)
-  }
-
   const action = info?.action
   // actions
   const a = {
@@ -488,6 +479,7 @@ bot?.on('message', async msg => {
       const payload = {
         domainName: info.website_name,
         domainPrice: info.price,
+        existingDomain: info.existingDomain,
         couponDiscount: info.couponDiscount,
         totalPrice: info.totalPrice,
         couponApplied: info.couponApplied,
@@ -862,15 +854,6 @@ bot?.on('message', async msg => {
       saveInfo('plan', 'Freedom Plan')
       send(chatId, t.getFreeTrialPlan, k.of([[user.backToFreeTrial]]))
     },
-    inValidSBSDomainName: () => {
-      send(chatId, t.trialPlanGetNowInvalidDomain, k.of([[user.backToFreeTrial]]))
-    },
-    SBSDomainNotFound: () => {
-      send(chatId, t.trialPlanSBSDomainNotMatched)
-    },
-    SBSDomainIsPremium: () => {
-      send(chatId, t.trialPlanSBSDomainIsPremium)
-    },
     continueWithDomainNameSBS: (websiteName) => {
       set(state, chatId, 'action', a.domainAvailableContinue)
       saveInfo('website_name', websiteName)
@@ -914,7 +897,7 @@ bot?.on('message', async msg => {
       set(state, chatId, 'action', plan)
       const message = generatePlanText(plan);
 
-      let actions = [[user.buyStarterPlan], [user.viewProPlan, user.viewBusinessPlan], [user.backToHostingPlans]];;
+      let actions = [[user.buyStarterPlan], [user.viewProPlan, user.viewBusinessPlan], [user.backToHostingPlans]];
       if (plan === a.businessPlan) {
         actions = [[user.buyBusinessPlan], [user.viewProPlan, user.viewStarterPlan], [user.backToHostingPlans]];
       } else if (plan === a.proPlan) {
@@ -1002,7 +985,7 @@ bot?.on('message', async msg => {
       let hostingPrice = parseFloat(HOSTING_STARTER_PLAN_PRICE)
 
       if (info.plan === a.businessPlan) {
-        hostingPrice = parseFloat(HOSTING_STARTER_PLAN_PRICE)
+        hostingPrice = parseFloat(HOSTING_BUSINESS_PLAN_PRICE)
       } else if (info.plan === a.proPlan) {
         hostingPrice = parseFloat(HOSTING_PRO_PLAN_PRICE)
       }
@@ -1048,37 +1031,17 @@ bot?.on('message', async msg => {
     },
 
     // Step 5: Proceed with Payment
-    proceedWithPaymentProcess: () => {
-      set(state, chatId, 'action', a.proceedWithPaymentProcess)
+    proceedWithPaymentProcess: async () => {
       send(chatId, generatePlanStepText('paymentConfirmation'), k.of([t.iHaveSentThePayment]))
     },
 
     // Step 5.1: I have sent the payment
-    iHaveSentThePayment: () => {
+    iHaveSentThePayment: async () => {
       set(state, chatId, 'action', a.iHaveSentThePayment)
-      if (info?.ref == transactionInfo?.ref) {
-        send(chatId, generatePlanStepText('paymentSuccess'), k.of([t.iHaveSentThePayment]))
-      } else {
-        send(chatId, generatePlanStepText('paymentFailed'), k.of([t.iHaveSentThePayment]))
-      }
+      send(chatId, generatePlanStepText('paymentSuccess'), k.of([t.iHaveSentThePayment]))
     },
-
-    // Step 6: Pay using wallet usd
-    payUsingWalletUsd: () => {
-      set(state, chatId, 'action', a.walletPayUsd)
-      send(chatId, generatePlanStepText('payUsingWallet'), k.of([t.iHaveSentThePayment]))
-    },
-
-    // Step 6.1: Pay using wallet ngn
-    payUsingWalletNgn: () => {
-      set(state, chatId, 'action', a.walletPayNgn)
-      send(chatId, generatePlanStepText('payUsingWallet'), k.of([t.iHaveSentThePayment]))
-    },
-
-    getInfo: () => {
-      return info
-    }
   }
+
   const walletOk = {
     'plan-pay': async coin => {
       set(state, chatId, 'action', 'none')
@@ -1495,14 +1458,22 @@ bot?.on('message', async msg => {
 
   if (action === a.getPlanNow) {
     if (message === user.backToFreeTrial) return goto.freeTrial()
-    if (!message.endsWith('.sbs') && message) return goto.inValidSBSDomainName()
-    let modifiedDomain = removeProtocolFromDomain(message)
-    let result = await checkDomainAvailability(modifiedDomain)
-    if (result.data.responseMsg.statusCode === 404 || result.data.responseMsg.statusCode === 400) return goto.SBSDomainNotFound()
-    else if (result.data.responseMsg.statusCode === 200) {
-      if (result.data.responseData.domainType === 'Premium') return goto.SBSDomainIsPremium()
-      return goto.continueWithDomainNameSBS(result.config.params.websiteName)
+
+    if (!message.endsWith('.sbs') && message) {
+       return send(chatId, t.trialPlanGetNowInvalidDomain, k.of([[user.backToFreeTrial]]))
     }
+
+    const { modifiedDomain, price, domainType } = await planGetNewDomain(message, chatId, send, saveInfo, false);
+
+    if (modifiedDomain === null || price === null) {
+      return send(chatId, t.trialPlanSBSDomainNotMatched)
+    }
+
+    if (domainType === 'Premium') {
+      return send(chatId, t.trialPlanSBSDomainIsPremium)
+    }
+
+    return goto.continueWithDomainNameSBS(modifiedDomain)
   }
 
   if (action === a.domainAvailableContinue) {
@@ -1522,8 +1493,23 @@ bot?.on('message', async msg => {
   }
 
 
+  // Starter Plan
+  if (message === user.starterPlan) {
+    return goto.selectPlan(a.starterPlan)
+  }
 
- //Business Plan
+  if (action === a.starterPlan) {
+    if (message === user.backToHostingPlans) return goto.submenu3()
+    if (message === user.buyStarterPlan) return goto.buyPlan(action)
+    if (message === user.backToStarterPlanDetails) return goto.selectPlan(a.starterPlan)
+    if (message === user.registerANewDomain) return goto.registerNewDomain()
+    if (message === user.useExistingDomain) return goto.useExistingDomain()
+    if (message === user.viewProPlan) return goto.selectPlan(a.proPlan)
+    if (message === user.viewBusinessPlan) return goto.selectPlan(a.businessPlan)
+  }
+
+
+  // Business Plan
   if (message === user.businessPlan) {
     return goto.selectPlan(a.businessPlan)
   }
@@ -1539,8 +1525,8 @@ bot?.on('message', async msg => {
   }
 
 
-   //Pro Plan
-   if (message === user.proPlan) {
+  // Pro Plan
+  if (message === user.proPlan) {
     return goto.selectPlan(a.proPlan)
   }
 
@@ -1554,21 +1540,6 @@ bot?.on('message', async msg => {
     if (message === user.viewStarterPlan) return goto.selectPlan(a.starterPlan)
   }
 
-
-  //Starter Plan
-  if (message === user.starterPlan) {
-    return goto.selectPlan(a.starterPlan)
-  }
-
-  if (action === a.starterPlan) {
-    if (message === user.backToHostingPlans) return goto.submenu3()
-    if (message === user.buyStarterPlan) return goto.buyPlan(action)
-    if (message === user.backToStarterPlanDetails) return goto.selectPlan(a.starterPlan)
-    if (message === user.registerANewDomain) return goto.registerNewDomain()
-    if (message === user.useExistingDomain) return goto.useExistingDomain()
-    if (message === user.viewProPlan) return goto.selectPlan(a.proPlan)
-    if (message === user.viewBusinessPlan) return goto.selectPlan(a.businessPlan)
-  }
 
   if (action === a.registerNewDomain) {
     if (message === 'Back') return goto.buyPlan(a.starterPlan)
@@ -1640,10 +1611,6 @@ bot?.on('message', async msg => {
   if (action === a.proceedWithPaymentProcess) {
     if (message === "Back") return goto['domain-pay-by-plan']()
     if (message === t.iHaveSentThePayment) return goto.iHaveSentThePayment()
-  }
-
-  if (action === a.walletPayUsd) {
-
   }
 
   // shortURL
@@ -1994,7 +1961,7 @@ bot?.on('message', async msg => {
     const payOption = message
 
     if (payOption === payIn.crypto) {
-      set(state, chatId, 'action', 'crypto-pay-domain-by-plan')
+      set(state, chatId, 'action', 'crypto-pay-hosting')
       return send(chatId, `Please choose a crypto currency`, k.of(tickerViews))
     }
 
@@ -2029,7 +1996,7 @@ bot?.on('message', async msg => {
     console.log('showDepositNgnInfo', url)
     return send(chatId, bankPayDomain(priceNGN, info.plan), payBank(url), k.of([t.iHaveSentThePayment]))
   }
-  if (action === 'crypto-pay-domain-by-plan') {
+  if (action === 'crypto-pay-hosting') {
     if (message === 'Back') return goto['domain-pay-by-plan']()
     const tickerView = message
     const coin = tickerOf[tickerView]
@@ -2040,7 +2007,7 @@ bot?.on('message', async msg => {
 
     const ref = nanoid()
     set(chatIdOfPayment, ref, { chatId, price, domain })
-    const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-domain-by-plan?a=b&ref=${ref}&`)
+    const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-hosting?a=b&ref=${ref}&`)
 
     log({ ref })
     await sendQrCode(bot, chatId, bb)
@@ -2968,12 +2935,12 @@ const bankApis = {
   '/bank-pay-domain-hosting': async (req, res, ngnIn) => {
     // Validate
     const { ref, chatId, price } = req.pay
+    const response = req?.query
     if (!ref || !chatId || !price) return log(t.argsErr) || res.send(html(t.argsErr))
 
     // Logs
     del(chatIdOfPayment, ref)
     const usdIn = await ngnToUsd(ngnIn)
-    const name = await get(nameOf, chatId)
     await insert(hostingTransactions, chatId, "bank", response)
 
     // Update Wallet
@@ -3184,13 +3151,13 @@ app.get('/crypto-pay-domain', auth, async (req, res) => {
   res.send(html())
 })
 
-// Paid Plan subscription of domains
-app.get('/crypto-pay-domain-by-plan', auth, async (req, res) => {
+// Hosting
+app.get('/crypto-pay-hosting', auth, async (req, res) => {
   // Validate
   const { ref, chatId, price } = req.pay
   const coin = req?.query?.coin
   const value = req?.query?.value_coin
-  const response = res.req?.query
+  const response = req?.query
 
   if (!ref || !chatId || !price || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
 
@@ -3214,7 +3181,7 @@ app.get('/crypto-pay-domain-by-plan', auth, async (req, res) => {
   const cPanelCreation = await registerDomainAndCreateCpanel(send, info, o, state)
 
   if (cPanelCreation) return res.send(html(cPanelCreation))
-  send(chatId, usdIn)
+
   res.send(html())
 })
 app.get('/crypto-wallet', auth, async (req, res) => {

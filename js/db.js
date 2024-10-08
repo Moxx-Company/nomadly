@@ -75,12 +75,58 @@ async function set(c, key, value, valueInside) {
 
 async function insert(collection, chatId, key, value) {
   try {
-    await collection.insertOne({ _id: chatId, [key]: value });
+    await collection.insertOne({
+      chatId: chatId,
+      [key]: value,
+      timestamp: new Date()
+    });
   } catch (error) {
     console.error(`Error setting: ${key} -> ${JSON.stringify(value)} in ${collection.collectionName}:`, error);
   }
 }
 
+async function getLatestTransactionByChatId(collection, chatId) {
+  try {
+    const result = await collection.find({ chatId: chatId })
+      .sort({ timestamp: -1 })
+      .limit(1)
+      .toArray();
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error(`Error getting transaction for chatId ${chatId} from ${collection.collectionName}:`, error);
+    return null;
+  }
+}
+
+async function removeKeyFromDocumentById(collection, chatId, key) {
+  try {
+    const query = { _id: chatId }; // Query to find the document by _id field
+    const update = { $unset: { [key]: "" } }; // Unset the specific key
+
+    const result = await collection.updateOne(query, update);
+
+    if (result.matchedCount === 0) {
+      console.log(`No document found with chatId: ${chatId}`);
+    } else if (result.modifiedCount === 0) {
+      // console.log(`Key: ${key} was not found in document with chatId: ${chatId}`);
+    } else {
+      console.log(`Successfully removed key: ${key} from document with chatId: ${chatId}`);
+    }
+  } catch (error) {
+    console.error(`Error removing key: ${key} from document with _id: ${chatId}:`, error);
+  }
+}
+
+async function removeKeysFromDocumentById(collection, chatId, keys) {
+  try {
+    for (const key of keys) {
+      await removeKeyFromDocumentById(collection, chatId, key);
+    }
+    console.log(`Successfully removed keys: ${keys.join(", ")} from document with chatId: ${chatId}`);
+  } catch (error) {
+    console.error(`Error removing keys: ${keys.join(", ")} from document with _id: ${chatId}:`, error);
+  }
+}
 
 async function assignPackageToUser(c, chatId, packageName, totalExpireHoursDuration = 1) {
   const now = new Date()
@@ -152,4 +198,14 @@ async function del(c, _id) {
   }
 }
 
-module.exports = { increment, decrement, get, set, del, getAll, assignPackageToUser, insert }
+module.exports = {
+  increment,
+  decrement,
+  get,
+  set,
+  del,
+  getAll,
+  assignPackageToUser,
+  insert,
+  removeKeysFromDocumentById
+}
