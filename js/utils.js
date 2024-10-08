@@ -7,8 +7,7 @@ const { t, timeOf, freeDomainsOf, o } = require('./config')
 const { getAll, get, set } = require('./db')
 const { log } = require('console')
 const resolveDns = require('./resolve-cname.js')
-const { checkDomainAvailable, checkExistingDomain, getNewDomain } = require('./cr-check-domain-available')
-const { checkDomainPriceOnline } = require('./cr-domain-price-get.js')
+const { checkExistingDomain, getNewDomain } = require('./cr-check-domain-available')
 const TELEGRAM_DEV_CHAT_ID = process.env.TELEGRAM_DEV_CHAT_ID
 
 const HIDE_SMS_APP = process.env.HIDE_SMS_APP
@@ -273,7 +272,6 @@ async function checkFreeTrialTaken(c, chatId) {
   return 'not_taken' // If neither current nor previous packages are 'Freedom Plan'
 }
 
-const checkDomainAvailability = domainName => checkDomainAvailable(domainName)
 const planCheckExistingDomain = domainName => checkExistingDomain(domainName)
 
 async function planGetNewDomain(message, chatId, send, saveInfo, verbose = true) {
@@ -354,7 +352,6 @@ module.exports = {
   checkFreeTrialTaken,
   extractPhoneNumbers,
   sendMessageToAllUsers,
-  checkDomainAvailability,
   planGetNewDomain,
   planCheckExistingDomain,
   removeProtocolFromDomain,

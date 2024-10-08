@@ -5,32 +5,6 @@ const axios = require('axios')
 const API_ADDRESS = process.env.CPANEL_CREATE_ACCOUNT_URL;
 const PERCENT_INCREASE_DOMAIN = 1 + Number(process.env.PERCENT_INCREASE_DOMAIN)
 
-const checkDomainAvailable = async websiteName => {
-  try {
-    const API_KEY = process.env.API_KEY_CONNECT_RESELLER
-    const URL = 'https://api.connectreseller.com/ConnectReseller/ESHOP/checkdomainavailable'
-
-    const params = {
-      APIKey: API_KEY,
-      websiteName: websiteName,
-    }
-
-    const response = await axios.get(URL, { params })
-
-    if (response?.status === 200) {
-      const domainDetails = response
-      // console.log('Domain Details:', domainDetails);
-      return domainDetails
-    } else {
-      console.error('Failed to fetch domain details')
-      return null
-    }
-  } catch (error) {
-    console.error('Error:', error)
-    throw error
-  }
-}
-
 const checkExistingDomain = async websiteName => {
   try {
     const URL = `${API_ADDRESS}/domain/existing?domain=${websiteName}`
@@ -63,7 +37,6 @@ const checkExistingDomain = async websiteName => {
     }
   }
 }
-
 
 const getNewDomain = async domainName => {
   const apiUrl = `${API_ADDRESS}/domain/new?domain=${domainName}`
@@ -123,4 +96,4 @@ const getNewDomain = async domainName => {
   }
 }
 
-module.exports = {checkDomainAvailable, checkExistingDomain, getNewDomain}
+module.exports = {checkExistingDomain, getNewDomain}
