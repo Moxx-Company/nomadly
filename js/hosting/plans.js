@@ -14,7 +14,7 @@ const plans = {
     price: 10.0,
     idealFor: 'Personal blogs, small business websites, or portfolios',
   },
-  businessPlan: {
+  proPlan: {
     name: 'Business Plan',
     storage: '50 GB SSD',
     bandwidth: '200 GB',
@@ -24,7 +24,7 @@ const plans = {
     price: 20.0,
     idealFor: 'Business websites, larger projects',
   },
-  proPlan: {
+  businessPlan: {
     name: 'Pro Plan',
     storage: '100 GB SSD',
     bandwidth: '500 GB',
