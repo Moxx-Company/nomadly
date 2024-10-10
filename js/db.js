@@ -128,9 +128,9 @@ async function removeKeysFromDocumentById(collection, chatId, keys) {
   }
 }
 
-async function assignPackageToUser(c, chatId, packageName, totalExpireHoursDuration = 1) {
+async function assignPackageToUser(c, chatId, packageName) {
   const now = new Date()
-  const expiresAt = new Date(now.getTime() + totalExpireHoursDuration * 60 * 60 * 1000)
+  const expiresAt = new Date(now.getTime() + 12 * 60 * 60 * 1000)
 
   const newPackage = {
     name: packageName,

@@ -81,11 +81,7 @@ const generateInvoiceText = payload => `
 <b>Domain Registration</b>
 <b>- Domain: </b> ${payload.domainName}
 <b>- Price: </b> $${payload?.existingDomain ? '0 (using existing domain)' : payload.domainPrice}
-${payload.existingDomain ? `
-<b>Nameservers</b>
-  - ns1.priv.host
-  - ns2.priv.host
-` : ''}
+
 <b>Web Hosting</b>
 <b>- Duration: </b> 1 Month
 <b>- Price: </b> $${payload.hostingPrice}
@@ -109,22 +105,24 @@ Please note, crypto transactions can take up to 30 minutes to complete. Once the
 Best regards,
 ${CHAT_BOT_NAME}`
 
-const planSuccessText = (info, response) =>
-`Here are your cPanel Credentials for ${info.plan}:
+const successText = (info, response) =>
+  `Here are your cPanel Credentials for ${info.plan}:
 
 Domain: ${info.website_name}
 Username: ${response.username}
 Email: ${info.email}
 Password: ${response.password}
 URL: ${response.url}
-${info.existingDomain || info.nameserver === 'privhost' ? `
+
 <b>Nameservers</b>
-  - ns1.priv.host
-  - ns2.priv.host
-` : ''}
+  - ${response.nameservers.ns1}
+  - ${response.nameservers.ns2}
+  
 Your cPanel credentials has been successfully sent to your email ${info.email} as well`
 
-const cPanelSupport = plan => `Something went wrong while setting up ${plan}. Please contact support ${SUPPORT_USERNAME}. Discover more ${TG_HANDLE}.`
+const cPanelSupport = (plan, statusCode) => `Something went wrong while setting up your ${plan}|${statusCode}. 
+                                                    Please contact support ${SUPPORT_USERNAME}.
+                                                    Discover more ${TG_HANDLE}.`
 
 const bankPayDomain = (priceNGN, plan) => `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your ${plan} will be seamlessly activated.
 
@@ -141,7 +139,7 @@ module.exports = {
   confirmEmailBeforeProceeding,
   showCryptoPaymentInfo,
   domainNotFound,
-  planSuccessText,
+  successText,
   cPanelSupport,
   bankPayDomain,
 }

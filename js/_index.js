@@ -488,7 +488,7 @@ bot?.on('message', async msg => {
         : send(chatId, t.domainPrice(domain, price), k.pay)
       set(state, chatId, 'action', 'domain-pay')
     },
-    'domain-pay-by-plan': () => {
+    'hosting-pay': () => {
       const payload = {
         domainName: info.website_name,
         domainPrice: info.price,
@@ -499,7 +499,7 @@ bot?.on('message', async msg => {
         hostingPrice: info.hostingPrice,
         newPrice: info.newPrice,
       }
-      set(state, chatId, 'action', 'domain-pay-by-plan')
+      set(state, chatId, 'action', 'hosting-pay')
       send(chatId, generateInvoiceText(payload), k.pay)
     },
     'choose-domain-to-buy': async () => {
@@ -870,11 +870,11 @@ bot?.on('message', async msg => {
     continueWithDomainNameSBS: (websiteName) => {
       set(state, chatId, 'action', a.domainAvailableContinue)
       saveInfo('website_name', websiteName)
+      saveInfo('existingDomain', false)
       send(chatId, t.trialPlanContinueWithDomainNameSBSMatched(websiteName), k.of([[user.continueWithDomainNameSBS(websiteName)], [user.searchAnotherDomain], [t.backButton]]))
     },
     nameserverSelectionSBS: (websiteName) => {
       set(state, chatId, 'action', a.nameserverSelectionSBS)
-      saveInfo('nameserver', user.privHostNS)
       const actions = [[user.privHostNS], [user.cloudflareNS], [t.backButton]];
       send(chatId, t.trialPlanNameserverSelection(websiteName), k.of(actions))
     },
@@ -989,7 +989,6 @@ bot?.on('message', async msg => {
     // Step 3: Nameserver Selection
     nameserverSelection: (websiteName) => {
       set(state, chatId, 'action', a.nameserverSelection)
-      saveInfo('nameserver', user.privHostNS)
       const actions = [[user.privHostNS], [user.cloudflareNS]];
       send(chatId, nameserverSelectionText(websiteName), k.of(actions))
     },
@@ -1134,7 +1133,7 @@ bot?.on('message', async msg => {
       const { usdBal: usd, ngnBal: ngn } = await getBalance(walletOf, chatId)
       send(chatId, t.showWallet(usd, ngn), o)
     },
-    'wallet-domain-pay-by-plan': async coin => {
+    'hosting-pay': async coin => {
       set(state, chatId, 'action', 'none')
       const price = info?.couponApplied ? info?.newPrice : info?.totalPrice
       const wallet = await get(walletOf, chatId)
@@ -1148,13 +1147,7 @@ bot?.on('message', async msg => {
       const priceNgn = await usdToNgn(price)
       if (coin === u.ngn && ngnBal < priceNgn) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
 
-      const cPenalCreation = await registerDomainAndCreateCpanel(send, info, o, state)
-
-      if (cPenalCreation) {
-        set(state, chatId, 'action', 'none')
-        return
-      }
-
+      await registerDomainAndCreateCpanel(send, info, o, state)
 
       // wallet update
       if (coin === u.usd) {
@@ -1616,7 +1609,7 @@ bot?.on('message', async msg => {
     if (message === "Back" || message === user.searchAnotherDomain) return goto.useExistingDomain()
     if (message === user.continueWithDomain(info.website_name)) {
       await saveInfo('continue_domain_last_state', 'useExistingDomain')
-      return goto.enterYourEmail()
+      return goto.nameserverSelection(info.website_name)
     }
   }
 
@@ -1635,14 +1628,7 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.enterYourEmail) {
-    if (message === 'Back') {
-        if (info?.continue_domain_last_state === 'registerNewDomain') {
-          return goto.nameserverSelection(info.website_name)
-        }
-        else if (info?.continue_domain_last_state === 'useExistingDomain') {
-          return goto.useExistingDomainFound(info.website_name)
-        }
-    }
+    if (message === 'Back') return goto.nameserverSelection(info.website_name)
 
     if (!isValidEmail(message)) {
       return send(chatId, generatePlanStepText('invalidEmail'), bc)
@@ -1658,12 +1644,12 @@ bot?.on('message', async msg => {
   if (action === a.proceedWithEmail) {
     if (message === "Back") return goto.enterYourEmail()
     if (message === t.proceedWithPayment)
-      return goto.plansAskCoupon('choose-domain-to-buy-with-plan')
+      return goto.plansAskCoupon('choose-hosting-to-buy')
   }
 
   // 123456
   if (action === a.proceedWithPaymentProcess) {
-    if (message === "Back") return goto['domain-pay-by-plan']()
+    if (message === "Back") return goto['hosting-pay']()
     if (message === t.iHaveSentThePayment) return goto.iHaveSentThePayment()
   }
 
@@ -1930,9 +1916,9 @@ bot?.on('message', async msg => {
   }
 
   // Coupon for domain
-  if (action === a.askCoupon + 'choose-domain-to-buy-with-plan') {
+  if (action === a.askCoupon + 'choose-hosting-to-buy') {
     if (message === 'Back') return goto.proceedWithEmail(info.website_name, info.price)
-    if (message === 'Skip') return goto.skipCoupon('domain-pay-by-plan')
+    if (message === 'Skip') return goto.skipCoupon('hosting-pay')
 
     const { totalPrice } = info
 
@@ -1948,7 +1934,7 @@ bot?.on('message', async msg => {
     await saveInfo('couponDiscount', couponDiscount)
     await saveInfo('newPrice', newPrice)
 
-    return goto['domain-pay-by-plan']()
+    return goto['hosting-pay']()
   }
   if (action === 'domain-pay') {
     if (message === 'Back') return goto.askCoupon('choose-domain-to-buy')
@@ -2009,9 +1995,9 @@ bot?.on('message', async msg => {
     return send(chatId, t.showDepositCryptoInfoDomain(priceCrypto, tickerView, address, domain), o)
   }
 
-  // paid plans proceed with payment
-  if (action === 'domain-pay-by-plan') {
-    if (message === 'Back') return goto.plansAskCoupon('choose-domain-to-buy-with-plan')
+  // Hosting payment
+  if (action === 'hosting-pay') {
+    if (message === 'Back') return goto.plansAskCoupon('choose-hosting-to-buy')
     const payOption = message
 
     if (payOption === payIn.crypto) {
@@ -2025,14 +2011,14 @@ bot?.on('message', async msg => {
     }
 
     if (payOption === payIn.wallet) {
-      set(state, chatId, 'lastStep', 'wallet-domain-pay-by-plan')
+      set(state, chatId, 'lastStep', 'hosting-pay')
       return goto.walletSelectCurrency(true)
     }
 
     return send(chatId, t.askValidPayOption)
   }
   if (action === 'bank-pay-domain-by-plan') {
-    if (message === 'Back') return goto['domain-pay-by-plan']()
+    if (message === 'Back') return goto['hosting-pay']()
     const email = message
     const price = info?.totalPrice
     const domain = info?.domain
@@ -2051,7 +2037,7 @@ bot?.on('message', async msg => {
     return send(chatId, bankPayDomain(priceNGN, info.plan), payBank(url), k.of([t.iHaveSentThePayment]))
   }
   if (action === 'crypto-pay-hosting') {
-    if (message === 'Back') return goto['domain-pay-by-plan']()
+    if (message === 'Back') return goto['hosting-pay']()
     const tickerView = message
     const coin = tickerOf[tickerView]
     const price = info?.couponApplied ? info?.newPrice : info?.totalPrice
@@ -3232,9 +3218,7 @@ app.get('/crypto-pay-hosting', auth, async (req, res) => {
 
   const info = await get(state, chatId)
 
-  const cPanelCreation = await registerDomainAndCreateCpanel(send, info, o, state)
-
-  if (cPanelCreation) return res.send(html(cPanelCreation))
+  await registerDomainAndCreateCpanel(send, info, o, state)
 
   res.send(html())
 })

@@ -10,8 +10,8 @@ const transporter = nodemailer.createTransport({
   },
 })
 
-async function sendEmail(plan, receiverName, receiverEmail, cPanelUserName, cPanelPassword, cPanelURL, text) {
-    plan = plan === 'Freedom Plan' ? 'Free Trial Plan' : plan;
+async function sendEmail(info, response) {
+  const plan = info.plan === 'Freedom Plan' ? 'Free Trial Plan' : info.plan;
   const emailHtml = `
     <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
@@ -19,7 +19,7 @@ async function sendEmail(plan, receiverName, receiverEmail, cPanelUserName, cPan
         </div>
         <div style="padding: 10px 20px;  background-color: #f9f9f9; border-radius: 0 0 10px 10px;">
             <p style="font-size: 18px; line-height: 1.6;">
-                Hello <strong>${receiverName}</strong>,
+                Hello <strong>${info.receiverName}</strong>,
             </p>
             <p style="font-size: 18px; line-height: 1.6;">
                 We are excited to inform you that your <strong>(${plan})</strong> has been successfully activated!
@@ -31,32 +31,45 @@ async function sendEmail(plan, receiverName, receiverEmail, cPanelUserName, cPan
             <table style="width: 100%; margin-top: 10px; border-collapse: separate; border-spacing: 0 10px;">
               <tr>
                   <td style="font-size: 16px; padding: 15px; background-color: #eee; border: 1px solid #ddd; border-radius: 5px;">
-                      <strong>Username:</strong> ${cPanelUserName}
+                      <strong>Domain:</strong> ${info.website_name}
                   </td>
               </tr>
               <tr>
                   <td style="font-size: 16px; padding: 15px; background-color: #eee; border: 1px solid #ddd; border-radius: 5px;">
-                      <strong>Email:</strong> ${receiverEmail}
+                      <strong>URL:</strong> ${response.url}
                   </td>
               </tr>
               <tr>
                   <td style="font-size: 16px; padding: 15px; background-color: #eee; border: 1px solid #ddd; border-radius: 5px;">
-                      <strong>Password:</strong> ${cPanelPassword}
+                      <strong>Username:</strong> ${response.username}
                   </td>
               </tr>
               <tr>
                   <td style="font-size: 16px; padding: 15px; background-color: #eee; border: 1px solid #ddd; border-radius: 5px;">
-                      <strong>URL:</strong> ${cPanelURL}
+                      <strong>Password:</strong> ${response.password}
+                  </td>
+              </tr>
+               <tr>
+                  <td style="font-size: 16px; padding: 15px; background-color: #eee; border: 1px solid #ddd; border-radius: 5px;">
+                      <strong>Nameservers</strong>
+                      <ul style="list-style-type: none; padding-left: 0;">
+                          <li>${response.nameservers.ns1}</li>
+                          <li>${response.nameservers.ns2}</li>
+                      </ul>
                   </td>
               </tr>
             </table>
 
             <p style="font-size: 18px; margin-top: 10px; line-height: 1.6;">
-                ${text}
+                Please log in to your cPanel to manage your website and services. 
+                If you need any assistance, feel free to contact our support team.
+                
+                ${info.plan === 'Freedom Plan' 
+                    ? `Remember, your plan will expire in 12 hours. If you like our service, 
+                       consider upgrading to one of our premium plans!` 
+                    : ''}
             </p>
-            <p style="font-size: 18px; line-height: 1.6;">
-                If you need any assistance, feel free to contact our support team. We’re always happy to help!
-            </p>
+            
             <p style="font-size: 18px; line-height: 1.6; margin-top: 15px;">
                 Best regards,<br>
                 Nomadly Team
@@ -66,14 +79,14 @@ async function sendEmail(plan, receiverName, receiverEmail, cPanelUserName, cPan
     `
 
   try {
-    const info = await transporter.sendMail({
+    const mailResponse = await transporter.sendMail({
       from: process.env.MAIL_SENDER,
-      to: receiverEmail,
+      to: info.email,
       subject: `🎉 Your ${plan} has been Activated!`,
       html: emailHtml,
     })
 
-    console.log('Message sent: %s', info.messageId)
+    console.log('Message sent: %s', mailResponse.messageId)
   } catch (error) {
     console.error('Error sending email:', error)
   }

@@ -204,7 +204,6 @@ To continue using our services, please buy one of our premium plans.`,
   trialPlanInValidEmail: 'Please provide a valid email',
   trialPlanActivationConfirmation: `Thank you! Your free trial plan will be activated shortly. Please note, this plan will be active for 12 hours only.`,
   trialPlanActivationInProgress: `Your free trial plan is being activated. This may take a few moments…`,
-  trialPlanEmailText: `Please log in to your cPanel to manage your website and services. Remember, your plan will expire in 12 hours. If you like our service, consider upgrading to one of our premium plans!`,
 
   what: `Please choose option from keyboard`,
   whatNum: `Please choose valid number`,

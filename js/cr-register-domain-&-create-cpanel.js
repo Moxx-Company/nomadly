@@ -3,33 +3,50 @@ const axios = require('axios')
 const { log } = require('console')
 const sendEmail = require('./send-email')
 const { assignPackageToUser, set, removeKeysFromDocumentById } = require('./db')
-const { t } = require('./config')
-const { cPanelSupport, planSuccessText } = require('./hosting/plans')
+const { cPanelSupport, successText } = require('./hosting/plans')
+
+
+const CPANEL_ENDPOINT = process.env.CPANEL_CREATE_ACCOUNT_URL
+const CPANEL_API_KEY = process.env.CPANEL_API_KEY
+const TELEGRAM_DEV_CHAT_ID = process.env.TELEGRAM_DEV_CHAT_ID
 
 async function registerDomainAndCreateCpanel(send, info, keyboardButtons, state) {
-  const url = process.env.CPANEL_CREATE_ACCOUNT_URL
-  const payload = {
-    telegramId: info._id,
-    name: info.username,
-    email: info.email,
-    domain: info.website_name,
-    existingDomain: info.existingDomain || false,
-    plan: info.plan,
-    nameserver: info.nameserver
-  }
-  const headers = {
-    accept: 'application/json',
-    'content-type': 'application/json',
-    'x-api-key': process.env.CPANEL_API_KEY,
-  }
-
+  let headers, payload;
   try {
-    let response = await axios.post(url, payload, { headers })
+    headers = {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'x-api-key': CPANEL_API_KEY,
+    }
 
-    if (response.request.res.statusCode === 201) {
+    payload = {
+      telegramId: info._id,
+      name: info.username,
+      email: info.email,
+      domain: info.website_name,
+      existingDomain: info.existingDomain || false,
+      plan: info.plan,
+      nameserver: info.nameserver,
+    }
+
+    let response = await axios.post(CPANEL_ENDPOINT, payload, { headers })
+
+    const statusCode = response.request.res.statusCode;
+
+    if (statusCode === 201) {
       response = response.data.data
 
-      send(info._id, planSuccessText(info, response), keyboardButtons)
+      send(info._id, successText(info, response), keyboardButtons)
+
+      assignPackageToUser(state, info._id, info.plan)
+
+      try {
+        await sendEmail(info, response)
+      } catch (error) {
+        log('Error sending email:', error)
+        send(TELEGRAM_DEV_CHAT_ID, 'Error sending email', keyboardButtons)
+      }
+
       set(state, info._id, 'action', 'none')
 
       removeKeysFromDocumentById(state, info._id, [
@@ -47,30 +64,12 @@ async function registerDomainAndCreateCpanel(send, info, keyboardButtons, state)
         'totalPrice',
         'newPrice',
       ])
-
-      let emailText;
-      if (info.plan === 'Freedom Plan') {
-        emailText = t.trialPlanEmailText
-        assignPackageToUser(state, info._id, info.plan, 12)
-      } else {
-        emailText = ''
-        assignPackageToUser(state, info._id, info.plan)
-      }
-      await sendEmail(
-        info.plan,
-        info.username,
-        info.email,
-        response.username,
-        response.password,
-        response.url,
-        emailText,
-      )
     } else {
-      return send(info._id, cPanelSupport(info.plan), keyboardButtons)
+      return send(info._id, cPanelSupport(info.plan, statusCode), keyboardButtons)
     }
   } catch (err) {
-    log('err registerDomain&CreateCPanel', {url, payload, headers }, err.data, err?.response?.data)
-    return send(info._id, cPanelSupport(info.plan), keyboardButtons)
+    log('err registerDomain&CreateCPanel', { CPANEL_ENDPOINT, headers, payload }, err.data, err?.response?.data)
+    return send(info._id, cPanelSupport(info.plan, 400), keyboardButtons)
   }
 }
 
