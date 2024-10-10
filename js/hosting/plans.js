@@ -2,10 +2,14 @@ const CHAT_BOT_NAME = process.env.CHAT_BOT_NAME
 const TG_HANDLE = process.env.TG_HANDLE
 const SUPPORT_USERNAME = process.env.SUPPORT_USERNAME
 
+const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
+const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
+const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
 
 const plans = {
   starterPlan: {
     name: 'Starter Plan',
+    price: HOSTING_STARTER_PLAN_PRICE,
     storage: '10 GB SSD',
     bandwidth: '100 GB',
     domains: '1 domain',
@@ -16,6 +20,7 @@ const plans = {
   },
   proPlan: {
     name: 'Pro Plan',
+    price: HOSTING_PRO_PLAN_PRICE,
     storage: '50 GB SSD',
     bandwidth: '500 GB',
     domains: '5 domains',
@@ -27,6 +32,7 @@ const plans = {
   },
   businessPlan: {
     name: 'Business Plan',
+    price: HOSTING_BUSINESS_PLAN_PRICE,
     storage: '100 GB SSD',
     bandwidth: 'Unlimited',
     domains: 'Unlimited domains',
@@ -41,7 +47,7 @@ const plans = {
 const generatePlanText = planKey => {
   const plan = plans[planKey]
   return `
-🚀 <b>${plan.name}:</b>
+🚀 <b>${plan.name}: $${plan.price}</b>
 <b>- Storage:</b> ${plan.storage}
 <b>- Bandwidth:</b> ${plan.bandwidth}
 <b>- Domains:</b> ${plan.domains}
