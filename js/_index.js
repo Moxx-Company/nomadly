@@ -1010,9 +1010,9 @@ bot?.on('message', async msg => {
     proceedWithEmail: (domainName, domainPrice) => {
       let hostingPrice = parseFloat(HOSTING_STARTER_PLAN_PRICE)
 
-      if (info.plan === a.businessPlan) {
+      if (info.plan === 'Business Plan') {
         hostingPrice = parseFloat(HOSTING_BUSINESS_PLAN_PRICE)
-      } else if (info.plan === a.proPlan) {
+      } else if (info.plan === 'Pro Plan') {
         hostingPrice = parseFloat(HOSTING_PRO_PLAN_PRICE)
       }
 
