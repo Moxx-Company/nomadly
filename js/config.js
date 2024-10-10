@@ -68,7 +68,7 @@ const admin = {
 }
 const user = {
   // main keyboard
-  cPanelWebHostingPlans: '📦 cPanel Web Hosting Plans',
+  cPanelWebHostingPlans: 'Private cPanel Hosting Plans 🔒',
   joinChannel: '📢 Join Channel',
   phoneNumberLeads: '📲 HQ SMS Lead',
   wallet: '👛 My Wallet',
