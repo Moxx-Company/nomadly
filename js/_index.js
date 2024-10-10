@@ -2006,7 +2006,7 @@ bot?.on('message', async msg => {
     }
 
     if (payOption === payIn.bank) {
-      set(state, chatId, 'action', 'bank-pay-domain-by-plan')
+      set(state, chatId, 'action', 'bank-pay-hosting')
       return send(chatId, t.askEmail, bc)
     }
 
@@ -2017,7 +2017,7 @@ bot?.on('message', async msg => {
 
     return send(chatId, t.askValidPayOption)
   }
-  if (action === 'bank-pay-domain-by-plan') {
+  if (action === 'bank-pay-hosting') {
     if (message === 'Back') return goto['hosting-pay']()
     const email = message
     const price = info?.totalPrice
@@ -2029,7 +2029,7 @@ bot?.on('message', async msg => {
     log({ ref })
     set(state, chatId, 'action', a.proceedWithPaymentProcess)
     const priceNGN = Number(await usdToNgn(price))
-    set(chatIdOfPayment, ref, { chatId, price, domain, endpoint: `/bank-pay-domain-hosting` })
+    set(chatIdOfPayment, ref, { chatId, price, domain, endpoint: `/bank-pay-hosting` })
     const { url, error } = await createCheckout(priceNGN, `/ok?a=b&ref=${ref}&`, email, username, ref)
     if (error) return send(chatId, error, o)
     send(chatId, `Bank ₦aira + Card 🌐︎`, o)
@@ -2972,7 +2972,7 @@ const bankApis = {
 
     res.send(html())
   },
-  '/bank-pay-domain-hosting': async (req, res, ngnIn) => {
+  '/bank-pay-hosting': async (req, res, ngnIn) => {
     // Validate
     const { ref, chatId, price } = req.pay
     const response = req?.query
@@ -2998,9 +2998,7 @@ const bankApis = {
     const info = await get(state, chatId)
 
     // Buy Domain Hosting
-    const cPanelHosting = await registerDomainAndCreateCpanel(send, info, o, state)
-
-    if (cPanelHosting) return res.send(html(cPanelHosting))
+    await registerDomainAndCreateCpanel(send, info, o, state)
 
     res.send(html())
   },
