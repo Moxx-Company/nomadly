@@ -846,7 +846,7 @@ bot?.on('message', async msg => {
     submenu3: () => {
       saveInfo('username', username)
       set(state, chatId, 'action', a.submenu3)
-      send(chatId, t.selectPlan, k.of([[user.freeTrial, user.starterPlan], [user.businessPlan, user.proPlan], user.contactSupport]))
+      send(chatId, t.selectPlan, k.of([[user.freeTrial, user.starterPlan], [user.proPlan, user.businessPlan], user.contactSupport]))
     },
 
     displayEmailValidationError: () => {
@@ -898,7 +898,6 @@ bot?.on('message', async msg => {
     },
 
 
-
     // Step 1: Select Plan
     selectPlan: plan => {
       let planName = 'Starter Plan';
@@ -909,18 +908,15 @@ bot?.on('message', async msg => {
         planName = 'Pro Plan';
       }
 
-      // set(walletOf, chatId, 'usdIn', 5000)
-      // set(walletOf, chatId, 'ngnIn', 5000)
-
       saveInfo('plan', planName)
       set(state, chatId, 'action', plan)
       const message = generatePlanText(plan);
 
       let actions = [[user.buyStarterPlan], [user.viewProPlan, user.viewBusinessPlan], [user.backToHostingPlans]];
-      if (plan === a.businessPlan) {
-        actions = [[user.buyBusinessPlan], [user.viewProPlan, user.viewStarterPlan], [user.backToHostingPlans]];
-      } else if (plan === a.proPlan) {
-        actions = [[user.buyProPlan], [user.viewBusinessPlan, user.viewStarterPlan], [user.backToHostingPlans]];
+      if (plan === a.proPlan) {
+        actions = [[user.buyProPlan], [user.viewStarterPlan, user.viewBusinessPlan], [user.backToHostingPlans]];
+      } else if (plan === a.businessPlan) {
+        actions = [[user.buyBusinessPlan], [user.viewStarterPlan, user.viewProPlan], [user.backToHostingPlans]];
       }
 
       send(chatId, message, k.of(actions))

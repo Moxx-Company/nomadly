@@ -92,9 +92,9 @@ const user = {
 
   // Sub Menu 3: cPanelWebHostingPlansMain
   freeTrial: '💡 Free Trial',
-  starterPlan: '🔷 Starter Plan',
-  businessPlan: '🔼 Business Plan',
-  proPlan: '👑 Pro Plan',
+  starterPlan: '🔼 Starter Plan',
+  proPlan: '🔷 Pro Plan',
+  businessPlan: '👑 Business Plan',
   contactSupport: '📞 Contact Support',
 
   // Free Trial
@@ -107,19 +107,19 @@ const user = {
   backToFreeTrial: '⬅️ Back To Free Trial',
   viewHostingPlans: '🖥️ View Hosting Plans',
 
-  //Starter Plan
+  // Paid Plans
   buyStarterPlan: '🛒 Buy Starter Plan',
-  buyBusinessPlan: '🛒 Buy Business Plan',
   buyProPlan: '🛒 Buy Pro Plan',
-  viewStarterPlan: '🔼 View Starter Plan',
-  viewBusinessPlan: '🔼 View Business Plan',
-  viewProPlan: '👑 View Pro Plan',
+  buyBusinessPlan: '🛒 Buy Business Plan',
+  viewStarterPlan: '🔷 View Starter Plan',
+  viewProPlan: '🔼 View Pro Plan',
+  viewBusinessPlan: '👑 View Business Plan',
   backToHostingPlans: '⬅️ Back To Hosting Plans',
   registerANewDomain: '🌐 Register a New Domain',
   useExistingDomain: '🔄 Use Existing Domain',
   backToStarterPlanDetails: '⬅️ Back to Starter Plan Details',
-  backToBusinessPlanDetails: '⬅️ Back to Business Plan Details',
   backToProPlanDetails: '⬅️ Back to Pro Plan Details',
+  backToBusinessPlanDetails: '⬅️ Back to Business Plan Details',
   continueWithDomain: (websiteName) => `➡️ Continue with ${websiteName}`,
   enterAnotherDomain: '🔍 Enter Another Domain',
   backToPurchaseOptions: '⬅️ Back to Purchase Options',

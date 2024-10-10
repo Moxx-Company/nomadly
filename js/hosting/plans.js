@@ -11,28 +11,30 @@ const plans = {
     domains: '1 domain',
     emailAccounts: '5 email accounts',
     databases: '1 MySQL database',
-    price: 10.0,
-    idealFor: 'Personal blogs, small business websites, or portfolios',
+    cPanelFeatures: 'Full access to cPanel for managing files, databases, emails, etc.',
+    idealFor: 'Personal blogs, small business websites, or portfolios.',
   },
   proPlan: {
-    name: 'Business Plan',
+    name: 'Pro Plan',
     storage: '50 GB SSD',
-    bandwidth: '200 GB',
+    bandwidth: '500 GB',
     domains: '5 domains',
-    emailAccounts: '20 email accounts',
-    databases: '5 MySQL databases',
-    price: 20.0,
-    idealFor: 'Business websites, larger projects',
+    emailAccounts: '25 email accounts',
+    databases: '10 MySQL databases',
+    cPanelFeatures: 'Full access to cPanel with advanced tools for backups, security, and analytics.',
+    additionalFeatures: 'Free website migration, daily backups.',
+    idealFor: 'Small to medium-sized business websites, e-commerce sites.',
   },
   businessPlan: {
-    name: 'Pro Plan',
+    name: 'Business Plan',
     storage: '100 GB SSD',
-    bandwidth: '500 GB',
-    domains: '10 domains',
-    emailAccounts: '50 email accounts',
-    databases: '10 MySQL databases',
-    price: 50.0,
-    idealFor: 'E-commerce sites, high-traffic websites',
+    bandwidth: 'Unlimited',
+    domains: 'Unlimited domains',
+    emailAccounts: 'Unlimited email accounts',
+    databases: 'Unlimited MySQL databases',
+    cPanelFeatures: 'Full access to cPanel with all advanced features, including priority support.',
+    additionalFeatures: 'Free website migration, daily backups, staging environment, enhanced security features.',
+    idealFor: 'Large businesses, high-traffic websites, and developers needing more flexibility.',
   },
 }
 
@@ -45,9 +47,10 @@ const generatePlanText = planKey => {
 <b>- Domains:</b> ${plan.domains}
 <b>- Email Accounts:</b> ${plan.emailAccounts}
 <b>- Databases:</b> ${plan.databases}
-<b>- Free SSL:</b> Yes
 <b>- Firewall Rules:</b> Country, IP, Device
-<b>- cPanel Features:</b> Full access to cPanel for managing files, database & emails, etc.
+<b>- Free SSL:</b> Yes
+<b>- cPanel Features:</b> Full access to cPanel with advanced tools for backups, security, and analytics.
+${plan.additionalFeatures ? `<b>- Additional Features:</b> ${plan.additionalFeatures}` : ''}
 <b>- Ideal for:</b> ${plan.idealFor}`
 }
 
