@@ -68,7 +68,7 @@ const admin = {
 }
 const user = {
   // main keyboard
-  cPanelWebHostingPlans: 'Private cPanel Hosting Plans 🔒',
+  // cPanelWebHostingPlans: 'Private cPanel Hosting Plans 🔒',
   joinChannel: '📢 Join Channel',
   phoneNumberLeads: '📲 HQ SMS Lead',
   wallet: '👛 My Wallet',
@@ -618,7 +618,7 @@ const adminKeyboard = {
 const userKeyboard = {
   reply_markup: {
     keyboard: [
-      [user.cPanelWebHostingPlans],
+      // [user.cPanelWebHostingPlans],
       [user.joinChannel, user.wallet],
       [user.phoneNumberLeads],
       HIDE_SMS_APP === 'true' ? [user.buyPlan] : [user.freeTrialAvailable, user.buyPlan],
