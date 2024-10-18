@@ -19,7 +19,7 @@ async function sendEmail(info, response) {
         </div>
         <div style="padding: 10px 20px;  background-color: #f9f9f9; border-radius: 0 0 10px 10px;">
             <p style="font-size: 18px; line-height: 1.6;">
-                Hello <strong>${info.receiverName}</strong>,
+                Hello <strong>${info.username}</strong>,
             </p>
             <p style="font-size: 18px; line-height: 1.6;">
                 We are excited to inform you that your <strong>(${plan})</strong> has been successfully activated!
