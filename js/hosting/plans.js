@@ -10,6 +10,7 @@ const plans = {
   starterPlan: {
     name: 'Starter Plan',
     price: HOSTING_STARTER_PLAN_PRICE,
+    duration: '30 days',
     storage: '10 GB SSD',
     bandwidth: '100 GB',
     domains: '1 domain',
@@ -21,6 +22,7 @@ const plans = {
   proPlan: {
     name: 'Pro Plan',
     price: HOSTING_PRO_PLAN_PRICE,
+    duration: '30 days',
     storage: '50 GB SSD',
     bandwidth: '500 GB',
     domains: '5 domains',
@@ -33,6 +35,7 @@ const plans = {
   businessPlan: {
     name: 'Business Plan',
     price: HOSTING_BUSINESS_PLAN_PRICE,
+    duration: '30 days',
     storage: '100 GB SSD',
     bandwidth: 'Unlimited',
     domains: 'Unlimited domains',
@@ -48,12 +51,13 @@ const generatePlanText = planKey => {
   const plan = plans[planKey]
   return `
 🚀 <b>${plan.name}: $${plan.price}</b>
+
+<b>- Duration:</b> ${plan.duration}
 <b>- Storage:</b> ${plan.storage}
 <b>- Bandwidth:</b> ${plan.bandwidth}
 <b>- Domains:</b> ${plan.domains}
 <b>- Email Accounts:</b> ${plan.emailAccounts}
 <b>- Databases:</b> ${plan.databases}
-<b>- Firewall Rules:</b> Country, IP, Device
 <b>- Free SSL:</b> Yes
 <b>- cPanel Features:</b> Full access to cPanel with advanced tools for backups, security, and analytics.
 ${plan.additionalFeatures ? `<b>- Additional Features:</b> ${plan.additionalFeatures}` : ''}
