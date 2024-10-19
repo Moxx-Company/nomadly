@@ -2991,7 +2991,7 @@ const bankApis = {
       sendMessage(chatId, t.sentMoreMoney(`${ngnPrice} NGN`, `${ngnIn} NGN`))
     }
 
-    const info = await get(state, chatId)
+    const info = await state.findOne({ _id: parseFloat(chatId) })
 
     // Buy Domain Hosting
     await registerDomainAndCreateCpanel(send, info, o, state)
@@ -3210,7 +3210,7 @@ app.get('/crypto-pay-hosting', auth, async (req, res) => {
     sendMessage(chatId, t.sentMoreMoney(`$${price}`, `$${usdIn}`))
   }
 
-  const info = await get(state, chatId)
+  const info = await state.findOne({ _id: parseFloat(chatId) })
 
   await registerDomainAndCreateCpanel(send, info, o, state)
 
