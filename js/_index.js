@@ -1777,7 +1777,7 @@ bot?.on('message', async msg => {
   }
 
   if (message === user.urlShortener) {
-    if (!((await freeLinksAvailable(chatId)) || (await isSubscribed(chatId)))) return send(chatId, '📋 Subscribe first')
+    if (!(await isSubscribed(chatId))) return send(chatId, '📋 Subscribe first')
 
     return goto['choose-url-to-shorten']()
   }
