@@ -2,17 +2,19 @@
 require('dotenv').config()
 const axios = require('axios')
 
-const API_ADDRESS = process.env.CPANEL_CREATE_ACCOUNT_URL;
+const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL;
 const PERCENT_INCREASE_DOMAIN = 1 + Number(process.env.PERCENT_INCREASE_DOMAIN)
 
-const checkExistingDomain = async websiteName => {
+const checkExistingDomain = async (websiteName, hostingType) => {
+  hostingType = hostingType.toLowerCase()
+
   try {
-    const URL = `${API_ADDRESS}/domain/existing?domain=${websiteName}`
+    const URL = `${NAMEWORD_BASE_URL}/${hostingType}/accounts/telegram/domain/existing?domain=${websiteName}`
 
     const headers = {
       accept: 'application/json',
       'content-type': 'application/json',
-      'x-api-key': process.env.CPANEL_API_KEY,
+      'x-api-key': process.env.NAMEWORD_API_KEY,
     }
 
     const response = await axios.get(URL, { headers })
@@ -38,13 +40,15 @@ const checkExistingDomain = async websiteName => {
   }
 }
 
-const getNewDomain = async domainName => {
-  const apiUrl = `${API_ADDRESS}/domain/new?domain=${domainName}`
+const getNewDomain = async (domainName, hostingType) => {
+  hostingType = hostingType.toLowerCase()
+
+  const apiUrl = `${NAMEWORD_BASE_URL}/${hostingType}/accounts/telegram/domain/new?domain=${domainName}`
 
   const headers = {
     accept: 'application/json',
     'content-type': 'application/json',
-    'x-api-key': process.env.CPANEL_API_KEY,
+    'x-api-key': process.env.NAMEWORD_API_KEY,
   }
 
   console.log(apiUrl, headers);
@@ -84,7 +88,7 @@ const getNewDomain = async domainName => {
       }
     } else {
       const chatMessage = `An error occurred while checking domain availability. Maybe IP Not Whitelisted. ${error.response?.status}`
-      console.error('checkDomainPriceOnline', error.response)
+      console.error('checkDomainPriceOnline', error.response.data.errors)
 
       return {
         available: false,

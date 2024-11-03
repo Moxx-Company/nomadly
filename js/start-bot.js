@@ -39,10 +39,10 @@ const handleAxiosError = (error, customMessage) => {
 const runBot = async () => {
   try {
     // Fetch and log the IP to whitelist in Connect Reseller
-    await getIPAndLogMessage();
+    // await getIPAndLogMessage();
 
     // Uncomment if needed in the future
-    await getBusinessId();
+    // await getBusinessId();
     log('Working, Fincra API');
 
     // Uncomment if needed in the future
@@ -50,13 +50,13 @@ const runBot = async () => {
     // log('Working, Connect Reseller API');
 
     // Fetch and log BTC to USD conversion
-    await logConversion('1', 'btc', 'usd', 'Blockbee API, BTC price in USD');
+    // await logConversion('1', 'btc', 'usd', 'Blockbee API, BTC price in USD');
 
     // Fetch and log MATIC to USD conversion
-    await logConversion('1', 'polygon_matic', 'usd', 'Matic price in USD');
+    // await logConversion('1', 'polygon_matic', 'usd', 'Matic price in USD');
 
     // Check if Railway API is working
-    await isRailwayAPIWorking();
+    // await isRailwayAPIWorking();
     log('Working, Railway API, now starting the bot');
 
     // Start the bot

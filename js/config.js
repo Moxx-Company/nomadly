@@ -67,8 +67,9 @@ const admin = {
   messageUsers: '👋 Message all users',
 }
 const user = {
-  // main keyboard
+  // main keyboards
   cPanelWebHostingPlans: 'Private cPanel Hosting Plans 🔒',
+  pleskWebHostingPlans: 'Private Plesk Hosting Plans 🔒',
   joinChannel: '📢 Join Channel',
   phoneNumberLeads: '📲 HQ SMS Lead',
   wallet: '👛 My Wallet',
@@ -90,7 +91,7 @@ const user = {
   viewDomainNames: '📂 My Domain Names',
   dnsManagement: '🔧 DNS Management',
 
-  // Sub Menu 3: cPanelWebHostingPlansMain
+  // Sub Menu 3: cPanel/Plesk WebHostingPlansMain
   freeTrial: '💡 Free Trial',
   starterPlan: '🔼 Starter Plan',
   proPlan: '🔷 Pro Plan',
@@ -105,7 +106,6 @@ const user = {
   privHostNS: `🏢 PrivHost (Fast & Secure Hosting)`,
   cloudflareNS: `🛡️ Cloudflare Shield (Security & Stealth)`,
   backToFreeTrial: '⬅️ Back To Free Trial',
-  viewHostingPlans: '🖥️ View Hosting Plans',
 
   // Paid Plans
   buyStarterPlan: '🛒 Buy Starter Plan',
@@ -166,7 +166,7 @@ ${CHAT_BOT_BRAND} Team
   resetLogin: `${CHAT_BOT_BRAND}SMS: Are you trying to log out of your previous device?`,
   select: `Please select an option:`,
 
-// cPanel Plans initial select plan text
+// cPanel/Plesk Plans initial select plan text
   selectPlan: `Please select a plan:`,
   backButton: '⬅️ Back',
   yesProceedWithThisEmail: (email) => `➡️ Proceed with ${email}`,
@@ -177,7 +177,7 @@ ${CHAT_BOT_BRAND} Team
   oneHourLeftToExpireTrialPlan: `Your Freedom Plan will expire in 1 hour. If you’d like to continue using our services, consider upgrading to a paid plan!`,
   freePlanExpired: `🚫 Your Freedom Plan has expired. We hope you enjoyed your trial,
 To continue using our services, please buy one of our premium plans.`,
-  freeTrialPlanSelected: `
+  freeTrialPlanSelected: (hostingType) => `
 - Try our <b>Freedom Plan</b> for free! This plan includes a free domain
   ending in .sbs and will be active for 12 hours.
 
@@ -188,7 +188,7 @@ To continue using our services, please buy one of our premium plans.`,
 <b>- Email Accounts:</b> 1 email account
 <b>- Databases:</b> 1 MySQL database
 <b>- Free SSL:</b> Yes
-<b>- cPanel Features:</b> Full access to cPanel for managing files,
+<b>- ${hostingType} Features:</b> Full access to ${hostingType} for managing files,
   database & emails etc.
 <b>- Duration:</b> Active for 12 hours
 <b>- Ideal for:</b> Testing and short-term projects.
@@ -199,7 +199,7 @@ To continue using our services, please buy one of our premium plans.`,
   trialPlanSBSDomainIsPremium: `Domain is premium price and available only with a paid plan. Please search for another domain.`,
   trialPlanGetNowInvalidDomain: 'Please enter a valid domain name that ends with \'.sbs\'. The domain should look like \'example.sbs\' and is free with your trial plan.',
   trialPlanNameserverSelection: (websiteName) => `Please select the nameserver provider you would like to use for ${websiteName}.`,
-  trialPlanDomainNameMatched: `Please provide your email address so we can proceed with creating your account & sending you the cPanel login details on your email.`,
+  trialPlanDomainNameMatched: `Please provide your email address to create your account and send your receipt.`,
   confirmEmailBeforeProceedingSBS: (email) => `Are you sure you want to proceed with this ${email} email for the Freedom Plan subscription?`,
   trialPlanInValidEmail: 'Please provide a valid email',
   trialPlanActivationConfirmation: `Thank you! Your free trial plan will be activated shortly. Please note, this plan will be active for 12 hours only.`,
@@ -298,8 +298,6 @@ Discover more: ${TG_CHANNEL}`,
   unknownCommand: `Command not found. Press /start or Please contact support ${SUPPORT_USERNAME}. Discover more ${TG_HANDLE}.`,
 
   support: `Please contact support ${SUPPORT_USERNAME}. Discover more ${TG_HANDLE}.`,
-
-  cPanelSupport: `Something went wrong while setting up cPanel Account. Please contact support ${SUPPORT_USERNAME}. Discover more ${TG_HANDLE}.`,
 
   joinChannel: `Please Join Channel ${TG_CHANNEL}`,
 
@@ -619,6 +617,7 @@ const userKeyboard = {
   reply_markup: {
     keyboard: [
       [user.cPanelWebHostingPlans],
+      [user.pleskWebHostingPlans],
       [user.joinChannel, user.wallet],
       [user.phoneNumberLeads],
       HIDE_SMS_APP === 'true' ? [user.buyPlan] : [user.freeTrialAvailable, user.buyPlan],

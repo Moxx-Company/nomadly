@@ -272,13 +272,13 @@ async function checkFreeTrialTaken(c, chatId) {
   return 'not_taken' // If neither current nor previous packages are 'Freedom Plan'
 }
 
-const planCheckExistingDomain = domainName => checkExistingDomain(domainName)
+const planCheckExistingDomain = (domainName, hostingType) => checkExistingDomain(domainName, hostingType)
 
-async function planGetNewDomain(message, chatId, send, saveInfo, verbose = true) {
+async function planGetNewDomain(message, chatId, send, saveInfo, hostingType, verbose = true) {
   try {
     let modifiedDomain = removeProtocolFromDomain(message)
 
-    const { available, originalPrice, price, chatMessage, domainType } = await getNewDomain(modifiedDomain)
+    const { available, originalPrice, price, chatMessage, domainType } = await getNewDomain(modifiedDomain, hostingType)
 
     if (!available) {
       if(verbose) {

@@ -291,9 +291,7 @@ async function sendRemindersForExpiringPackages() {
     }).toArray()
 
     for (const user of users) {
-
-      set(state, user._id, 'action', 'displayMainMenuButtons')
-      send(user._id, t.oneHourLeftToExpireTrialPlan, k.of([[user.viewHostingPlans], [user.contactSupport]]))
+      send(user._id, t.oneHourLeftToExpireTrialPlan)
 
       await state.updateOne(
         { _id: user._id },
@@ -309,9 +307,7 @@ async function sendRemindersForExpiringPackages() {
     }).toArray()
 
     for (const user of expiredUsers) {
-
-      set(state, user._id, 'action', 'displayMainMenuButtons')
-      send(user._id, t.freePlanExpired, k.of([[user.viewHostingPlans], [user.contactSupport]]))
+      send(user._id, t.freePlanExpired)
 
       await state.updateOne(
         { _id: user._id },
@@ -860,7 +856,7 @@ bot?.on('message', async msg => {
     },
     freeTrial: () => {
       set(state, chatId, 'action', a.freeTrial)
-      send(chatId, t.freeTrialPlanSelected, k.of([[user.getFreeTrialPlanNow, t.backButton]]))
+      send(chatId, t.freeTrialPlanSelected(info.hostingType), k.of([[user.getFreeTrialPlanNow, t.backButton]]))
     },
     getFreeTrialPlanNow: () => {
       set(state, chatId, 'action', a.getPlanNow)
@@ -910,7 +906,7 @@ bot?.on('message', async msg => {
 
       saveInfo('plan', planName)
       set(state, chatId, 'action', plan)
-      const message = generatePlanText(plan);
+      const message = generatePlanText(info.hostingType, plan);
 
       let actions = [[user.buyStarterPlan], [user.viewProPlan, user.viewBusinessPlan], [user.backToHostingPlans]];
       if (plan === a.proPlan) {
@@ -925,7 +921,7 @@ bot?.on('message', async msg => {
     // Step 1.1: View Plan
     viewPlan: plan => {
       set(state, chatId, 'action', plan)
-      const message = generatePlanText(plan);
+      const message = generatePlanText(info.hostingType, plan);
       send(chatId, message, bc)
     },
 
@@ -1450,7 +1446,9 @@ bot?.on('message', async msg => {
   }
 
   // cPanel Plans Events Handlers
-  if ([user.cPanelWebHostingPlans, user.viewHostingPlans].includes(message)) {
+  if ([user.cPanelWebHostingPlans, user.pleskWebHostingPlans].includes(message)) {
+    const hostingType = message === user.cPanelWebHostingPlans ? 'cPanel' : 'Plesk';
+    saveInfo('hostingType', hostingType)
     return goto.submenu3()
   }
 
@@ -1479,7 +1477,7 @@ bot?.on('message', async msg => {
        return send(chatId, t.trialPlanGetNowInvalidDomain, k.of([[user.backToFreeTrial]]))
     }
 
-    const { modifiedDomain, price, domainType, chatMessage } = await planGetNewDomain(message, chatId, send, saveInfo, false);
+    const { modifiedDomain, price, domainType, chatMessage } = await planGetNewDomain(message, chatId, send, saveInfo, info.hostingType,false);
 
     if (modifiedDomain === null || price === null) {
       return send(chatId, chatMessage)
@@ -1569,7 +1567,7 @@ bot?.on('message', async msg => {
   if (action === a.registerNewDomain) {
     if (message === 'Back') return goto.buyPlan(a.starterPlan)
     send(chatId, "Checking domain availability...")
-    const { modifiedDomain, price } = await planGetNewDomain(message, chatId, send, saveInfo);
+    const { modifiedDomain, price } = await planGetNewDomain(message, chatId, send, saveInfo, info.hostingType);
     if (modifiedDomain === null || price === null) return
     return goto.registerNewDomainFound(modifiedDomain, price)
   }
@@ -1578,7 +1576,7 @@ bot?.on('message', async msg => {
     if (message === 'Back') return goto.submenu3()
     send(chatId, "Checking existing domain availability...")
     let modifiedDomain = removeProtocolFromDomain(message)
-    const { available, chatMessage } = await planCheckExistingDomain(modifiedDomain)
+    const { available, chatMessage } = await planCheckExistingDomain(modifiedDomain, info.hostingType)
     if (!available) {
       send(chatId, chatMessage)
       return goto.domainNotFound(modifiedDomain)

@@ -6,49 +6,51 @@ const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_P
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
 
-const plans = {
-  starterPlan: {
-    name: 'Starter Plan',
-    price: HOSTING_STARTER_PLAN_PRICE,
-    duration: '30 days',
-    storage: '10 GB SSD',
-    bandwidth: '100 GB',
-    domains: '1 domain',
-    emailAccounts: '5 email accounts',
-    databases: '1 MySQL database',
-    cPanelFeatures: 'Full access to cPanel for managing files, databases, emails, etc.',
-    idealFor: 'Personal blogs, small business websites, or portfolios.',
-  },
-  proPlan: {
-    name: 'Pro Plan',
-    price: HOSTING_PRO_PLAN_PRICE,
-    duration: '30 days',
-    storage: '50 GB SSD',
-    bandwidth: '500 GB',
-    domains: '5 domains',
-    emailAccounts: '25 email accounts',
-    databases: '10 MySQL databases',
-    cPanelFeatures: 'Full access to cPanel with advanced tools for backups, security, and analytics.',
-    additionalFeatures: 'Free website migration, daily backups.',
-    idealFor: 'Small to medium-sized business websites, e-commerce sites.',
-  },
-  businessPlan: {
-    name: 'Business Plan',
-    price: HOSTING_BUSINESS_PLAN_PRICE,
-    duration: '30 days',
-    storage: '100 GB SSD',
-    bandwidth: 'Unlimited',
-    domains: 'Unlimited domains',
-    emailAccounts: 'Unlimited email accounts',
-    databases: 'Unlimited MySQL databases',
-    cPanelFeatures: 'Full access to cPanel with all advanced features, including priority support.',
-    additionalFeatures: 'Free website migration, daily backups, staging environment, enhanced security features.',
-    idealFor: 'Large businesses, high-traffic websites, and developers needing more flexibility.',
-  },
+const plans = (hostingType)=> {
+  return {
+    starterPlan: {
+      name: 'Starter Plan',
+        price: HOSTING_STARTER_PLAN_PRICE,
+        duration: '30 days',
+        storage: '10 GB SSD',
+        bandwidth: '100 GB',
+        domains: '1 domain',
+        emailAccounts: '5 email accounts',
+        databases: '1 MySQL database',
+        features: `Full access to ${hostingType} for managing files, databases, emails, etc.`,
+        idealFor: 'Personal blogs, small business websites, or portfolios.',
+    },
+    proPlan: {
+      name: 'Pro Plan',
+        price: HOSTING_PRO_PLAN_PRICE,
+        duration: '30 days',
+        storage: '50 GB SSD',
+        bandwidth: '500 GB',
+        domains: '5 domains',
+        emailAccounts: '25 email accounts',
+        databases: '10 MySQL databases',
+        features: `Full access to ${hostingType} with advanced tools for backups, security, and analytics.`,
+        additionalFeatures: 'Free website migration, daily backups.',
+        idealFor: 'Small to medium-sized business websites, e-commerce sites.',
+    },
+    businessPlan: {
+      name: 'Business Plan',
+        price: HOSTING_BUSINESS_PLAN_PRICE,
+        duration: '30 days',
+        storage: '100 GB SSD',
+        bandwidth: 'Unlimited',
+        domains: 'Unlimited domains',
+        emailAccounts: 'Unlimited email accounts',
+        databases: 'Unlimited MySQL databases',
+          features: `Full access to ${hostingType} with all advanced features, including priority support.`,
+        additionalFeatures: 'Free website migration, daily backups, staging environment, enhanced security features.',
+        idealFor: 'Large businesses, high-traffic websites, and developers needing more flexibility.',
+    },
+  }
 }
 
-const generatePlanText = planKey => {
-  const plan = plans[planKey]
+const generatePlanText = (hostingType, planKey) => {
+  const plan = plans(hostingType)[planKey]
   return `
 🚀 <b>${plan.name}: $${plan.price}</b>
 
@@ -59,7 +61,7 @@ const generatePlanText = planKey => {
 <b>- Email Accounts:</b> ${plan.emailAccounts}
 <b>- Databases:</b> ${plan.databases}
 <b>- Free SSL:</b> Yes
-<b>- cPanel Features:</b> Full access to cPanel with advanced tools for backups, security, and analytics.
+<b>- ${hostingType} Features:</b> ${plan.features}
 ${plan.additionalFeatures ? `<b>- Additional Features:</b> ${plan.additionalFeatures}` : ''}
 <b>- Ideal for:</b> ${plan.idealFor}`
 }
@@ -119,7 +121,7 @@ Best regards,
 ${CHAT_BOT_NAME}`
 
 const successText = (info, response) =>
-  `Here are your cPanel Credentials for ${info.plan}:
+  `Here are your ${info.hostingType} Credentials for ${info.plan}:
 
 Domain: ${info.website_name}
 Username: ${response.username}
@@ -131,11 +133,11 @@ URL: ${response.url}
   - ${response.nameservers.ns1}
   - ${response.nameservers.ns2}
   
-Your cPanel credentials has been successfully sent to your email ${info.email} as well`
+Your ${info.hostingType} credentials has been successfully sent to your email ${info.email} as well`
 
-const cPanelSupport = (plan, statusCode) => `Something went wrong while setting up your ${plan}|${statusCode}. 
-                                                    Please contact support ${SUPPORT_USERNAME}.
-                                                    Discover more ${TG_HANDLE}.`
+const support = (plan, statusCode) => `Something went wrong while setting up your ${plan}|${statusCode}. 
+                                              Please contact support ${SUPPORT_USERNAME}.
+                                              Discover more ${TG_HANDLE}.`
 
 const bankPayDomain = (priceNGN, plan) => `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your ${plan} will be seamlessly activated.
 
@@ -153,6 +155,6 @@ module.exports = {
   showCryptoPaymentInfo,
   domainNotFound,
   successText,
-  cPanelSupport,
+  support,
   bankPayDomain,
 }

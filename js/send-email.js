@@ -25,7 +25,7 @@ async function sendEmail(info, response) {
                 We are excited to inform you that your <strong>(${plan})</strong> has been successfully activated!
             </p>
             <p style="font-size: 18px; line-height: 1.6; color: #007bff;">
-                You can now log in to your cPanel and start exploring your account.
+                You can now log in to your ${info.hostingType} and start exploring your account.
             </p>
 
             <table style="width: 100%; margin-top: 10px; border-collapse: separate; border-spacing: 0 10px;">
@@ -61,7 +61,7 @@ async function sendEmail(info, response) {
             </table>
 
             <p style="font-size: 18px; margin-top: 10px; line-height: 1.6;">
-                Please log in to your cPanel to manage your website and services. 
+                Please log in to your ${info.hostingType} to manage your website and services. 
                 If you need any assistance, feel free to contact our support team.
                 
                 ${info.plan === 'Freedom Plan' 
