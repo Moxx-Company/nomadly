@@ -530,11 +530,45 @@ const tickerOf = {
   LTC: 'ltc',
   ETH: 'eth',
   'USDT (TRC20)': 'trc20_usdt',
+  'BCH': 'bch',
   'USDT (ERC20)': 'erc20_usdt',
   DOGE: 'doge',
+  TRON: 'trx'
   // Matic: 'polygon_matic',
 }
 
+const supportedCrypto = {
+  BTC: '₿ Bitcoin (BTC)',
+  LTC: 'Ł Litecoin (LTC)',
+  DOGE: 'Ð Dogecoin (DOGE)',
+  BCH: 'Ƀ Bitcoin Cash (BCH)',
+  ETH: 'Ξ Ethereum (ETH)',
+  TRON: '🌐 Tron (TRX)',
+  'USDT (TRC20)': '₮ Tether (USDT - TRC20)',
+  'USDT (ERC20)': '₮ Tether (USDT - ERC20)'
+}
+
+const tickerOfDyno = {
+  BTC: 'BTC',
+  LTC: 'LTC',
+  ETH: 'ETH',
+  'USDT (TRC20)': 'USDT-TRC20',
+  'USDT (ERC20)': 'USDT-ERC20',
+  DOGE: 'DOGE',
+  BCH: 'BCH',
+  TRON: 'TRX'
+}
+
+const tickerViewOfDyno = {
+  BTC: 'btc',
+  LTC: 'ltc',
+  ETH: 'eth',
+  'USDT-TRC20': 'trc20_usdt',
+  DOGE: 'doge',
+  BCH: 'bch',
+  'USDT-ERC20': 'erc20_usdt',
+  'TRX': 'trx',
+}
 /////////////////////////////////////////////////////////////////////////////////////
 const _bc = ['Back', 'Cancel']
 
@@ -547,6 +581,8 @@ const payIn = {
 const tickerViews = Object.keys(tickerOf)
 const reverseObject = o => Object.fromEntries(Object.entries(o).map(([key, val]) => [val, key]))
 const tickerViewOf = reverseObject(tickerOf)
+const supportedCryptoView = reverseObject(supportedCrypto)
+const supportedCryptoViewOf = Object.keys(supportedCryptoView)
 
 const kOf = list => ({
   reply_markup: {
@@ -731,6 +767,13 @@ const html = (text = t.successPayment) => {
     `
 }
 
+const dynopayActions = {
+  walletFund: 'walletFund',
+  payHosting: 'payHosting',
+  payDomain: 'payDomain',
+  payPlan: 'payPlan'
+}
+
 module.exports = {
   k,
   t,
@@ -783,4 +826,10 @@ module.exports = {
   validatorSelectFormat,
   redSelectRandomCustom,
   redSelectProvider,
+  dynopayActions,
+  tickerOfDyno,
+  tickerViewOfDyno,
+  supportedCrypto,
+  supportedCryptoView,
+  supportedCryptoViewOf
 }

@@ -21,7 +21,6 @@ const {
   discountOn,
   planOptions,
   linkOptions,
-  tickerViews,
   tickerViewOf,
   dnsRecordType,
   chooseSubscription,
@@ -45,6 +44,11 @@ const {
   redSelectProvider,
   yesNo,
   payOpts,
+  dynopayActions,
+  tickerOfDyno,
+  tickerViewOfDyno,
+  supportedCryptoViewOf,
+  supportedCryptoView,
 } = require('./config.js')
 const createShortBitly = require('./bitly.js')
 const { createShortUrlApi, analyticsCuttly } = require('./cuttly.js')
@@ -74,6 +78,7 @@ const {
   removeProtocolFromDomain,
   planCheckExistingDomain,
   planGetNewDomain,
+  generateQr,
 } = require('./utils.js')
 const fs = require('fs')
 require('dotenv').config()
@@ -114,6 +119,11 @@ const {
   domainNotFound,
   bankPayDomain,
 } = require('./hosting/plans.js')
+const { 
+  getDynopayCryptoAddress,
+  getDynopayCryptoPaymentStatus, 
+  fetchDynoPayTransaction 
+} = require('./pay-dynopay.js')
 
 process.env['NTBA_FIX_350'] = 1
 const DB_NAME = process.env.DB_NAME
@@ -130,6 +140,7 @@ const HOSTED_ON = process.env.HOSTED_ON
 const CHAT_BOT_NAME = process.env.CHAT_BOT_NAME
 const REST_APIS_ON = process.env.REST_APIS_ON
 const TELEGRAM_BOT_ON = process.env.TELEGRAM_BOT_ON
+const BLOCKBEE_CRYTPO_PAYMENT_ON = process.env.BLOCKBEE_CRYTPO_PAYMENT_ON
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const TELEGRAM_DEV_CHAT_ID = process.env.TELEGRAM_DEV_CHAT_ID
 const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID
@@ -176,6 +187,7 @@ let state = {},
   chatIdBlocked = {},
   planEndingTime = {},
   chatIdOfPayment = {},
+  chatIdOfDynopayPayment = {},
   totalShortLinks = {},
   freeShortLinksOf = {},
   freeSmsCountOf = {},
@@ -217,6 +229,7 @@ const loadData = async () => {
   chatIdBlocked = db.collection('chatIdBlocked')
   planEndingTime = db.collection('planEndingTime')
   chatIdOfPayment = db.collection('chatIdOfPayment')
+  chatIdOfDynopayPayment = db.collection('chatIdOfDynopayPayment')
   totalShortLinks = db.collection('totalShortLinks')
   freeShortLinksOf = db.collection('freeShortLinksOf')
   freeSmsCountOf = db.collection('freeSmsCountOf')
@@ -663,20 +676,35 @@ bot?.on('message', async msg => {
     },
     [a.selectCryptoToDeposit]: () => {
       set(state, chatId, 'action', a.selectCryptoToDeposit)
-      send(chatId, t.selectCryptoToDeposit, k.of(tickerViews))
+      send(chatId, t.selectCryptoToDeposit, k.of(supportedCryptoViewOf))
     },
     showDepositCryptoInfo: async () => {
       const ref = nanoid()
       const { amount, tickerView } = info
       const ticker = tickerOf[tickerView]
-      const { address, bb } = await getCryptoDepositAddress(ticker, chatId, SELF_URL, `/crypto-wallet?a=b&ref=${ref}&`)
+      if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
+        const { address, bb } = await getCryptoDepositAddress(ticker, chatId, SELF_URL, `/crypto-wallet?a=b&ref=${ref}&`)
 
-      log({ ref })
-      sendQrCode(bot, chatId, bb)
-      set(chatIdOfPayment, ref, { chatId })
-      set(state, chatId, 'action', 'none')
-      const usdIn = await convert(amount, 'usd', ticker)
-      send(chatId, t.showDepositCryptoInfo(usdIn, tickerView, address), o)
+        log({ ref })
+        sendQrCode(bot, chatId, bb)
+        set(chatIdOfPayment, ref, { chatId })
+        set(state, chatId, 'action', 'none')
+        const usdIn = await convert(amount, 'usd', ticker)
+        send(chatId, t.showDepositCryptoInfo(usdIn, tickerView, address), o)
+      } else {
+        const tickerDyno = tickerOfDyno[tickerView]
+        const redirect_url = `${SELF_URL}/dynopay/crypto-wallet`
+        const meta_data = {
+          "product_name": dynopayActions.walletFund,
+          "refId" : ref
+        }
+        const { qr_code, address } = await getDynopayCryptoAddress(amount, tickerDyno, redirect_url, meta_data)
+        await generateQr(bot, chatId, qr_code)
+        set(chatIdOfDynopayPayment, ref, { chatId, action: dynopayActions.walletFund, address })
+        set(state, chatId, 'action', 'none')
+        const usdIn = await convert(amount, 'usd', ticker)
+        send(chatId, t.showDepositCryptoInfo(usdIn, tickerView, address), o)
+      }
     },
 
     //
@@ -1936,7 +1964,7 @@ bot?.on('message', async msg => {
 
     if (payOption === payIn.crypto) {
       set(state, chatId, 'action', 'crypto-pay-domain')
-      return send(chatId, `Please choose a crypto currency`, k.of(tickerViews))
+      return send(chatId, `Please choose a crypto currency`, k.of(supportedCryptoViewOf))
     }
 
     if (payOption === payIn.bank) {
@@ -1972,21 +2000,38 @@ bot?.on('message', async msg => {
   }
   if (action === 'crypto-pay-domain') {
     if (message === 'Back') return goto['domain-pay']()
-    const tickerView = message
-    const coin = tickerOf[tickerView]
-    const price = info?.couponApplied ? info?.newPrice : info?.price
-    const domain = info?.domain
-    if (!coin) return send(chatId, t.askValidCrypto)
-
-    const ref = nanoid()
-    set(chatIdOfPayment, ref, { chatId, price, domain })
-    const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-domain?a=b&ref=${ref}&`)
-    saveInfo('ref', ref)
-    log({ ref })
-    sendQrCode(bot, chatId, bb)
-    set(state, chatId, 'action', 'none')
-    const priceCrypto = await convert(price, 'usd', coin)
-    return send(chatId, t.showDepositCryptoInfoDomain(priceCrypto, tickerView, address, domain), o)
+      const tickerView = message
+      const ticker = supportedCryptoView[tickerView]
+      if (!ticker) return send(chatId, t.askValidCrypto)
+      const price = info?.couponApplied ? info?.newPrice : info?.price
+      const domain = info?.domain
+      const ref = nanoid()
+      if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
+        const coin = tickerOf[ticker]
+        set(chatIdOfPayment, ref, { chatId, price, domain })
+        const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-domain?a=b&ref=${ref}&`)
+        saveInfo('ref', ref)
+        log({ ref })
+        await sendQrCode(bot, chatId, bb)
+        set(state, chatId, 'action', 'none')
+        const priceCrypto = await convert(price, 'usd', coin)
+        return send(chatId, t.showDepositCryptoInfoDomain(priceCrypto, ticker, address, domain), o)
+      } else {
+        const coin = tickerOfDyno[ticker]
+        const redirect_url = `${SELF_URL}/dynopay/crypto-pay-domain`
+        const meta_data = {
+          "product_name": dynopayActions.payDomain,
+          "refId" : ref
+        }
+        const { qr_code, address } = await getDynopayCryptoAddress(price, coin, redirect_url, meta_data)
+        set(chatIdOfDynopayPayment, ref, { chatId, price, domain, action: dynopayActions.payDomain, address })
+        saveInfo('ref', ref)
+        log({ ref })
+        await generateQr(bot, chatId, qr_code)
+        set(state, chatId, 'action', 'none')
+        const priceCrypto = await convert(price, 'usd',  tickerOf[ticker])
+        return send(chatId, t.showDepositCryptoInfoDomain(priceCrypto, ticker, address, domain), o)
+      }
   }
 
   // Hosting payment
@@ -1996,7 +2041,7 @@ bot?.on('message', async msg => {
 
     if (payOption === payIn.crypto) {
       set(state, chatId, 'action', 'crypto-pay-hosting')
-      return send(chatId, `Please choose a crypto currency`, k.of(tickerViews))
+      return send(chatId, `Please choose a crypto currency`, k.of(supportedCryptoViewOf))
     }
 
     if (payOption === payIn.bank) {
@@ -2033,22 +2078,37 @@ bot?.on('message', async msg => {
   if (action === 'crypto-pay-hosting') {
     if (message === 'Back') return goto['hosting-pay']()
     const tickerView = message
-    const coin = tickerOf[tickerView]
+    const ticker = supportedCryptoView[tickerView]
+    if (!ticker) return send(chatId, t.askValidCrypto)
     const price = info?.couponApplied ? info?.newPrice : info?.totalPrice
     const domain = info?.domain
     const plan = info?.plan
-    if (!coin) return send(chatId, t.askValidCrypto)
-
     const ref = nanoid()
-    set(chatIdOfPayment, ref, { chatId, price, domain })
-    const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-hosting?a=b&ref=${ref}&`)
-
-    log({ ref })
-    await sendQrCode(bot, chatId, bb)
-    set(state, chatId, 'action', a.proceedWithPaymentProcess)
-    const priceCrypto = await convert(price, 'usd', coin)
-
-    return send(chatId, showCryptoPaymentInfo(priceCrypto, tickerView, address, plan), k.of([t.iHaveSentThePayment]))
+    if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
+      const coin = tickerOf[ticker]
+      set(chatIdOfPayment, ref, { chatId, price, domain })
+      const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-hosting?a=b&ref=${ref}&`)
+      log({ ref })
+      await sendQrCode(bot, chatId, bb)
+      set(state, chatId, 'action', a.proceedWithPaymentProcess)
+      const priceCrypto = await convert(price, 'usd', coin)
+      return send(chatId, showCryptoPaymentInfo(priceCrypto, ticker, address, plan), k.of([t.iHaveSentThePayment]))
+    } else {
+      const coin = tickerOfDyno[ticker]
+      if (!coin) return send(chatId, t.askValidCrypto)
+      const redirect_url = `${SELF_URL}/dynopay/crypto-pay-hosting`
+      const meta_data = {
+        "product_name": dynopayActions.payHosting,
+        "refId" : ref
+      }
+      const { qr_code, address } = await getDynopayCryptoAddress(price, coin, redirect_url, meta_data)
+      set(chatIdOfDynopayPayment, ref, { chatId, price, domain, action: dynopayActions.payHosting, address })
+      log({ ref })
+      await generateQr(bot, chatId, qr_code)
+      set(state, chatId, 'action', a.proceedWithPaymentProcess)
+      const priceCrypto = await convert(price, 'usd', tickerOf[ticker])
+      return send(chatId, showCryptoPaymentInfo(priceCrypto, ticker, address, plan), k.of([t.iHaveSentThePayment]))
+    }
   }
   if (action === 'get-free-domain') {
     if (message === 'Back' || message === 'No') return goto['choose-domain-to-buy']()
@@ -2100,7 +2160,7 @@ bot?.on('message', async msg => {
     const payOption = message
     if (payOption === payIn.crypto) {
       set(state, chatId, 'action', 'crypto-pay-plan')
-      return send(chatId, `Please choose a crypto currency`, k.of(tickerViews))
+      return send(chatId, `Please choose a crypto currency`, k.of(supportedCryptoViewOf))
     }
     if (payOption === payIn.bank) {
       set(state, chatId, 'action', 'bank-pay-plan')
@@ -2138,18 +2198,34 @@ bot?.on('message', async msg => {
 
     const ref = nanoid()
     const tickerView = message
-    const ticker = tickerOf[tickerView]
+    const ticker = supportedCryptoView[tickerView]
     if (!ticker) return send(chatId, t.askValidCrypto)
-    const { address, bb } = await getCryptoDepositAddress(ticker, chatId, SELF_URL, `/crypto-pay-plan?a=b&ref=${ref}&`)
-
-    log({ ref })
-    sendQrCode(bot, chatId, bb)
     const { plan } = info
-    const price = info?.couponApplied ? info?.newPrice : info?.price
-    set(state, chatId, 'action', 'none')
-    set(chatIdOfPayment, ref, { chatId, price, plan })
-    const priceCrypto = await convert(price, 'usd', ticker)
-    return send(chatId, t.showDepositCryptoInfoPlan(priceCrypto, tickerView, address, plan), o)
+    const price = info?.couponApplied ? info?.newPrice : info?.price 
+    if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
+      const coin = tickerOf[ticker]
+      const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-plan?a=b&ref=${ref}&`)
+      set(chatIdOfPayment, ref, { chatId, price, plan })
+      log({ ref })
+      await sendQrCode(bot, chatId, bb)
+      set(state, chatId, 'action', 'none')
+      const priceCrypto = await convert(price, 'usd', coin)
+      return send(chatId, t.showDepositCryptoInfoPlan(priceCrypto, ticker, address, plan), o)
+    } else {
+      const coin = tickerOfDyno[ticker]
+      if (!coin) return send(chatId, t.askValidCrypto)
+      const redirect_url = `${SELF_URL}/dynopay/crypto-pay-plan`
+      const meta_data = {
+        "product_name": dynopayActions.payPlan,
+        "refId" : ref
+      }
+      const { qr_code, address } = await getDynopayCryptoAddress(price, coin, redirect_url, meta_data)
+      set(chatIdOfDynopayPayment, ref, { chatId, price, plan, action: dynopayActions.payPlan, address })
+      log({ ref })
+      await generateQr(bot, chatId, qr_code)
+      const priceCrypto = await convert(price, 'usd', tickerOf[ticker])
+      return send(chatId, t.showDepositCryptoInfoPlan(priceCrypto, ticker, address, plan), o)
+    }
   }
   //
   //
@@ -2339,9 +2415,9 @@ bot?.on('message', async msg => {
     if (message === 'Back') return goto[a.depositUSD]()
 
     const tickerView = message
-    const ticker = tickerOf[tickerView]
+    const ticker = supportedCryptoView[tickerView]
     if (!ticker) return send(chatId, t.askValidCrypto)
-    await saveInfo('tickerView', tickerView)
+    await saveInfo('tickerView', ticker)
     return goto.showDepositCryptoInfo()
   }
   //
@@ -2891,6 +2967,16 @@ const auth = async (req, res, next) => {
   next()
 }
 
+const authDyno = async (req, res, next) => {
+  log(req.hostname + req.originalUrl)
+  const { meta_data } = req.body
+  const ref = meta_data.refId // first for crypto and second for webhook fincra
+  const pay = await get(chatIdOfDynopayPayment, ref)
+  if (!pay) return log(t.payError) || res.send(html(t.payError))
+  req.pay = { ...pay, ref }
+  next()
+}
+
 const app = express()
 app.use(express.json())
 app.use(cors())
@@ -3233,7 +3319,126 @@ app.get('/crypto-wallet', auth, async (req, res) => {
   const name = await get(nameOf, chatId)
   set(payments, ref, `Crypto,Wallet,wallet,$${usdIn},${chatId},${name},${new Date()},${value} ${coin}`)
 })
-//
+
+// Dynopay Pay plan
+app.post('dynopay/crypto-pay-plan', authDyno, async (req, res) => {
+  // Validate
+  const { ref, chatId, price, plan } = req.pay
+  const { paid_amount:value , paid_currency:coin, id } = req.body
+
+  console.log({ method: 'dynopay/crypto-pay-plan', ref, chatId, plan, price, coin, value })
+
+  if (!ref || !chatId || !plan || !price || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
+
+  // Logs
+  del(chatIdOfDynopayPayment, ref)
+  const name = await get(nameOf, chatId)
+  set(payments, ref, `Crypto,Plan,${plan},$${price},${chatId},${name},${new Date()},${value} ${coin},transaction,${id}`)
+
+  // Update Wallet
+  // Update Wallet
+  const ticker = tickerViewOfDyno[coin]
+  const usdIn = await convert(value, ticker , 'usd')  
+  const usdNeed = usdIn * 1.06
+  console.log(`usdIn ${usdIn}, usdNeed ${usdNeed}, Crypto, Plan, ${chatId}, ${name}`)
+  if (usdNeed < price) {
+    sendMessage(chatId, t.sentLessMoney(`$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn)
+    return res.send(html(t.lowPrice))
+  }
+  console.log(`usdIn > price = ${usdIn > price}`)
+  if (usdIn > price) {
+    addFundsTo(walletOf, chatId, 'usd', usdIn - price)
+    sendMessage(chatId, t.sentMoreMoney(`$${price}`, `$${usdIn}`))
+  }
+
+  // Subscribe Plan
+  subscribePlan(planEndingTime, freeDomainNamesAvailableFor, planOf, chatId, plan, bot)
+  res.send(html())
+})
+
+// Dynopay Domain
+app.post('/dynopay/crypto-pay-domain', authDyno, async (req, res) => {
+  // Validate
+  const { ref, chatId, price, domain } = req.pay
+  const { paid_amount:value , paid_currency:coin, id } = req.body
+
+  if (!ref || !chatId || !domain || !price || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
+
+  // Logs
+  del(chatIdOfDynopayPayment, ref)
+  const name = await get(nameOf, chatId)
+  set(payments, ref, `Crypto,Domain,${domain},$${price},${chatId},${name},${new Date()},${value} ${coin},transaction,${id}`)
+
+  // Update Wallet
+  const ticker = tickerViewOfDyno[coin]
+  const usdIn = await convert(value, ticker , 'usd')
+  if (usdIn * 1.06 < price) {
+    sendMessage(chatId, t.sentLessMoney(`$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn)
+    return res.send(html(t.lowPrice))
+  }
+  if (usdIn > price) {
+    addFundsTo(walletOf, chatId, 'usd', usdIn - price)
+    sendMessage(chatId, t.sentMoreMoney(`$${price}`, `$${usdIn}`))
+  }
+
+  // Buy Domain
+  const error = await buyDomainFullProcess(chatId, domain)
+  if (error) return res.send(html(error))
+  res.send(html())
+})
+
+// Dynopay Hosting
+app.post('/dynopay/crypto-pay-hosting', authDyno, async (req, res) => {
+  // Validate
+  const { ref, chatId, price } = req.pay
+  const { paid_amount:value , paid_currency:coin } = req.body
+
+  if (!ref || !chatId || !price || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
+
+    // Logs
+  del(chatIdOfDynopayPayment, ref)
+  await insert(hostingTransactions, chatId, "dynopay", req.body)
+  // Update Wallet
+  const ticker = tickerViewOfDyno[coin]
+  const usdIn = await convert(value, ticker , 'usd')
+  if (usdIn * 1.06 < price) {
+    sendMessage(chatId, t.sentLessMoney(`$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn)
+    return res.send(html(t.lowPrice))
+  }
+  if (usdIn > price) {
+    addFundsTo(walletOf, chatId, 'usd', usdIn - price)
+    sendMessage(chatId, t.sentMoreMoney(`$${price}`, `$${usdIn}`))
+  }
+
+  const info = await state.findOne({ _id: parseFloat(chatId) })
+  await registerDomainAndCreateCpanel(send, info, o, state)
+
+  res.send(html())
+})
+
+// Dynopay wallet 
+app.post('/dynopay/crypto-wallet', authDyno, async (req, res) => {
+  // Validate
+  const { ref, chatId } = req.pay
+  const { paid_amount:value , paid_currency:coin, id } = req.body
+  if (!ref || !chatId || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
+
+  // Update Wallet
+  const ticker = tickerViewOfDyno[coin]
+  const usdIn = await convert(value, ticker , 'usd')
+  addFundsTo(walletOf, chatId, 'usd', usdIn)
+  sendMessage(chatId, t.confirmationDepositMoney(value + ' ' + coin, usdIn))
+
+  // Logs
+  res.send(html())
+  del(chatIdOfDynopayPayment, ref)
+  const name = await get(nameOf, chatId)
+  set(payments, ref, `Crypto,Wallet,wallet,$${usdIn},${chatId},${name},${new Date()},${value} ${coin},transaction,${id}`)
+})
+
 //
 app.get('/', (req, res) => {
   res.send(html(t.greet))
