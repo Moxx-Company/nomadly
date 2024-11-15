@@ -176,6 +176,14 @@ const sendQr = async (bot, chatId, text, caption) => {
     ?.catch(log)
 }
 
+const generateQr = async (bot, chatId, data) => {
+  fs.writeFileSync('image.png', data.split(';base64,').pop(), { encoding: 'base64' })
+  bot
+    ?.sendPhoto(chatId, 'image.png', {  caption: 'Here is your QR code!', })
+    ?.then(() => fs.unlinkSync('image.png'))
+    ?.catch(log)
+}
+
 const getBalance = async (walletOf, chatId) => {
   const wallet = await get(walletOf, chatId)
 
@@ -342,6 +350,7 @@ module.exports = {
   isValidUrl,
   sendQrCode,
   sendQr,
+  generateQr,
   getBalance,
   nextNumber,
   isDeveloper,
