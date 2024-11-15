@@ -3322,7 +3322,7 @@ app.get('/crypto-wallet', auth, async (req, res) => {
 })
 
 // Dynopay Pay plan
-app.post('dynopay/crypto-pay-plan', auth, async (req, res) => {
+app.post('dynopay/crypto-pay-plan', authDyno, async (req, res) => {
   // Validate
   const { ref, chatId, price, plan } = req.pay
   const { paid_amount:value , paid_currency:coin, id } = req.body
@@ -3359,7 +3359,7 @@ app.post('dynopay/crypto-pay-plan', auth, async (req, res) => {
 })
 
 // Dynopay Domain
-app.post('/dynopay/crypto-pay-domain', auth, async (req, res) => {
+app.post('/dynopay/crypto-pay-domain', authDyno, async (req, res) => {
   // Validate
   const { ref, chatId, price, domain } = req.pay
   const { paid_amount:value , paid_currency:coin, id } = req.body
