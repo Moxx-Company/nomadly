@@ -73,8 +73,8 @@ const getNewDomain = async (domainName, hostingType) => {
 
     return {
       available: true,
-      originalPrice: domainPrice,
-      price: price > 5 ? price : 6,
+      originalPrice: domainPrice < 1 ? 1 : domainPrice,
+      price: price < 10 ? 10 : price,
       chatMessage,
       domainType
     }
