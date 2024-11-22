@@ -3326,7 +3326,7 @@ app.post('/dynopay/crypto-pay-plan', authDyno, async (req, res) => {
   const { ref, chatId, price, plan } = req.pay
   const { paid_amount:value , paid_currency:coin, id } = req.body
 
-  console.log({ method: 'dynopay/crypto-pay-plan', ref, chatId, plan, price, coin, value })
+  log({ method: 'dynopay/crypto-pay-plan', ref, chatId, plan, price, coin, value })
 
   if (!ref || !chatId || !plan || !price || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
 
@@ -3363,6 +3363,8 @@ app.post('/dynopay/crypto-pay-domain', authDyno, async (req, res) => {
   const { ref, chatId, price, domain } = req.pay
   const { paid_amount:value , paid_currency:coin, id } = req.body
 
+  log({ method: 'dynopay/crypto-pay-domain', ref, chatId, domain, price, coin, value })
+
   if (!ref || !chatId || !domain || !price || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
 
   // Logs
@@ -3395,6 +3397,8 @@ app.post('/dynopay/crypto-pay-hosting', authDyno, async (req, res) => {
   const { ref, chatId, price } = req.pay
   const { paid_amount:value , paid_currency:coin } = req.body
 
+  log({ method: 'dynopay/crypto-pay-hosting', ref, chatId, price, coin, value })
+
   if (!ref || !chatId || !price || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
 
     // Logs
@@ -3424,6 +3428,7 @@ app.post('/dynopay/crypto-wallet', authDyno, async (req, res) => {
   // Validate
   const { ref, chatId } = req.pay
   const { paid_amount:value , paid_currency:coin, id } = req.body
+  log({ method: 'dynopay/crypto-pay-wallet', ref, chatId, coin, value })
   if (!ref || !chatId || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
 
   // Update Wallet
