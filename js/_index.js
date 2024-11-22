@@ -2921,7 +2921,7 @@ const buyDomainFullProcess = async (chatId, domain) => {
       sendMessage(chatId, m)
       return m
     }
-    sendMessage(chatId, t.domainBoughtSuccess(domain), o)
+    send(chatId, t.domainBoughtSuccess(domain), o)
 
     let info = await get(state, chatId)
     if (info?.askDomainToUseWithShortener === 'No') return
