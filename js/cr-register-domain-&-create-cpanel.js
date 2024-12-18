@@ -3,7 +3,7 @@ const axios = require('axios')
 const { log } = require('console')
 const sendEmail = require('./send-email')
 const { assignPackageToUser, set, removeKeysFromDocumentById } = require('./db')
-const { support, successText } = require('./hosting/plans')
+const { translation } = require('./translation')
 
 
 const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL
@@ -38,9 +38,10 @@ async function registerDomainAndCreateCpanel(send, info, keyboardButtons, state)
     const statusCode = response.request.res.statusCode;
 
     if (statusCode === 201) {
+      const lang = info?.userLanguage ?? 'en'
       response = response.data.data
 
-      send(info._id, successText(info, response), keyboardButtons)
+      send(info._id, translation('hP.successText', lang, info, response), keyboardButtons)
 
       assignPackageToUser(state, info._id, info.plan)
 
@@ -71,11 +72,11 @@ async function registerDomainAndCreateCpanel(send, info, keyboardButtons, state)
         'hostingType',
       ])
     } else {
-      return send(info._id, support(info.plan, statusCode), keyboardButtons)
+      return send(info._id, translation('hP.support', lang, info.plan, statusCode), keyboardButtons)
     }
   } catch (err) {
     log('err registerDomain&CreateCPanel', { endpoint, headers, payload }, err.data, err?.response?.data)
-    return send(info._id, support(info.plan, 400), keyboardButtons)
+    return send(info._id, translation('hP.support', lang, info.plan, 400), keyboardButtons)
   }
 }
 

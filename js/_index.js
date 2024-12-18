@@ -1,30 +1,12 @@
 /*global process */
 const {
-  o,
-  t,
-  k,
-  u,
-  bc,
-  aO,
   rem,
-  dns,
   html,
-  user,
-  show,
-  payIn,
-  admin,
-  yes_no,
-  priceOf,
-  payBank,
-  linkType,
   tickerOf,
   discountOn,
-  planOptions,
-  linkOptions,
   tickerViewOf,
-  dnsRecordType,
-  chooseSubscription,
   buyLeadsSelectCountry,
+  priceOf,
   buyLeadsSelectSmsVoice,
   buyLeadsSelectArea,
   buyLeadsSelectAreaCode,
@@ -39,16 +21,10 @@ const {
   validatorSelectCarrier,
   validatorSelectAmount,
   validatorSelectFormat,
-  validatorSelectCnam,
-  redSelectRandomCustom,
-  redSelectProvider,
-  yesNo,
-  payOpts,
   dynopayActions,
   tickerOfDyno,
   tickerViewOfDyno,
-  supportedCryptoViewOf,
-  supportedCryptoView,
+  t,
 } = require('./config.js')
 const createShortBitly = require('./bitly.js')
 const { createShortUrlApi, analyticsCuttly } = require('./cuttly.js')
@@ -107,23 +83,10 @@ const createCustomShortUrlCuttly = require('./customCuttly.js')
 const schedule = require('node-schedule')
 const { registerDomainAndCreateCpanel } = require('./cr-register-domain-&-create-cpanel.js')
 const { isEmail } = require('validator')
-const {
-  generatePlanText,
-  generatePlanStepText,
-  generateDomainFoundText,
-  generateInvoiceText,
-  nameserverSelectionText,
-  confirmEmailBeforeProceeding,
-  generateExistingDomainText,
-  showCryptoPaymentInfo,
-  domainNotFound,
-  bankPayDomain,
-} = require('./hosting/plans.js')
 const { 
   getDynopayCryptoAddress,
-  getDynopayCryptoPaymentStatus, 
-  fetchDynoPayTransaction 
 } = require('./pay-dynopay.js')
+const { translation } = require('./translation.js')
 
 process.env['NTBA_FIX_350'] = 1
 const DB_NAME = process.env.DB_NAME
@@ -304,7 +267,7 @@ async function sendRemindersForExpiringPackages() {
     }).toArray()
 
     for (const user of users) {
-      send(user._id, t.oneHourLeftToExpireTrialPlan)
+      send(user._id, translation('t.oneHourLeftToExpireTrialPlan'))
 
       await state.updateOne(
         { _id: user._id },
@@ -386,6 +349,23 @@ bot?.on('message', async msg => {
   }
 
   const action = info?.action
+
+  const trans = (key, ...args) => {
+    const lang = info?.userLanguage || 'en';
+    return translation(key, lang, ...args)
+  };
+
+  const user = trans('user')
+  const t = trans('t')
+  const u = trans('u')
+  const bc = trans('bc')
+  const k = trans('k')
+  const aO = trans('aO')
+  const admin = trans('admin')
+  const payIn = trans('payIn')
+  const payBank = trans('payBank')
+  const hP = trans('hP')
+
   // actions
   const a = {
     // submenu
@@ -469,6 +449,11 @@ bot?.on('message', async msg => {
     redSelectRandomCustom: 'redSelectRandomCustom',
     redSelectProvider: 'redSelectProvider',
     redSelectCustomExt: 'redSelectCustomExt',
+
+    // user setup
+    addUserLanguage: 'addUserLanguage',
+    askUserEmail: 'askUserEmail',
+    askUserTerms: 'askUserTerms',
   }
   const firstSteps = [
     'block-user',
@@ -487,7 +472,7 @@ bot?.on('message', async msg => {
   ]
   const goto = {
     askCoupon: action => {
-      send(chatId, t.askCoupon(info?.price), k.of(['Skip']))
+      send(chatId, t.askCoupon(info?.price), k.of([t.skip]))
       set(state, chatId, 'action', a.askCoupon + action)
     },
     'domain-pay': () => {
@@ -509,7 +494,7 @@ bot?.on('message', async msg => {
         newPrice: info.newPrice,
       }
       set(state, chatId, 'action', 'hosting-pay')
-      send(chatId, generateInvoiceText(payload), k.pay)
+      send(chatId, hP.generateInvoiceText(payload), k.pay)
     },
     'choose-domain-to-buy': async () => {
       let text = ``
@@ -520,14 +505,14 @@ bot?.on('message', async msg => {
         text =
           available <= 0
             ? ``
-            : ` Remember, your ${plan} plan includes ${available} free ".sbs" domain${s}. Let's get your domain today!`
+            : t.availablefreeDomain(plan, available, s)
       }
       set(state, chatId, 'action', 'choose-domain-to-buy')
       send(chatId, t.chooseDomainToBuy(text), bc)
     },
     askDomainToUseWithShortener: () => {
       set(state, chatId, 'action', a.askDomainToUseWithShortener)
-      send(chatId, t.askDomainToUseWithShortener, yes_no)
+      send(chatId, t.askDomainToUseWithShortener,  trans('yes_no'))
     },
     'plan-pay': () => {
       const { plan, price, couponApplied, newPrice } = info
@@ -538,31 +523,30 @@ bot?.on('message', async msg => {
     },
     'choose-subscription': () => {
       set(state, chatId, 'action', 'choose-subscription')
-      send(chatId, t.chooseSubscription, chooseSubscription)
+      send(chatId, t.chooseSubscription, trans('chooseSubscription'))
     },
     'choose-url-to-shorten': async () => {
       set(state, chatId, 'action', 'choose-url-to-shorten')
-      const m = 'Kindly share the URL that you would like shortened and analyzed. e.g https://cnn.com'
-      send(chatId, m, bc)
+      send(chatId, t.shortenedUrlLink, bc)
       adminDomains = await getPurchasedDomains(TELEGRAM_DOMAINS_SHOW_CHAT_ID)
     },
     'choose-domain-with-shorten': domains => {
-      send(chatId, t.chooseDomainWithShortener, show(domains))
+      send(chatId, t.chooseDomainWithShortener, trans('show', domains))
       set(state, chatId, 'action', 'choose-domain-with-shorten')
     },
     'choose-link-type': () => {
-      send(chatId, `Choose link type:`, linkType)
+      send(chatId, `Choose link type:`, trans('linkType'))
       set(state, chatId, 'action', 'choose-link-type')
     },
     'get-free-domain': () => {
-      send(chatId, t.chooseFreeDomainText, yes_no)
+      send(chatId, t.chooseFreeDomainText,  trans('yes_no'))
       set(state, chatId, 'action', 'get-free-domain')
     },
 
     'choose-domain-to-manage': async () => {
       const domains = await getPurchasedDomains(chatId)
       set(state, chatId, 'action', 'choose-domain-to-manage')
-      send(chatId, t.chooseDomainToManage, show(domains))
+      send(chatId, t.chooseDomainToManage, trans('show', domains))
     },
 
     'select-dns-record-id-to-delete': () => {
@@ -571,7 +555,7 @@ bot?.on('message', async msg => {
     },
 
     'confirm-dns-record-id-to-delete': () => {
-      send(chatId, t.confirmDeleteDnsTxt, yes_no)
+      send(chatId, t.confirmDeleteDnsTxt,  trans('yes_no'))
       set(state, chatId, 'action', 'confirm-dns-record-id-to-delete')
     },
 
@@ -598,7 +582,7 @@ bot?.on('message', async msg => {
 
       set(state, chatId, 'domainNameId', domainNameId)
       set(state, chatId, 'action', 'choose-dns-action')
-      send(chatId, `${t.viewDnsRecords.replaceAll('{{domain}}', domain)}\n${viewDnsRecords}`, dns)
+      send(chatId, `${t.viewDnsRecords.replaceAll('{{domain}}', domain)}\n${viewDnsRecords}`, trans('dns'))
     },
 
     'type-dns-record-data-to-add': recordType => {
@@ -619,7 +603,7 @@ bot?.on('message', async msg => {
 
     'select-dns-record-type-to-add': () => {
       set(state, chatId, 'action', 'select-dns-record-type-to-add')
-      send(chatId, t.addDnsTxt, dnsRecordType)
+      send(chatId, t.addDnsTxt, trans('dnsRecordType'))
     },
 
     //
@@ -629,7 +613,7 @@ bot?.on('message', async msg => {
       set(state, chatId, 'action', admin.messageUsers)
     },
     adminConfirmMessage: () => {
-      send(chatId, 'Confirm?', yes_no)
+      send(chatId, 'Confirm?',  trans('yes_no'))
       set(state, chatId, 'action', 'adminConfirmMessage')
     },
     //
@@ -644,7 +628,7 @@ bot?.on('message', async msg => {
     //
     [a.selectCurrencyToDeposit]: () => {
       set(state, chatId, 'action', a.selectCurrencyToDeposit)
-      send(chatId, t.selectCurrencyToDeposit, payOpts)
+      send(chatId, t.selectCurrencyToDeposit, trans('payOpts'))
     },
     //
     [a.depositNGN]: () => {
@@ -664,10 +648,10 @@ bot?.on('message', async msg => {
       const { url, error } = await createCheckout(ngn, `/ok?a=b&ref=${ref}&`, email, username, ref)
 
       set(state, chatId, 'action', 'none')
-      if (error) return send(chatId, error, o)
+      if (error) return send(chatId, error, trans('o'))
       console.log('showDepositNgnInfo', url)
       send(chatId, t.showDepositNgnInfo(ngn), payBank(url))
-      return send(chatId, `Bank ₦aira + Card 🌐︎`, o)
+      return send(chatId, `Bank ₦aira + Card 🌐︎`, trans('o'))
     },
     //
     [a.depositUSD]: () => {
@@ -676,21 +660,21 @@ bot?.on('message', async msg => {
     },
     [a.selectCryptoToDeposit]: () => {
       set(state, chatId, 'action', a.selectCryptoToDeposit)
-      send(chatId, t.selectCryptoToDeposit, k.of(supportedCryptoViewOf))
+      send(chatId, t.selectCryptoToDeposit, trans('k.of', trans('supportedCryptoViewOf')))
     },
     showDepositCryptoInfo: async () => {
       const ref = nanoid()
-      const { amount, tickerView } = info
+      const { amount, tickerView, userLanguage } = info
       const ticker = tickerOf[tickerView]
       if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
         const { address, bb } = await getCryptoDepositAddress(ticker, chatId, SELF_URL, `/crypto-wallet?a=b&ref=${ref}&`)
 
         log({ ref })
-        sendQrCode(bot, chatId, bb)
+        sendQrCode(bot, chatId, bb, userLanguage ?? 'en')
         set(chatIdOfPayment, ref, { chatId })
         set(state, chatId, 'action', 'none')
         const usdIn = await convert(amount, 'usd', ticker)
-        send(chatId, t.showDepositCryptoInfo(usdIn, tickerView, address), o)
+        send(chatId, t.showDepositCryptoInfo(usdIn, tickerView, address), trans('o'))
       } else {
         const tickerDyno = tickerOfDyno[tickerView]
         const redirect_url = `${SELF_URL}/dynopay/crypto-wallet`
@@ -699,11 +683,11 @@ bot?.on('message', async msg => {
           "refId" : ref
         }
         const { qr_code, address } = await getDynopayCryptoAddress(amount, tickerDyno, redirect_url, meta_data)
-        await generateQr(bot, chatId, qr_code)
+        await generateQr(bot, chatId, qr_code, userLanguage ?? 'en')
         set(chatIdOfDynopayPayment, ref, { chatId, action: dynopayActions.walletFund, address })
         set(state, chatId, 'action', 'none')
         const usdIn = await convert(amount, 'usd', ticker)
-        send(chatId, t.showDepositCryptoInfo(usdIn, tickerView, address), o)
+        send(chatId, t.showDepositCryptoInfo(usdIn, tickerView, address), trans('o'))
       }
     },
 
@@ -722,20 +706,20 @@ bot?.on('message', async msg => {
         if (plan) {
           const { amount, totalPrice, couponApplied, newPrice } = info
           couponApplied
-          ? send(chatId, t.buyLeadsNewPrice(amount, totalPrice, newPrice), payOpts)
-          : send(chatId, t.buyLeadsPrice(amount, totalPrice), payOpts)
+          ? send(chatId, t.buyLeadsNewPrice(amount, totalPrice, newPrice), trans('payOpts'))
+          : send(chatId, t.buyLeadsPrice(amount, totalPrice), trans('payOpts'))
         } else {
           const { amount, price, couponApplied, newPrice } = info
           couponApplied
-          ? send(chatId, t.buyLeadsNewPrice(amount, price, newPrice), payOpts)
-          : send(chatId, t.buyLeadsPrice(amount, price), payOpts)
+          ? send(chatId, t.buyLeadsNewPrice(amount, price, newPrice), trans('payOpts'))
+          : send(chatId, t.buyLeadsPrice(amount, price), trans('payOpts'))
         }
 
       }
 
       set(state, chatId, 'action', a.walletSelectCurrency)
       const { usdBal, ngnBal } = await getBalance(walletOf, chatId)
-      send(chatId, t.walletSelectCurrency(usdBal, ngnBal), payOpts)
+      send(chatId, t.walletSelectCurrency(usdBal, ngnBal), trans('payOpts'))
     },
     walletSelectCurrencyConfirm: async () => {
       const { price, couponApplied, newPrice, coin } = info
@@ -744,7 +728,7 @@ bot?.on('message', async msg => {
       let text = ''
       if (coin === u.ngn) text = t.confirmNgn(p, await usdToNgn(p))
 
-      send(chatId, text + t.walletSelectCurrencyConfirm, yes_no)
+      send(chatId, text + t.walletSelectCurrencyConfirm,  trans('yes_no'))
       set(state, chatId, 'action', a.walletSelectCurrencyConfirm)
     },
     //
@@ -843,12 +827,12 @@ bot?.on('message', async msg => {
     },
 
     redSelectRandomCustom: () => {
-      send(chatId, t.redSelectRandomCustom, k.redSelectRandomCustom)
+      send(chatId, t.redSelectRandomCustom, trans('k.redSelectRandomCustom'))
       set(state, chatId, 'action', a.redSelectRandomCustom)
     },
 
     redSelectProvider: () => {
-      send(chatId, t.redSelectProvider, k.redSelectProvider)
+      send(chatId, trans('t.redSelectProvider'), trans('k.redSelectProvider'))
       set(state, chatId, 'action', a.redSelectProvider)
     },
 
@@ -859,18 +843,18 @@ bot?.on('message', async msg => {
 
     submenu1: () => {
       set(state, chatId, 'action', a.submenu1)
-      send(chatId, t.select, k.of([user.redSelectUrl, user.urlShortener, user.viewShortLinks]))
+      send(chatId, t.select, trans('k.of', [user.redSelectUrl, user.urlShortener, user.viewShortLinks]))
     },
     submenu2: () => {
       set(state, chatId, 'action', a.submenu2)
-      send(chatId, t.select, k.of([user.buyDomainName, user.viewDomainNames, user.dnsManagement]))
+      send(chatId, t.select, trans('k.of', [user.buyDomainName, user.viewDomainNames, user.dnsManagement]))
     },
 
     // cPanel Plans SubMenu
     submenu3: () => {
       saveInfo('username', username)
       set(state, chatId, 'action', a.submenu3)
-      send(chatId, t.selectPlan, k.of([[user.freeTrial, user.starterPlan], [user.proPlan, user.businessPlan], user.contactSupport]))
+      send(chatId, t.selectPlan, trans('k.of', [[user.freeTrial, user.starterPlan], [user.proPlan, user.businessPlan], user.contactSupport]))
     },
 
     displayEmailValidationError: () => {
@@ -880,7 +864,7 @@ bot?.on('message', async msg => {
     //free Trial Package
     freeTrialMenu: () => {
       set(state, chatId, 'action', a.freeTrial)
-      send(chatId, 'Your have selected Free Trial Plan', k.of([user.freeTrialMenuButton, user.contactSupport]))
+      send(chatId, t.selectedTrialPlan, k.of([user.freeTrialMenuButton, user.contactSupport]))
     },
     freeTrial: () => {
       set(state, chatId, 'action', a.freeTrial)
@@ -914,8 +898,8 @@ bot?.on('message', async msg => {
     sendcPanelCredentialsAsEmailToUser: async () => {
       try {
         send(chatId, t.trialPlanActivationConfirmation)
-        send(chatId, t.trialPlanActivationInProgress, o)
-        return await registerDomainAndCreateCpanel(send, info, o, state)
+        send(chatId, t.trialPlanActivationInProgress, trans('o'))
+        return await registerDomainAndCreateCpanel(send, info, trans('o'), state)
       } catch (error) {
         console.error('Error in sending messages or email:', error)
       }
@@ -934,7 +918,7 @@ bot?.on('message', async msg => {
 
       saveInfo('plan', planName)
       set(state, chatId, 'action', plan)
-      const message = generatePlanText(info.hostingType, plan);
+      const message = hP.generatePlanText(info.hostingType, plan);
 
       let actions = [[user.buyStarterPlan], [user.viewProPlan, user.viewBusinessPlan], [user.backToHostingPlans]];
       if (plan === a.proPlan) {
@@ -949,7 +933,7 @@ bot?.on('message', async msg => {
     // Step 1.1: View Plan
     viewPlan: plan => {
       set(state, chatId, 'action', plan)
-      const message = generatePlanText(info.hostingType, plan);
+      const message = hP.generatePlanText(info.hostingType, plan);
       send(chatId, message, bc)
     },
 
@@ -957,7 +941,7 @@ bot?.on('message', async msg => {
     buyPlan: plan => {
       set(state, chatId, 'action', plan)
       console.log("buyPlan", plan)
-      const message = generatePlanStepText("buyText");
+      const message = hP.generatePlanStepText("buyText");
       let actions = [user.registerANewDomain, user.useExistingDomain, [user.backToStarterPlanDetails]];
 
       if (plan === a.businessPlan) {
@@ -974,7 +958,7 @@ bot?.on('message', async msg => {
       set(state, chatId, 'action', a.registerNewDomain)
       saveInfo('existingDomain', false)
 
-      const message = generatePlanStepText("registerNewDomainText");
+      const message = hP.generatePlanStepText("registerNewDomainText");
       send(chatId, message, bc)
     },
 
@@ -982,7 +966,7 @@ bot?.on('message', async msg => {
     registerNewDomainFound: (websiteName, price) => {
       set(state, chatId, 'action', a.registerNewDomainFound)
       saveInfo('website_name', websiteName)
-      const domainFoundText = generateDomainFoundText(websiteName, price);
+      const domainFoundText = hP.generateDomainFoundText(websiteName, price);
       send(chatId, domainFoundText, k.of([[user.continueWithDomain(websiteName)], [user.searchAnotherDomain]]))
     },
 
@@ -990,7 +974,7 @@ bot?.on('message', async msg => {
     useExistingDomain: () => {
       set(state, chatId, 'action', a.useExistingDomain)
       saveInfo('existingDomain', true)
-      const message = generatePlanStepText("useExistingDomainText");
+      const message = hP.generatePlanStepText("useExistingDomainText");
       send(chatId, message, bc)
     },
 
@@ -998,32 +982,32 @@ bot?.on('message', async msg => {
     useExistingDomainFound: (websiteName) => {
       set(state, chatId, 'action', a.useExistingDomainFound)
       saveInfo('website_name', websiteName)
-      send(chatId, generateExistingDomainText(websiteName), k.of([[user.continueWithDomain(websiteName)], [user.searchAnotherDomain]]))
+      send(chatId, hP.generateExistingDomainText(websiteName), k.of([[user.continueWithDomain(websiteName)], [user.searchAnotherDomain]]))
     },
 
     domainNotFound: (websiteName) => {
       set(state, chatId, 'action', a.domainNotFound)
-      send(chatId, domainNotFound(websiteName), bc)
+      send(chatId, hP.domainNotFound(websiteName), bc)
     },
 
     // Step 3: Nameserver Selection
     nameserverSelection: (websiteName) => {
       set(state, chatId, 'action', a.nameserverSelection)
       const actions = [[user.privHostNS], [user.cloudflareNS]];
-      send(chatId, nameserverSelectionText(websiteName), k.of(actions))
+      send(chatId, hP.nameserverSelectionText(websiteName), k.of(actions))
     },
 
     // Step 4: Enter your email
     enterYourEmail: () => {
       set(state, chatId, 'action', a.enterYourEmail)
-      send(chatId, generatePlanStepText('enterYourEmail'), bc)
+      send(chatId, hP.generatePlanStepText('enterYourEmail'), bc)
     },
 
     // Step 4.1: Confirm Email
     confirmEmailBeforeProceeding: (email) => {
       saveInfo('email', email)
       set(state, chatId, 'action', a.confirmEmailBeforeProceeding)
-      send(chatId, confirmEmailBeforeProceeding(email), k.of([t.yesProceedWithThisEmail(email)]))
+      send(chatId, hP.confirmEmailBeforeProceeding(email), k.of([t.yesProceedWithThisEmail(email)]))
     },
 
     // Step 4.2: Proceed with Email
@@ -1056,7 +1040,7 @@ bot?.on('message', async msg => {
       }
 
       set(state, chatId, 'action', a.proceedWithEmail)
-      send(chatId, generateInvoiceText(payload), k.of([t.proceedWithPayment]),
+      send(chatId, hP.generateInvoiceText(payload), k.of([t.proceedWithPayment]),
       )
     },
 
@@ -1064,7 +1048,7 @@ bot?.on('message', async msg => {
     plansAskCoupon: action => {
       saveInfo('couponApplied', false)
       saveInfo('couponDiscount', 0)
-      send(chatId, t.planAskCoupon, k.of(['Skip']))
+      send(chatId, t.planAskCoupon, k.of([t.skip]))
       set(state, chatId, 'action', a.askCoupon + action)
     },
 
@@ -1078,14 +1062,30 @@ bot?.on('message', async msg => {
 
     // Step 6: Proceed with Payment
     proceedWithPaymentProcess: async () => {
-      send(chatId, generatePlanStepText('paymentConfirmation'), k.of([t.iHaveSentThePayment]))
+      send(chatId, hP.generatePlanStepText('paymentConfirmation'), k.of([t.iHaveSentThePayment]))
     },
 
     // Step 6.1: I have sent the payment
     iHaveSentThePayment: async () => {
       set(state, chatId, 'action', a.iHaveSentThePayment)
-      send(chatId, generatePlanStepText('paymentSuccess'), k.of([t.iHaveSentThePayment]))
+      send(chatId, hP.generatePlanStepText('paymentSuccess'), k.of([t.iHaveSentThePayment]))
     },
+    userLanguage : () => {
+      set(state, chatId, 'action', a.addUserLanguage)
+      return send(chatId, trans('l.askPreferredLanguage') , trans('languageMenu'))
+    },
+    askUserEmail : () => {
+      set(state, chatId, 'action', a.askUserEmail)
+      return send(chatId, trans('l.askUserEmail'), trans('k.of', [[trans('t.backButton')]]))    
+    },
+    askUserTerms: () => {
+      set(state, chatId, 'action', a.askUserTerms)
+      send(chatId, trans('l.termsAndCond'), trans('termsAndConditionType', info?.userLanguage ?? 'en'))
+      setTimeout(() => {
+        return send(chatId, trans('l.acceptTermMsg'), trans('k.of', [[trans('l.acceptTermButton')], [trans('l.declineTermButton')], [trans('t.backButton')]]))
+      },1000)
+      return
+    }
   }
 
   const walletOk = {
@@ -1093,6 +1093,7 @@ bot?.on('message', async msg => {
       set(state, chatId, 'action', 'none')
 
       const plan = info?.plan
+      const lang = info?.userLanguage || 'en'
       const name = await get(nameOf, chatId)
       const price = info?.couponApplied ? info?.newPrice : info?.price
       const wallet = await get(walletOf, chatId)
@@ -1115,8 +1116,8 @@ bot?.on('message', async msg => {
       }
 
       const { usdBal: usd, ngnBal: ngn } = await getBalance(walletOf, chatId)
-      send(chatId, t.showWallet(usd, ngn), o)
-      subscribePlan(planEndingTime, freeDomainNamesAvailableFor, planOf, chatId, plan, bot)
+      send(chatId, t.showWallet(usd, ngn), trans('o'))
+      subscribePlan(planEndingTime, freeDomainNamesAvailableFor, planOf, chatId, plan, bot, lang)
     },
 
     'domain-pay': async coin => {
@@ -1135,7 +1136,8 @@ bot?.on('message', async msg => {
 
       // buy domain
       const domain = info?.domain
-      const error = await buyDomainFullProcess(chatId, domain)
+      const lang = info?.userLanguage ?? 'en'
+      const error = await buyDomainFullProcess(chatId, lang, domain)
       if (error) return
       const name = await get(nameOf, chatId)
 
@@ -1151,7 +1153,7 @@ bot?.on('message', async msg => {
         await set(walletOf, chatId, 'ngnOut', ngnOut + priceNgn)
       }
       const { usdBal: usd, ngnBal: ngn } = await getBalance(walletOf, chatId)
-      send(chatId, t.showWallet(usd, ngn), o)
+      send(chatId, t.showWallet(usd, ngn), trans('o'))
     },
     'hosting-pay': async coin => {
       set(state, chatId, 'action', 'none')
@@ -1167,7 +1169,7 @@ bot?.on('message', async msg => {
       const priceNgn = await usdToNgn(price)
       if (coin === u.ngn && ngnBal < priceNgn) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
 
-      await registerDomainAndCreateCpanel(send, info, o, state)
+      await registerDomainAndCreateCpanel(send, info, trans('o'), state)
 
       // wallet update
       if (coin === u.usd) {
@@ -1181,7 +1183,7 @@ bot?.on('message', async msg => {
         await set(walletOf, chatId, 'ngnOut', ngnOut + priceNgn)
       }
       const { usdBal: usd, ngnBal: ngn } = await getBalance(walletOf, chatId)
-      send(chatId, t.showWallet(usd, ngn), o)
+      send(chatId, t.showWallet(usd, ngn), trans('o'))
     },
     [a.buyLeadsSelectFormat]: async coin => {
       set(state, chatId, 'action', 'none')
@@ -1215,9 +1217,10 @@ bot?.on('message', async msg => {
       const l = format === buyLeadsSelectFormat[0]
 
       // buy leads
-      send(chatId, t.validatorBulkNumbersStart, o)
+      send(chatId, t.validatorBulkNumbersStart, trans('o'))
       const leadsAmount = info?.amount
-      const res = await validateBulkNumbers(info?.carrier, info?.amount, cc, areaCodes, cnam, bot, chatId)
+      const lang = info?.userLanguage ?? 'en'
+      const res = await validateBulkNumbers(info?.carrier, info?.amount, cc, areaCodes, cnam, bot, chatId, lang)
       if (!res) return send(chatId, t.buyLeadsError)
 
       send(chatId, t.buyLeadsSuccess(info?.amount)) // send success message
@@ -1269,7 +1272,7 @@ bot?.on('message', async msg => {
         return send(chatId, 'Some Issue')
       }
       const { usdBal: usd, ngnBal: ngn } = await getBalance(walletOf, chatId)
-      send(chatId, t.showWallet(usd, ngn), o)
+      send(chatId, t.showWallet(usd, ngn), trans('o'))
     },
 
     [a.validatorSelectFormat]: async coin => {
@@ -1294,7 +1297,7 @@ bot?.on('message', async msg => {
       const l = format === validatorSelectFormat[0]
 
       // buy leads
-      send(chatId, t.validatorBulkNumbersStart, o) // main keyboard view
+      send(chatId, t.validatorBulkNumbersStart, trans('o')) // main keyboard view
       const phones = info?.phones?.slice(0, info?.amount)
       const leadsAmount = info?.amount
       const res = await validatePhoneBulkFile(info?.carrier, phones, cc, cnam, bot, chatId)
@@ -1348,7 +1351,7 @@ bot?.on('message', async msg => {
         return send(chatId, 'Some Issue')
       }
       const { usdBal: usd, ngnBal: ngn } = await getBalance(walletOf, chatId)
-      send(chatId, t.showWallet(usd, ngn), o)
+      send(chatId, t.showWallet(usd, ngn), trans('o'))
     },
     [a.redSelectProvider]: async coin => {
       set(state, chatId, 'action', 'none')
@@ -1375,12 +1378,12 @@ bot?.on('message', async msg => {
         set(maskOf, shortUrl, _shortUrl)
         set(fullUrlOf, shortUrl, url)
         set(linksOf, chatId, shortUrl, url)
-        send(chatId, _shortUrl, o)
+        send(chatId, _shortUrl, trans('o'))
         set(state, chatId, 'action', 'none')
       } catch (error) {
         send(TELEGRAM_DEV_CHAT_ID, error.message)
         set(state, chatId, 'action', 'none')
-        return send(chatId, t.redIssueUrlBitly, o)
+        return send(chatId, t.redIssueUrlBitly, trans('o'))
       }
 
       // wallet update
@@ -1396,7 +1399,7 @@ bot?.on('message', async msg => {
         return send(chatId, 'Some Issue')
       }
       const { usdBal: usd, ngnBal: ngn } = await getBalance(walletOf, chatId)
-      send(chatId, t.showWallet(usd, ngn), o)
+      send(chatId, t.showWallet(usd, ngn), trans('o'))
     },
   }
 
@@ -1414,14 +1417,21 @@ bot?.on('message', async msg => {
     if (isAdmin(chatId)) return send(chatId, 'Hello, Admin! Please select an option:', aO)
 
     const freeLinks = await get(freeShortLinksOf, chatId)
-    if (freeLinks === undefined || freeLinks > 0) return send(chatId, t.welcomeFreeTrial, o)
+    if (!info?.hasAcceptedTerms) {
+      return goto.userLanguage()
+    }
+    if (freeLinks === undefined || freeLinks > 0) return send(chatId, t.welcomeFreeTrial, trans('o'))
 
-    return send(chatId, t.welcome, o)
+    return send(chatId, t.welcome, trans('o'))
+  }
+
+  if (message === user.changeSetting) {
+    return goto.userLanguage()
   }
   //
-  if (message.toLowerCase() === 'cancel' || (firstSteps.includes(action) && message === 'Back')) {
+  if (message === t.cancel || (firstSteps.includes(action) && message === t.back)) {
     set(state, chatId, 'action', 'none')
-    return send(chatId, `User has Pressed ${message} Button.`, isAdmin(chatId) ? aO : o)
+    return send(chatId, t.userPressedBtn(message), isAdmin(chatId) ? aO : trans('o'))
   }
   //
   if (message === admin.blockUser) {
@@ -1432,11 +1442,11 @@ bot?.on('message', async msg => {
   if (action === 'block-user') {
     const userToBlock = message
     const chatIdToBlock = await get(chatIdOf, userToBlock)
-    if (!chatIdToBlock) return send(chatId, `User ${userToBlock} not found`)
+    if (!chatIdToBlock) return send(chatId, t.userToBlock(userToBlock))
 
     set(state, chatId, 'action', 'none')
     set(chatIdBlocked, chatIdToBlock, true)
-    return send(chatId, `User ${userToBlock} has been blocked.`, aO)
+    return send(chatId, t.userBlocked(userToBlock), aO)
   }
   //
   if (message === admin.unblockUser) {
@@ -1465,12 +1475,61 @@ bot?.on('message', async msg => {
     return goto.adminConfirmMessage()
   }
   if (action === 'adminConfirmMessage') {
-    if (message === 'Back' || message === 'No') return goto[admin.messageUsers]()
-    if (message !== 'Yes') return send(chatId, t.what)
+    if (message === t.back || message === t.no) return goto[admin.messageUsers]()
+    if (message !== t.yes) return send(chatId, t.what)
 
     set(state, chatId, 'action', 'none')
     sendMessageToAllUsers(bot, info?.messageContent, info?.messageMethod, nameOf, chatId)
     return send(chatId, 'Sent to all users', aO)
+  }
+  if (action === a.addUserLanguage) {
+    const language = message
+    const supportedLanguages = trans('supportedLanguages')
+    const validLanguage = supportedLanguages[language]
+    if (!validLanguage) return send(chatId, trans('l.askValidLanguage'), trans('languageMenu') )
+    info.userLanguage = validLanguage
+    send(chatId, trans('l.welcomeMessage'))
+    set(state, chatId, 'userLanguage', validLanguage)
+    setTimeout(() => {
+      return  goto.askUserEmail()
+    },500)
+    return
+  }
+
+  if (action === a.askUserEmail) {
+    if (message === trans('t.backButton')) return goto.userLanguage();
+    const email = message;
+    if (!isValidEmail(message)) {
+      return send(chatId, hP.generatePlanStepText('invalidEmail'), trans('k.of', [[trans('t.backButton')]]))
+    }
+    set(state, chatId, 'userEmail', email)
+    send(chatId, trans('l.processUserEmail'))
+    setTimeout(() => {
+      send(chatId, trans('l.confirmUserEmail'))
+      return goto.askUserTerms()
+    },1000)
+    return
+  }
+
+  if (action === a.askUserTerms) {
+    if (message === trans('t.backButton')) return goto.askUserEmail();
+    if (message === trans('l.viewTermsAgainButton')) return goto.askUserTerms()
+    if (message === trans('l.exitSetupButton')) {
+      set(state, chatId, 'action', 'none')
+      return send(chatId, trans('l.userExitMsg'), rem)
+    }
+    if (message === trans('l.acceptTermButton')) {
+      set(state, chatId, 'hasAcceptedTerms', true)
+      send(chatId, trans('l.acceptedTermsMsg'))
+      setTimeout(async () => {
+        const freeLinks = await get(freeShortLinksOf, chatId)
+        set(state, chatId, 'action', 'none')
+        if (freeLinks === undefined || freeLinks > 0) return send(chatId, t.welcomeFreeTrial, trans('o'))
+        return send(chatId, t.welcome, trans('o'))      
+      },1000)
+      return
+    }
+    return send(chatId, trans('l.declinedTermsMsg'),  trans('k.of', [[trans('l.viewTermsAgainButton')], [trans('l.exitSetupButton')], [trans('t.backButton')]]))
   }
 
   // cPanel Plans Events Handlers
@@ -1492,7 +1551,7 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.freeTrial) {
-    if (message === 'Back') return goto.submenu3()
+    if (message === t.back) return goto.submenu3()
     if (message === t.backButton) return goto.freeTrialMenu()
     if (message === user.freeTrialMenuButton) return goto.freeTrial()
     if (message === user.getFreeTrialPlanNow) return goto.getFreeTrialPlanNow()
@@ -1593,16 +1652,16 @@ bot?.on('message', async msg => {
 
 
   if (action === a.registerNewDomain) {
-    if (message === 'Back') return goto.buyPlan(a.starterPlan)
-    send(chatId, "Checking domain availability...")
+    if (message === t.back) return goto.buyPlan(a.starterPlan)
+    send(chatId, t.checkingDomainAvail)
     const { modifiedDomain, price } = await planGetNewDomain(message, chatId, send, saveInfo, info.hostingType);
     if (modifiedDomain === null || price === null) return
     return goto.registerNewDomainFound(modifiedDomain, price)
   }
 
   if (action === a.useExistingDomain) {
-    if (message === 'Back') return goto.submenu3()
-    send(chatId, "Checking existing domain availability...")
+    if (message === t.back) return goto.submenu3()
+    send(chatId, t.checkingExistingDomainAvail)
     let modifiedDomain = removeProtocolFromDomain(message)
     const { available, chatMessage } = await planCheckExistingDomain(modifiedDomain, info.hostingType)
     if (!available) {
@@ -1614,13 +1673,13 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.domainNotFound) {
-    if (message === 'Back') return goto.buyPlan(a.starterPlan)
+    if (message === t.back) return goto.buyPlan(a.starterPlan)
     if (message === user.searchAnotherDomain) return goto.registerNewDomain()
     if (message === user.continueWithDomain(info.website_name)) return goto.enterYourEmail()
   }
 
   if (action === a.registerNewDomainFound) {
-    if (message === "Back" || message === user.searchAnotherDomain) return goto.registerNewDomain()
+    if (message === t.back || message === user.searchAnotherDomain) return goto.registerNewDomain()
     if (message === user.continueWithDomain(info.website_name)) {
       await saveInfo('continue_domain_last_state', 'registerNewDomain')
       return goto.nameserverSelection(info.website_name)
@@ -1628,7 +1687,7 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.useExistingDomainFound) {
-    if (message === "Back" || message === user.searchAnotherDomain) return goto.useExistingDomain()
+    if (message === t.back || message === user.searchAnotherDomain) return goto.useExistingDomain()
     if (message === user.continueWithDomain(info.website_name)) {
       await saveInfo('continue_domain_last_state', 'useExistingDomain')
       return goto.nameserverSelection(info.website_name)
@@ -1636,7 +1695,7 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.nameserverSelection) {
-    if (message === 'Back') {
+    if (message === t.back) {
       if (info?.continue_domain_last_state === 'registerNewDomain') return goto.registerNewDomainFound(info.website_name)
       else if (info?.continue_domain_last_state === 'useExistingDomain') return goto.useExistingDomainFound(info.website_name)
     }
@@ -1650,28 +1709,28 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.enterYourEmail) {
-    if (message === 'Back') return goto.nameserverSelection(info.website_name)
+    if (message === t.back) return goto.nameserverSelection(info.website_name)
 
     if (!isValidEmail(message)) {
-      return send(chatId, generatePlanStepText('invalidEmail'), bc)
+      return send(chatId, hP.generatePlanStepText('invalidEmail'), bc)
     }
     return goto.confirmEmailBeforeProceeding(message)
   }
 
   if (action === a.confirmEmailBeforeProceeding) {
-    if (message === "Back") return goto.enterYourEmail()
+    if (message === t.back) return goto.enterYourEmail()
     if (message === t.yesProceedWithThisEmail(info.email)) return goto.proceedWithEmail(info.website_name, info.price)
   }
 
   if (action === a.proceedWithEmail) {
-    if (message === "Back") return goto.enterYourEmail()
+    if (message === t.back) return goto.enterYourEmail()
     if (message === t.proceedWithPayment)
       return goto.plansAskCoupon('choose-hosting-to-buy')
   }
 
   // 123456
   if (action === a.proceedWithPaymentProcess) {
-    if (message === "Back") return goto['hosting-pay']()
+    if (message === t.back) return goto['hosting-pay']()
     if (message === t.iHaveSentThePayment) return goto.iHaveSentThePayment()
   }
 
@@ -1681,15 +1740,16 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.redSelectUrl) {
-    if (message === 'Back') return goto.submenu1()
+    if (message === t.back) return goto.submenu1()
     if (!isValidUrl(message)) return send(chatId, t.redValidUrl, bc)
     saveInfo('url', message)
     return goto.redSelectProvider()
   }
 
   if (action === a.redSelectProvider) {
-    if (message === 'Back') return goto.redSelectUrl()
+    if (message === t.back) return goto.redSelectUrl()
     if (message === user.buyPlan) return goto['choose-subscription']()
+    const redSelectProvider = trans('redSelectProvider')
     if (!redSelectProvider.includes(message)) return send(chatId, t.what)
     saveInfo('provider', message)
     // bitly
@@ -1700,12 +1760,14 @@ bot?.on('message', async msg => {
     // cuttly
     if (redSelectProvider[1] === message) {
       if (!((await freeLinksAvailable(chatId)) || (await isSubscribed(chatId))))
-        return send(chatId, '📋 Subscribe first', k.of([...redSelectProvider, user.buyPlan]))
+        return send(chatId, t.subscribeFirst, k.of([...redSelectProvider, user.buyPlan]))
       return goto.redSelectRandomCustom()
     }
   }
   if (action === a.redSelectRandomCustom) {
-    if (message === 'Back') return goto.redSelectProvider()
+    if (message === t.back) return goto.redSelectProvider()
+
+    const redSelectRandomCustom = trans('redSelectRandomCustom')
 
     if (!redSelectRandomCustom.includes(message)) return send(chatId, t.what)
     saveInfo('format', message)
@@ -1737,11 +1799,11 @@ bot?.on('message', async msg => {
           set(expiryOf, shortUrl, Date.now() + FREE_LINKS_TIME_SECONDS)
         }
         set(state, chatId, 'action', 'none')
-        return send(chatId, _shortUrl, o)
+        return send(chatId, _shortUrl, trans('o'))
       } catch (error) {
         send(TELEGRAM_ADMIN_CHAT_ID, error?.response?.data)
         set(state, chatId, 'action', 'none')
-        return send(chatId, t.redIssueUrlCuttly, o)
+        return send(chatId, t.redIssueUrlCuttly, trans('o'))
       }
     }
 
@@ -1749,9 +1811,9 @@ bot?.on('message', async msg => {
     if (redSelectRandomCustom[1] === message) return goto.redSelectCustomExt()
   }
   if (action === a.redSelectCustomExt) {
-    if (message === 'Back') return goto.redSelectRandomCustom()
+    if (message === t.back) return goto.redSelectRandomCustom()
 
-    if (!isValidUrl(`https://abc.com/${message}`)) return send(chatId, `Enter a valid back half`)
+    if (!isValidUrl(`https://abc.com/${message}`)) return send(chatId, t.notValidHalf)
     try {
       const { url } = info
       const slug = nanoid()
@@ -1767,7 +1829,7 @@ bot?.on('message', async msg => {
         set(expiryOf, shortUrl, Date.now() + FREE_LINKS_TIME_SECONDS)
       }
       set(state, chatId, 'action', 'none')
-      return send(chatId, _shortUrl, o)
+      return send(chatId, _shortUrl, trans('o'))
     } catch (error) {
       if (error?.response?.data?.url?.status === 3) {
         return send(chatId, t.redIssueSlugCuttly)
@@ -1778,13 +1840,13 @@ bot?.on('message', async msg => {
         'cuttly issue: status:' + error?.response?.data?.url?.status + ' ' + error?.response?.data,
       )
       set(state, chatId, 'action', 'none')
-      return send(chatId, t.redIssueUrlCuttly, o)
+      return send(chatId, t.redIssueUrlCuttly, trans('o'))
     }
   }
 
   if (action === a.askCoupon + a.redSelectProvider) {
-    if (message === 'Back') return goto.redSelectProvider()
-    if (message === 'Skip') {
+    if (message === t.back) return goto.redSelectProvider()
+    if (message === t.skip) {
       saveInfo('lastStep', a.redSelectProvider)
       return (await saveInfo('couponApplied', false)) || goto.walletSelectCurrency()
     }
@@ -1810,8 +1872,8 @@ bot?.on('message', async msg => {
     return goto['choose-url-to-shorten']()
   }
   if (action === 'choose-url-to-shorten') {
-    if (message === 'Back') return goto.submenu1()
-    if (!isValidUrl(message)) return send(chatId, 'Please provide a valid URL. e.g https://google.com', bc)
+    if (message === t.back) return goto.submenu1()
+    if (!isValidUrl(message)) return send(chatId, t.provideLink, bc)
 
     set(state, chatId, 'url', message)
 
@@ -1819,7 +1881,7 @@ bot?.on('message', async msg => {
     return goto['choose-domain-with-shorten']([...domains, ...adminDomains])
   }
   if (action === 'choose-domain-with-shorten') {
-    if (message === 'Back') return goto['choose-url-to-shorten']()
+    if (message === t.back) return goto['choose-url-to-shorten']()
     if (message === user.buyDomainName) return goto['choose-domain-to-buy']()
 
     const domain = message.toLowerCase()
@@ -1831,13 +1893,13 @@ bot?.on('message', async msg => {
     return goto['choose-link-type']()
   }
   if (action === 'choose-link-type') {
-    if (message === 'Back') return goto['choose-domain-with-shorten'](await getPurchasedDomains(chatId))
-
+    if (message === t.back) return goto['choose-domain-with-shorten'](await getPurchasedDomains(chatId))
+    const linkOptions = trans('linkOption')
     if (!linkOptions.includes(message)) return send(chatId, t.what)
 
-    if (message === 'Custom Link') {
+    if (message === t.customLink) {
       set(state, chatId, 'action', 'shorten-custom')
-      return send(chatId, `Please tell your us preferred short link extension: e.g payer`, bc)
+      return send(chatId, t.askShortLinkExtension, bc)
     }
 
     // Random Link
@@ -1845,7 +1907,7 @@ bot?.on('message', async msg => {
     const domain = info?.selectedDomain
     const shortUrl = domain + '/' + nanoid()
     if (await get(fullUrlOf, shortUrl)) {
-      send(chatId, `Link already exists. Please type 'ok' to try another.`)
+      send(chatId, t.linkAlreadyExist)
       return
     }
 
@@ -1854,7 +1916,7 @@ bot?.on('message', async msg => {
     set(state, chatId, 'action', 'none')
     set(fullUrlOf, shortUrlSanitized, url)
     set(linksOf, chatId, shortUrlSanitized, url)
-    send(chatId, `Your shortened URL is: ${shortUrl}`, o)
+    send(chatId, t.yourShortendUrl(shortUrl), trans('o'))
     if (adminDomains.includes(domain)) {
       decrement(freeShortLinksOf, chatId)
       set(expiryOf, shortUrlSanitized, Date.now() + FREE_LINKS_TIME_SECONDS)
@@ -1862,21 +1924,21 @@ bot?.on('message', async msg => {
     return
   }
   if (action === 'shorten-custom') {
-    if (message === 'Back') return goto['choose-link-type']()
+    if (message === t.back) return goto['choose-link-type']()
 
     const url = info?.url
     const domain = info?.selectedDomain
     const shortUrl = domain + '/' + message
 
     if (!isValidUrl('https://' + shortUrl)) return send(chatId, t.provideLink)
-    if (await get(fullUrlOf, shortUrl)) return send(chatId, `Link already exists. Please try another.`)
+    if (await get(fullUrlOf, shortUrl)) return send(chatId, t.linkAlreadyExist)
 
     const shortUrlSanitized = shortUrl.replaceAll('.', '@')
     increment(totalShortLinks)
     set(state, chatId, 'action', 'none')
     set(fullUrlOf, shortUrlSanitized, url)
     set(linksOf, chatId, shortUrlSanitized, url)
-    send(chatId, `Your shortened URL is: ${shortUrl}`, o)
+    send(chatId, `Your shortened URL is: ${shortUrl}`, trans('o'))
     if (adminDomains.includes(domain)) {
       decrement(freeShortLinksOf, chatId)
       set(expiryOf, shortUrlSanitized, Date.now() + FREE_LINKS_TIME_SECONDS)
@@ -1889,19 +1951,19 @@ bot?.on('message', async msg => {
     return goto['choose-domain-to-buy']()
   }
   if (action === 'choose-domain-to-buy') {
-    if (message === 'Back') return goto.submenu2()
+    if (message === t.back) return goto.submenu2()
     let domain = message.toLowerCase()
     domain = domain.replace('https://', '')
     domain = domain.replace('http://', '')
 
     const domainRegex = /^(?:(?!-)[A-Za-z0-9-]{1,63}(?<!-)\.)+[A-Za-z]{2,6}$/
     if (!domainRegex.test(domain))
-      return send(chatId, 'Domain name is invalid. Please try another domain name. Use format abcpay.com')
+      return send(chatId, t.domainInvalid)
     const { available, price, originalPrice, message: msg } = await checkDomainPriceOnline(domain)
     if (!available) return send(chatId, msg)
     if (!originalPrice) {
-      send(TELEGRAM_DEV_CHAT_ID, 'Some issue in getting price')
-      return send(chatId, 'Some issue in getting price')
+      send(TELEGRAM_DEV_CHAT_ID, t.issueGettingPrice)
+      return send(chatId, t.issueGettingPrice)
     }
     saveInfo('price', price)
     saveInfo('domain', domain)
@@ -1909,7 +1971,8 @@ bot?.on('message', async msg => {
     return goto.askDomainToUseWithShortener()
   }
   if (action === a.askDomainToUseWithShortener) {
-    if (message === 'Back') return goto['choose-domain-to-buy']()
+    const yesNo = trans('yesNo')
+    if (message === t.back) return goto['choose-domain-to-buy']()
     if (!yesNo.includes(message)) return send(chatId, t.what)
     saveInfo('askDomainToUseWithShortener', message)
 
@@ -1921,8 +1984,8 @@ bot?.on('message', async msg => {
     return goto.askCoupon('choose-domain-to-buy')
   }
   if (action === a.askCoupon + 'choose-domain-to-buy') {
-    if (message === 'Back') return goto.askDomainToUseWithShortener()
-    if (message === 'Skip') return goto.skipCoupon('domain-pay')
+    if (message === t.back) return goto.askDomainToUseWithShortener()
+    if (message === t.skip) return goto.skipCoupon('domain-pay')
 
     const { price } = info
 
@@ -1939,8 +2002,8 @@ bot?.on('message', async msg => {
 
   // Coupon for domain
   if (action === a.askCoupon + 'choose-hosting-to-buy') {
-    if (message === 'Back') return goto.proceedWithEmail(info.website_name, info.price)
-    if (message === 'Skip') return goto.skipCoupon('hosting-pay')
+    if (message === t.back) return goto.proceedWithEmail(info.website_name, info.price)
+    if (message === t.skip) return goto.skipCoupon('hosting-pay')
 
     const { totalPrice } = info
 
@@ -1959,12 +2022,12 @@ bot?.on('message', async msg => {
     return goto['hosting-pay']()
   }
   if (action === 'domain-pay') {
-    if (message === 'Back') return goto.askCoupon('choose-domain-to-buy')
+    if (message === t.back) return goto.askCoupon('choose-domain-to-buy')
     const payOption = message
 
     if (payOption === payIn.crypto) {
       set(state, chatId, 'action', 'crypto-pay-domain')
-      return send(chatId, `Please choose a crypto currency`, k.of(supportedCryptoViewOf))
+      return send(chatId, t.selectCryptoToDeposit, trans('k.of', trans('supportedCryptoViewOf')))
     }
 
     if (payOption === payIn.bank) {
@@ -1980,7 +2043,7 @@ bot?.on('message', async msg => {
     return send(chatId, t.askValidPayOption)
   }
   if (action === 'bank-pay-domain') {
-    if (message === 'Back') return goto['domain-pay']()
+    if (message === t.back) return goto['domain-pay']()
     const email = message
     const price = info?.price
     const domain = info?.domain
@@ -1993,14 +2056,15 @@ bot?.on('message', async msg => {
     const priceNGN = Number(await usdToNgn(price))
     set(chatIdOfPayment, ref, { chatId, price, domain, endpoint: `/bank-pay-domain` })
     const { url, error } = await createCheckout(priceNGN, `/ok?a=b&ref=${ref}&`, email, username, ref)
-    if (error) return send(chatId, error, o)
-    send(chatId, `Bank ₦aira + Card 🌐︎`, o)
+    if (error) return send(chatId, error, trans('o'))
+    send(chatId, `Bank ₦aira + Card 🌐︎`, trans('o'))
     console.log('showDepositNgnInfo', url)
     return send(chatId, t.bankPayDomain(priceNGN, domain), payBank(url))
   }
   if (action === 'crypto-pay-domain') {
-    if (message === 'Back') return goto['domain-pay']()
+    if (message === t.back) return goto['domain-pay']()
       const tickerView = message
+      const supportedCryptoView = trans('supportedCryptoView')
       const ticker = supportedCryptoView[tickerView]
       if (!ticker) return send(chatId, t.askValidCrypto)
       const price = info?.couponApplied ? info?.newPrice : info?.price
@@ -2012,10 +2076,10 @@ bot?.on('message', async msg => {
         const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-domain?a=b&ref=${ref}&`)
         saveInfo('ref', ref)
         log({ ref })
-        await sendQrCode(bot, chatId, bb)
+        await sendQrCode(bot, chatId, bb, info?.userLanguage ?? 'en')
         set(state, chatId, 'action', 'none')
         const priceCrypto = await convert(price, 'usd', coin)
-        return send(chatId, t.showDepositCryptoInfoDomain(priceCrypto, ticker, address, domain), o)
+        return send(chatId, t.showDepositCryptoInfoDomain(priceCrypto, ticker, address, domain), trans('o'))
       } else {
         const coin = tickerOfDyno[ticker]
         const redirect_url = `${SELF_URL}/dynopay/crypto-pay-domain`
@@ -2027,21 +2091,21 @@ bot?.on('message', async msg => {
         set(chatIdOfDynopayPayment, ref, { chatId, price, domain, action: dynopayActions.payDomain, address })
         saveInfo('ref', ref)
         log({ ref })
-        await generateQr(bot, chatId, qr_code)
+        await generateQr(bot, chatId, qr_code, info?.userLanguage ?? 'en')
         set(state, chatId, 'action', 'none')
         const priceCrypto = await convert(price, 'usd',  tickerOf[ticker])
-        return send(chatId, t.showDepositCryptoInfoDomain(priceCrypto, ticker, address, domain), o)
+        return send(chatId, t.showDepositCryptoInfoDomain(priceCrypto, ticker, address, domain), trans('o'))
       }
   }
 
   // Hosting payment
   if (action === 'hosting-pay') {
-    if (message === 'Back') return goto.plansAskCoupon('choose-hosting-to-buy')
+    if (message === t.back) return goto.plansAskCoupon('choose-hosting-to-buy')
     const payOption = message
 
     if (payOption === payIn.crypto) {
       set(state, chatId, 'action', 'crypto-pay-hosting')
-      return send(chatId, `Please choose a crypto currency`, k.of(supportedCryptoViewOf))
+      return send(chatId, t.selectCryptoToDeposit, trans('k.of', trans('supportedCryptoViewOf')))
     }
 
     if (payOption === payIn.bank) {
@@ -2057,7 +2121,7 @@ bot?.on('message', async msg => {
     return send(chatId, t.askValidPayOption)
   }
   if (action === 'bank-pay-hosting') {
-    if (message === 'Back') return goto['hosting-pay']()
+    if (message === t.back) return goto['hosting-pay']()
     const email = message
     const price = info?.totalPrice
     const domain = info?.domain
@@ -2070,14 +2134,15 @@ bot?.on('message', async msg => {
     const priceNGN = Number(await usdToNgn(price))
     set(chatIdOfPayment, ref, { chatId, price, domain, endpoint: `/bank-pay-hosting` })
     const { url, error } = await createCheckout(priceNGN, `/ok?a=b&ref=${ref}&`, email, username, ref)
-    if (error) return send(chatId, error, o)
-    send(chatId, `Bank ₦aira + Card 🌐︎`, o)
+    if (error) return send(chatId, error, trans('o'))
+    send(chatId, `Bank ₦aira + Card 🌐︎`, trans('o'))
     console.log('showDepositNgnInfo', url)
-    return send(chatId, bankPayDomain(priceNGN, info.plan), payBank(url), k.of([t.iHaveSentThePayment]))
+    return send(chatId, hP.bankPayDomain(priceNGN, info.plan), payBank(url), k.of([t.iHaveSentThePayment]))
   }
   if (action === 'crypto-pay-hosting') {
-    if (message === 'Back') return goto['hosting-pay']()
+    if (message === t.back) return goto['hosting-pay']()
     const tickerView = message
+    const supportedCryptoView = trans('supportedCryptoView')
     const ticker = supportedCryptoView[tickerView]
     if (!ticker) return send(chatId, t.askValidCrypto)
     const price = info?.couponApplied ? info?.newPrice : info?.totalPrice
@@ -2089,10 +2154,10 @@ bot?.on('message', async msg => {
       set(chatIdOfPayment, ref, { chatId, price, domain })
       const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-hosting?a=b&ref=${ref}&`)
       log({ ref })
-      await sendQrCode(bot, chatId, bb)
+      await sendQrCode(bot, chatId, bb, info?.userLanguage ?? 'en')
       set(state, chatId, 'action', a.proceedWithPaymentProcess)
       const priceCrypto = await convert(price, 'usd', coin)
-      return send(chatId, showCryptoPaymentInfo(priceCrypto, ticker, address, plan), k.of([t.iHaveSentThePayment]))
+      return send(chatId, hP.showCryptoPaymentInfo(priceCrypto, ticker, address, plan), k.of([t.iHaveSentThePayment]))
     } else {
       const coin = tickerOfDyno[ticker]
       if (!coin) return send(chatId, t.askValidCrypto)
@@ -2104,18 +2169,19 @@ bot?.on('message', async msg => {
       const { qr_code, address } = await getDynopayCryptoAddress(price, coin, redirect_url, meta_data)
       set(chatIdOfDynopayPayment, ref, { chatId, price, domain, action: dynopayActions.payHosting, address })
       log({ ref })
-      await generateQr(bot, chatId, qr_code)
+      await generateQr(bot, chatId, qr_code, info?.userLanguage ?? 'en')
       set(state, chatId, 'action', a.proceedWithPaymentProcess)
       const priceCrypto = await convert(price, 'usd', tickerOf[ticker])
-      return send(chatId, showCryptoPaymentInfo(priceCrypto, ticker, address, plan), k.of([t.iHaveSentThePayment]))
+      return send(chatId, hP.showCryptoPaymentInfo(priceCrypto, ticker, address, plan), k.of([t.iHaveSentThePayment]))
     }
   }
   if (action === 'get-free-domain') {
-    if (message === 'Back' || message === 'No') return goto['choose-domain-to-buy']()
-    if (message !== 'Yes') return send(chatId, t.what)
+    if (message === t.back || message === t.no) return goto['choose-domain-to-buy']()
+    if (message !== t.yes) return send(chatId, t.what)
 
     const domain = info?.domain
-    const error = await buyDomainFullProcess(chatId, domain)
+    const lang = info?.userLanguage ?? 'en'
+    const error = await buyDomainFullProcess(chatId, lang, domain)
     if (!error) decrement(freeDomainNamesAvailableFor, chatId)
 
     return set(state, chatId, 'action', 'none')
@@ -2133,17 +2199,19 @@ bot?.on('message', async msg => {
     return goto['choose-subscription']()
   }
   if (action === 'choose-subscription') {
-    const plan = message
-    if (!planOptions.includes(plan)) return send(chatId, 'Please choose a valid plan', chooseSubscription)
+    const planOptionsOf = trans('planOptionsOf')
+    const planOptions = trans('planOptions')
+    if (!planOptions.includes(message)) return send(chatId, t.chooseValidPlan, trans('chooseSubscription'))
+    const plan = planOptionsOf[message]
     await saveInfo('plan', plan)
     await saveInfo('price', priceOf[plan])
     return goto.askCoupon('choose-subscription')
   }
   if (action === a.askCoupon + 'choose-subscription') {
-    if (message === 'Back') return goto['choose-subscription']()
+    if (message === t.back) return goto['choose-subscription']()
     const price = priceOf[info?.plan]
     saveInfo('price', price)
-    if (message === 'Skip') return (await saveInfo('couponApplied', false)) || goto['plan-pay']()
+    if (message === t.skip) return (await saveInfo('couponApplied', false)) || goto['plan-pay']()
 
     const coupon = message.toUpperCase()
     const discount = discountOn[coupon]
@@ -2156,11 +2224,11 @@ bot?.on('message', async msg => {
     return goto['plan-pay']()
   }
   if (action === 'plan-pay') {
-    if (message === 'Back') return goto.askCoupon('choose-subscription')
+    if (message === t.back) return goto.askCoupon('choose-subscription')
     const payOption = message
     if (payOption === payIn.crypto) {
       set(state, chatId, 'action', 'crypto-pay-plan')
-      return send(chatId, `Please choose a crypto currency`, k.of(supportedCryptoViewOf))
+      return send(chatId, t.selectCryptoToDeposit, trans('k.of', trans('supportedCryptoViewOf')))
     }
     if (payOption === payIn.bank) {
       set(state, chatId, 'action', 'bank-pay-plan')
@@ -2173,7 +2241,7 @@ bot?.on('message', async msg => {
     return send(chatId, t.askValidPayOption)
   }
   if (action === 'bank-pay-plan') {
-    if (message === 'Back') return goto['plan-pay']()
+    if (message === t.back) return goto['plan-pay']()
 
     const email = message
     if (!isValidEmail(email)) return send(chatId, t.askValidEmail)
@@ -2188,16 +2256,17 @@ bot?.on('message', async msg => {
     const { url, error } = await createCheckout(priceNGN, `/ok?a=b&ref=${ref}&`, email, username, ref)
 
     log({ ref })
-    if (error) return send(chatId, error, o)
-    send(chatId, `Bank ₦aira + Card 🌐︎`, o)
+    if (error) return send(chatId, error, trans('o'))
+    send(chatId, `Bank ₦aira + Card 🌐︎`, trans('o'))
     console.log('showDepositNgnInfo', url)
     return send(chatId, t['bank-pay-plan'](priceNGN, plan), payBank(url))
   }
   if (action === 'crypto-pay-plan') {
-    if (message === 'Back') return goto['plan-pay']()
+    if (message === t.back) return goto['plan-pay']()
 
     const ref = nanoid()
     const tickerView = message
+    const supportedCryptoView = trans('supportedCryptoView')
     const ticker = supportedCryptoView[tickerView]
     if (!ticker) return send(chatId, t.askValidCrypto)
     const { plan } = info
@@ -2207,10 +2276,10 @@ bot?.on('message', async msg => {
       const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-plan?a=b&ref=${ref}&`)
       set(chatIdOfPayment, ref, { chatId, price, plan })
       log({ ref })
-      await sendQrCode(bot, chatId, bb)
+      await sendQrCode(bot, chatId, bb, info?.userLanguage ?? 'en')
       set(state, chatId, 'action', 'none')
       const priceCrypto = await convert(price, 'usd', coin)
-      return send(chatId, t.showDepositCryptoInfoPlan(priceCrypto, ticker, address, plan), o)
+      return send(chatId, t.showDepositCryptoInfoPlan(priceCrypto, ticker, address, plan), trans('o'))
     } else {
       const coin = tickerOfDyno[ticker]
       if (!coin) return send(chatId, t.askValidCrypto)
@@ -2222,28 +2291,28 @@ bot?.on('message', async msg => {
       const { qr_code, address } = await getDynopayCryptoAddress(price, coin, redirect_url, meta_data)
       set(chatIdOfDynopayPayment, ref, { chatId, price, plan, action: dynopayActions.payPlan, address })
       log({ ref })
-      await generateQr(bot, chatId, qr_code)
+      await generateQr(bot, chatId, qr_code, info?.userLanguage ?? 'en')
       const priceCrypto = await convert(price, 'usd', tickerOf[ticker])
-      return send(chatId, t.showDepositCryptoInfoPlan(priceCrypto, ticker, address, plan), o)
+      return send(chatId, t.showDepositCryptoInfoPlan(priceCrypto, ticker, address, plan), trans('o'))
     }
   }
   //
   //
   if (message === user.dnsManagement) {
     if (!(await ownsDomainName(chatId))) {
-      send(chatId, 'No domain names found')
+      send(chatId, t.noDomainFound)
       return
     }
 
     return goto['choose-domain-to-manage']()
   }
   if (action === 'choose-domain-to-manage') {
-    if (message === 'Back') return goto.submenu2()
+    if (message === t.back) return goto.submenu2()
     const domain = message.toLowerCase()
 
     const domains = await getPurchasedDomains(chatId)
     if (!domains.includes(domain)) {
-      return send(chatId, 'Please choose a valid domain')
+      return send(chatId, t.chooseValidDomain)
     }
 
     await set(state, chatId, 'domainToManage', domain)
@@ -2252,9 +2321,9 @@ bot?.on('message', async msg => {
     return goto['choose-dns-action']()
   }
   if (action === 'choose-dns-action') {
-    if (message === 'Back') return goto['choose-domain-to-manage']()
+    if (message === t.back) return goto['choose-domain-to-manage']()
 
-    if (![t.addDns, t.updateDns, t.deleteDns].includes(message)) return send(chatId, `select valid option`)
+    if (![t.addDns, t.updateDns, t.deleteDns].includes(message)) return send(chatId, t.selectValidOption)
 
     if (message === t.deleteDns) return goto['select-dns-record-id-to-delete']()
 
@@ -2264,40 +2333,40 @@ bot?.on('message', async msg => {
   }
   //
   if (action === 'select-dns-record-id-to-delete') {
-    if (message === 'Back') return goto['choose-dns-action']()
+    if (message === t.back) return goto['choose-dns-action']()
 
     let id = Number(message)
-    if (isNaN(id) || !(id > 0 && id <= info?.dnsRecords.length)) return send(chatId, `select valid option`)
+    if (isNaN(id) || !(id > 0 && id <= info?.dnsRecords.length)) return send(chatId, t.selectValidOption)
 
     set(state, chatId, 'delId', --id) // User See id as 1,2,3 and we see as 0,1,2
     return goto['confirm-dns-record-id-to-delete']()
   }
   if (action === 'confirm-dns-record-id-to-delete') {
-    if (message === 'Back' || message === 'No') return goto['select-dns-record-id-to-delete']()
-    if (message !== 'Yes') return send(chatId, t.what)
+    if (message === t.back || message === t.no) return goto['select-dns-record-id-to-delete']()
+    if (message !== t.yes) return send(chatId, t.what)
 
     const { domainNameId, dnsRecords, domainToManage, delId } = info
     const nsRecords = dnsRecords.filter(r => r.recordType === 'NS')
     const { dnszoneID, dnszoneRecordID, nsId } = dnsRecords[delId]
     const { error } = await deleteDNSRecord(dnszoneID, dnszoneRecordID, domainToManage, domainNameId, nsId, nsRecords)
-    if (error) return send(chatId, `Error deleting dns record, ${error}, Provide value again`)
+    if (error) return send(chatId, t.errorDeletingDns(error))
 
     send(chatId, t.dnsRecordDeleted)
     return goto['choose-dns-action']()
   }
   if (action === 'select-dns-record-type-to-add') {
-    if (message === 'Back') return goto['choose-dns-action']()
+    if (message === t.back) return goto['choose-dns-action']()
 
     const recordType = message
 
     if (![t.cname, t.ns, t.a].includes(recordType)) {
-      return send(chatId, `select valid option`)
+      return send(chatId, t.selectValidOption)
     }
 
     return goto['type-dns-record-data-to-add'](recordType)
   }
   if (action === 'type-dns-record-data-to-add') {
-    if (message === 'Back') return goto['select-dns-record-type-to-add']()
+    if (message === t.back) return goto['select-dns-record-type-to-add']()
 
     const domain = info?.domainToManage
     const recordType = info?.recordType
@@ -2307,14 +2376,14 @@ bot?.on('message', async msg => {
     const domainNameId = info?.domainNameId
 
     if (nsRecords.length >= 4 && t[recordType] === 'NS') {
-      send(chatId, 'Maximum 4 NS records can be added, you can update or delete previous NS records')
+      send(chatId, t.maxDnsRecord)
       return goto['choose-dns-action']()
     }
 
     const nextId = nextNumber(nsRecords.map(r => r.nsId))
     const { error } = await saveServerInDomain(domain, recordContent, t[recordType], domainNameId, nextId, nsRecords)
     if (error) {
-      const m = `Error saving dns record, ${error}, Provide value again`
+      const m = errorSavingDns
       return send(chatId, m)
     }
 
@@ -2323,19 +2392,19 @@ bot?.on('message', async msg => {
   }
   //
   if (action === 'select-dns-record-id-to-update') {
-    if (message === 'Back') return goto['choose-dns-action']()
+    if (message === t.back) return goto['choose-dns-action']()
 
     const dnsRecords = info?.dnsRecords
     let id = Number(message)
     if (isNaN(id) || !(id > 0 && id <= dnsRecords.length)) {
-      return send(chatId, `select valid option`)
+      return send(chatId, t.selectValidOption)
     }
     id-- // User See id as 1,2,3 and we see as 0,1,2
 
     return goto['type-dns-record-data-to-update'](id, dnsRecords[id]?.recordType)
   }
   if (action === 'type-dns-record-data-to-update') {
-    if (message === 'Back') return goto['select-dns-record-id-to-update']()
+    if (message === t.back) return goto['select-dns-record-id-to-update']()
 
     const recordContent = message
     const dnsRecords = info?.dnsRecords
@@ -2379,14 +2448,14 @@ bot?.on('message', async msg => {
   if (message === u.deposit) return goto[a.selectCurrencyToDeposit]()
 
   if (action === a.selectCurrencyToDeposit) {
-    if (message === 'Back') return goto[user.wallet]()
+    if (message === t.back) return goto[user.wallet]()
     if (message === u.usd) return goto[a.depositUSD]()
     if (message === u.ngn) return goto[a.depositNGN]()
     return send(chatId, t.what)
   }
 
   if (action === a.depositNGN) {
-    if (message === 'Back') return goto[a.selectCurrencyToDeposit]()
+    if (message === t.back) return goto[a.selectCurrencyToDeposit]()
 
     const amount = message
     if (isNaN(amount)) return send(chatId, t.askValidAmount)
@@ -2394,7 +2463,7 @@ bot?.on('message', async msg => {
     return goto[a.askEmailForNGN]()
   }
   if (action === a.askEmailForNGN) {
-    if (message === 'Back') return goto[a.depositNGN]()
+    if (message === t.back) return goto[a.depositNGN]()
 
     const email = message
     if (!isValidEmail(email)) return send(chatId, t.askValidEmail)
@@ -2403,7 +2472,7 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.depositUSD) {
-    if (message === 'Back') return goto[a.selectCurrencyToDeposit]()
+    if (message === t.back) return goto[a.selectCurrencyToDeposit]()
 
     const amount = Number(message)
     if (isNaN(amount)) return send(chatId, t.whatNum)
@@ -2412,9 +2481,10 @@ bot?.on('message', async msg => {
     return goto[a.selectCryptoToDeposit]()
   }
   if (action === a.selectCryptoToDeposit) {
-    if (message === 'Back') return goto[a.depositUSD]()
+    if (message === t.back) return goto[a.depositUSD]()
 
     const tickerView = message
+    const supportedCryptoView = trans('supportedCryptoView')
     const ticker = supportedCryptoView[tickerView]
     if (!ticker) return send(chatId, t.askValidCrypto)
     await saveInfo('tickerView', ticker)
@@ -2423,7 +2493,7 @@ bot?.on('message', async msg => {
   //
   //
   if (action === a.walletSelectCurrency) {
-    if (message === 'Back') return goto[info?.lastStep]()
+    if (message === t.back) return goto[info?.lastStep]()
 
     const coin = message
     if (![u.usd, u.ngn].includes(coin)) return send(chatId, t.what)
@@ -2432,9 +2502,9 @@ bot?.on('message', async msg => {
     return goto.walletSelectCurrencyConfirm()
   }
   if (action === a.walletSelectCurrencyConfirm) {
-    if (message === 'Back' || message === 'No') return goto[a.walletSelectCurrency]()
+    if (message === t.back || message === t.no) return goto[a.walletSelectCurrency]()
 
-    if (message !== 'Yes') return send(chatId, t.what)
+    if (message !== t.yes) return send(chatId, t.what)
 
     try {
       return walletOk[info?.lastStep](info?.coin)
@@ -2461,14 +2531,14 @@ bot?.on('message', async msg => {
     return send(chatId, t.what)
   }
   if (action === a.buyLeadsSelectCountry) {
-    if (message === 'Back') goto.phoneNumberLeads()
+    if (message === t.back) goto.phoneNumberLeads()
     if (!buyLeadsSelectCountry.includes(message)) return send(chatId, t.what)
     if (areasOfCountry[message] && Object.keys(areasOfCountry[message]).length === 0) return send(chatId, `Coming Soon`)
     saveInfo('country', message)
     return goto.buyLeadsSelectSmsVoice()
   }
   if (action === a.buyLeadsSelectSmsVoice) {
-    if (message === 'Back') return goto.buyLeadsSelectCountry()
+    if (message === t.back) return goto.buyLeadsSelectCountry()
     if (buyLeadsSelectSmsVoice[1] === message) return send(chatId, `Coming Soon`)
     if (!buyLeadsSelectSmsVoice.includes(message)) return send(chatId, t.what)
     saveInfo('smsVoice', message)
@@ -2478,14 +2548,14 @@ bot?.on('message', async msg => {
     return goto.buyLeadsSelectAreaCode()
   }
   if (action === a.buyLeadsSelectArea) {
-    if (message === 'Back') return goto.buyLeadsSelectSmsVoice()
+    if (message === t.back) return goto.buyLeadsSelectSmsVoice()
     if (!buyLeadsSelectArea(info?.country).includes(message)) return send(chatId, t.what)
     await saveInfo('area', message)
     saveInfo('cameFrom', a.buyLeadsSelectArea)
     return goto.buyLeadsSelectAreaCode()
   }
   if (action === a.buyLeadsSelectAreaCode) {
-    if (message === 'Back') return goto?.[info?.cameFrom]()
+    if (message === t.back) return goto?.[info?.cameFrom]()
     const areaCodes = buyLeadsSelectAreaCode(
       info?.country,
       ['USA', 'Canada'].includes(info?.country) ? info?.area : 'Area Codes',
@@ -2498,7 +2568,7 @@ bot?.on('message', async msg => {
     return goto.buyLeadsSelectCarrier()
   }
   if (action === a.buyLeadsSelectCarrier) {
-    if (message === 'Back') return goto?.[info?.cameFrom]()
+    if (message === t.back) return goto?.[info?.cameFrom]()
     if (!buyLeadsSelectCarrier(info?.country).includes(message)) return send(chatId, t.what)
     saveInfo('carrier', message)
     saveInfo('cameFrom', a.buyLeadsSelectCarrier)
@@ -2506,14 +2576,14 @@ bot?.on('message', async msg => {
     return goto.buyLeadsSelectAmount()
   }
   if (action === a.buyLeadsSelectCnam) {
-    if (message === 'Back') return goto.buyLeadsSelectCarrier()
+    if (message === t.back) return goto.buyLeadsSelectCarrier()
     if (!buyLeadsSelectCnam.includes(message)) return send(chatId, t.what)
-    saveInfo('cnam', message === 'Yes')
+    saveInfo('cnam', message === t.yes)
     saveInfo('cameFrom', a.buyLeadsSelectCnam)
     return goto.buyLeadsSelectAmount()
   }
   if (action === a.buyLeadsSelectAmount) {
-    if (message === 'Back') return goto?.[info?.cameFrom]()
+    if (message === t.back) return goto?.[info?.cameFrom]()
 
     const amount = Number(message)
     if (chatId === 6687923716) {
@@ -2532,14 +2602,14 @@ bot?.on('message', async msg => {
     return goto.buyLeadsSelectFormat()
   }
   if (action === a.buyLeadsSelectFormat) {
-    if (message === 'Back') return goto.buyLeadsSelectAmount()
+    if (message === t.back) return goto.buyLeadsSelectAmount()
     if (!buyLeadsSelectFormat.includes(message)) return send(chatId, t.what)
     saveInfo('format', message)
     return goto.askCoupon(a.buyLeadsSelectFormat)
   }
   if (action === a.askCoupon + a.buyLeadsSelectFormat) {
-    if (message === 'Back') return goto.buyLeadsSelectFormat()
-    if (message === 'Skip') {
+    if (message === t.back) return goto.buyLeadsSelectFormat()
+    if (message === t.skip) {
       saveInfo('lastStep', a.buyLeadsSelectFormat)
       return (await saveInfo('couponApplied', false)) || goto.walletSelectCurrency()
     }
@@ -2562,7 +2632,7 @@ bot?.on('message', async msg => {
 
   //phone number validator
   if (action === a.validatorSelectCountry) {
-    if (message === 'Back') return goto.phoneNumberLeads()
+    if (message === t.back) return goto.phoneNumberLeads()
     if (!validatorSelectCountry.includes(message)) return send(chatId, t.what)
     saveInfo('country', message)
     return goto.validatorPhoneNumber()
@@ -2570,7 +2640,7 @@ bot?.on('message', async msg => {
 
   // get phone on file
   if (action === a.validatorPhoneNumber) {
-    if (message === 'Back') return goto.validatorSelectCountry()
+    if (message === t.back) return goto.validatorSelectCountry()
     let content
 
     if (msg.document) {
@@ -2579,7 +2649,7 @@ bot?.on('message', async msg => {
         content = (await axios.get(fileLink, { responseType: 'text' }))?.data
       } catch (error) {
         console.error('Error:', error.message)
-        return send(chatId, 'Error occurred while processing the file.')
+        return send(chatId, t.fileError)
       }
     } else {
       content = message
@@ -2596,7 +2666,7 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.validatorSelectSmsVoice) {
-    if (message === 'Back') return goto.validatorPhoneNumber()
+    if (message === t.back) return goto.validatorPhoneNumber()
     if (validatorSelectSmsVoice[1] === message) return send(chatId, `Coming Soon`)
     if (!validatorSelectSmsVoice.includes(message)) return send(chatId, t.what)
     saveInfo('smsVoice', message)
@@ -2604,7 +2674,7 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.validatorSelectCarrier) {
-    if (message === 'Back') return goto.validatorSelectSmsVoice()
+    if (message === t.back) return goto.validatorSelectSmsVoice()
     if (!validatorSelectCarrier(info?.country).includes(message)) return send(chatId, t.what)
     saveInfo('carrier', message)
     saveInfo('history', [...(info?.history || []), a.validatorSelectCarrier])
@@ -2615,9 +2685,10 @@ bot?.on('message', async msg => {
     return goto.validatorSelectCnam()
   }
   if (action === a.validatorSelectCnam) {
-    if (message === 'Back') return goBack()
+    if (message === t.back) return goBack()
+    const validatorSelectCnam = trans('validatorSelectCnam')
     if (!validatorSelectCnam.includes(message)) return send(chatId, t.what)
-    saveInfo('cnam', message === 'Yes')
+    saveInfo('cnam', message === t.yes)
     saveInfo('history', [...(info?.history || []), a.validatorSelectCnam])
 
     if (info?.phones.length < 2000) {
@@ -2632,12 +2703,12 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.validatorSelectAmount) {
-    if (message === 'Back') return goBack()
+    if (message === t.back) return goBack()
     let amount = message
     if (message.toLowerCase() === 'all') {
       amount = info?.phones.length
     }
-    if (isNaN(amount)) return send(chatId, `Amount incorrect`)
+    if (isNaN(amount)) return send(chatId, t.ammountIncorrect)
     saveInfo('amount', Number(amount))
     saveInfo('history', [...(info?.history || []), a.validatorSelectAmount])
     let cnam = info?.country === 'USA' ? info?.cnam : false
@@ -2646,14 +2717,14 @@ bot?.on('message', async msg => {
     return goto.validatorSelectFormat()
   }
   if (action === a.validatorSelectFormat) {
-    if (message === 'Back') return goBack()
+    if (message === t.back) return goBack()
     if (!validatorSelectFormat.includes(message)) return send(chatId, t.what)
     saveInfo('format', message)
     return goto.askCoupon(a.validatorSelectFormat)
   }
   if (action === a.askCoupon + a.validatorSelectFormat) {
-    if (message === 'Back') return goto.validatorSelectFormat()
-    if (message === 'Skip') {
+    if (message === t.back) return goto.validatorSelectFormat()
+    if (message === t.skip) {
       saveInfo('lastStep', a.validatorSelectFormat)
       return (await saveInfo('couponApplied', false)) || goto.walletSelectCurrency()
     }
@@ -2679,23 +2750,21 @@ bot?.on('message', async msg => {
 
   if (message === user.viewPlan) {
     const subscribedPlan = await get(planOf, chatId)
-
     if (subscribedPlan) {
+      const timeEnd = new Date(await get(planEndingTime, chatId))
       if (!(await isSubscribed(chatId))) {
-        send(chatId, `Your ${subscribedPlan} subscription is expired on ${new Date(await get(planEndingTime, chatId))}`)
+        send(chatId, t.subscriptionExpire(subscribedPlan, timeEnd))
         return
       }
 
       send(
         chatId,
-        `You are currently subscribed to the ${subscribedPlan} plan. Your plan is valid till ${new Date(
-          await get(planEndingTime, chatId),
-        )}`,
+        t.plansSubscripedtill(subscribedPlan, timeEnd),
       )
       return
     }
 
-    send(chatId, 'You are not currently subscribed to any plan.')
+    send(chatId, t.planNotSubscriped)
     return
   }
   if (message === user.becomeReseller) {
@@ -2704,12 +2773,12 @@ bot?.on('message', async msg => {
   if (message === user.viewShortLinks) {
     const links = await getShortLinks(chatId)
     if (links.length === 0) {
-      send(chatId, 'You have no shortened links yet.')
+      send(chatId, t.noShortenedUrlLink)
       return
     }
 
     const linksText = formatLinks(links.slice(-20)).join('\n\n')
-    send(chatId, `Here are your shortened links:\n${linksText}`)
+    send(chatId, t.shortenedLinkText(linksText))
     return
   }
   if (message === user.viewDomainNames) {
@@ -2757,17 +2826,17 @@ bot?.on('message', async msg => {
       bot,
       chatId,
       `${chatId}`,
-      `Scan QR with sms marketing app to login. You can also use this code to login: ${chatId}`,
+      t.scanQrOrUseChat(chatId),
     )
     return send(chatId, t.freeTrialAvailable)
   }
   if (action === 'listen_reset_login') {
-    if (message === 'Yes') {
+    if (message === t.yes) {
       const loginData = (await get(loginCountOf, Number(chatId))) || { loginCount: 0, canLogin: true }
       await set(loginCountOf, Number(chatId), { loginCount: loginData.loginCount, canLogin: true })
-      send(chatId, t.resetLoginAdmit, o)
+      send(chatId, t.resetLoginAdmit, trans('o'))
     } else {
-      send(chatId, t.resetLoginDeny, o)
+      send(chatId, t.resetLoginDeny, trans('o'))
     }
     return
   }
@@ -2911,20 +2980,20 @@ const formatLinks = links => {
   return links.map(d => `${d.clicks} ${d.clicks === 1 ? 'click' : 'clicks'} → ${d.shorter} → ${d.url}`)
 }
 
-const buyDomainFullProcess = async (chatId, domain) => {
+const buyDomainFullProcess = async (chatId, lang, domain) => {
   try {
     const { error: buyDomainError } = await buyDomain(chatId, domain)
     if (buyDomainError) {
-      const m = `Domain purchase fails, try another name. ${domain} ${buyDomainError}`
+      const m = t.domainPurchasedFailed(domain, buyDomainError)
       log(m)
       sendMessage(TELEGRAM_DEV_CHAT_ID, m)
       sendMessage(chatId, m)
       return m
     }
-    send(chatId, t.domainBoughtSuccess(domain), o)
+    send(chatId, translation('t.domainBoughtSuccess', lang, domain), translation('o', lang))
 
     let info = await get(state, chatId)
-    if (info?.askDomainToUseWithShortener === 'No') return
+    if (info?.askDomainToUseWithShortener === translation('t.no', lang)) return
 
     // saveDomainInServerRender
     const { server, error, recordType } =
@@ -2933,11 +3002,11 @@ const buyDomainFullProcess = async (chatId, domain) => {
         : await saveDomainInServerRailway(domain) // save domain in railway // can do separately maybe or just send messages of progress to user
 
     if (error) {
-      const m = t.errorSavingDomain
-      sendMessage(chatId, t.errorSavingDomain)
+      const m = translation('t.errorSavingDomain', lang)
+      sendMessage(chatId, m)
       return m
     }
-    sendMessage(chatId, t.domainLinking(domain))
+    sendMessage(chatId, translation('t.domainLinking', lang, domain))
 
     await sleep(65000) // sleep 65 seconds so that CR API can get the info that
 
@@ -2947,8 +3016,8 @@ const buyDomainFullProcess = async (chatId, domain) => {
       sendMessage(chatId, m)
       return m
     }
-    sendMessage(chatId, t.domainBought.replaceAll('{{domain}}', domain))
-    regularCheckDns(bot, chatId, domain)
+    sendMessage(chatId, translation('t.domainBought', lang).replaceAll('{{domain}}', domain))
+    regularCheckDns(bot, chatId, domain, lang)
     return false // error = false
   } catch (error) {
     const errorMessage = `err buyDomainFullProcess ${error?.message} ${JSON.stringify(error?.response?.data, null, 2)}`
@@ -2962,7 +3031,7 @@ const auth = async (req, res, next) => {
   log(req.hostname + req.originalUrl)
   const ref = req?.query?.ref || req?.body?.data?.reference // first for crypto and second for webhook fincra
   const pay = await get(chatIdOfPayment, ref)
-  if (!pay) return log(t.payError) || res.send(html(t.payError))
+  if (!pay) return log(translation('t.payError', 'en')) || res.send(html(translation('t.payError', 'en')))
   req.pay = { ...pay, ref }
   next()
 }
@@ -2972,7 +3041,7 @@ const authDyno = async (req, res, next) => {
   const { meta_data } = req.body
   const ref = meta_data.refId // first for crypto and second for webhook fincra
   const pay = await get(chatIdOfDynopayPayment, ref)
-  if (!pay) return log(t.payError) || res.send(html(t.payError))
+  if (!pay) return log(translation('t.payError', 'en')) || res.send(html(translation('t.payError', 'en')))
   req.pay = { ...pay, ref }
   next()
 }
@@ -2983,13 +3052,13 @@ app.use(cors())
 app.set('json spaces', 2)
 let serverStartTime = new Date()
 
-const addFundsTo = async (walletOf, chatId, coin, valueIn) => {
+const addFundsTo = async (walletOf, chatId, coin, valueIn, lang) => {
   if (!['usd', 'ngn'].includes(coin)) throw Error('Dev Please Debug')
 
   const key = `${coin}In`
   await increment(walletOf, chatId, key, valueIn)
   const { usdBal, ngnBal } = await getBalance(walletOf, chatId)
-  sendMessage(chatId, t.showWallet(usdBal, ngnBal))
+  sendMessage(chatId, translation('t.showWallet', lang, usdBal, ngnBal))
 }
 //
 //
@@ -2997,8 +3066,10 @@ const bankApis = {
   '/bank-pay-plan': async (req, res, ngnIn) => {
     // Validate
     const { ref, chatId, price, plan } = req.pay
-    if (!ref || !chatId || !price || !plan) return log(t.argsErr) || res.send(html(t.argsErr))
-    if (('' + ref + chatId + price + plan).includes('undefined')) return log(t.argsErr) || res.send(html(t.argsErr))
+    if (!ref || !chatId || !price || !plan) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+    if (('' + ref + chatId + price + plan).includes('undefined')) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+    const info = await state.findOne({ _id: parseFloat(chatId) })
+    const lang = info?.userLanguage ?? 'en'
 
     // Logs
     del(chatIdOfPayment, ref)
@@ -3009,24 +3080,26 @@ const bankApis = {
     // Update Wallet
     const ngnPrice = await usdToNgn(price)
     if (usdIn * 1.06 < price) {
-      sendMessage(chatId, t.sentLessMoney(`${ngnPrice} NGN`, `${ngnIn} NGN`))
-      addFundsTo(walletOf, chatId, 'ngn', ngnIn)
-      return res.send(html(t.lowPrice))
+      sendMessage(chatId, translation('t.sentLessMoney', lang, `${ngnPrice} NGN`, `${ngnIn} NGN`))
+      addFundsTo(walletOf, chatId, 'ngn', ngnIn, lang)
+      return res.send(html(translation('t.lowPrice')))
     }
     if (ngnIn > ngnPrice) {
-      addFundsTo(walletOf, chatId, 'ngn', ngnIn - ngnPrice)
-      sendMessage(chatId, t.sentMoreMoney(`${ngnPrice} NGN`, `${ngnIn} NGN`))
+      addFundsTo(walletOf, chatId, 'ngn', ngnIn - ngnPrice, lang)
+      sendMessage(chatId, translation('t.sentLessMoney', lang, `${ngnPrice} NGN`, `${ngnIn} NGN`))
     }
 
     // Subscribe Plan
-    subscribePlan(planEndingTime, freeDomainNamesAvailableFor, planOf, chatId, plan, bot)
+    subscribePlan(planEndingTime, freeDomainNamesAvailableFor, planOf, chatId, plan, bot, lang)
 
     res.send(html())
   },
   '/bank-pay-domain': async (req, res, ngnIn) => {
     // Validate
     const { ref, chatId, price, domain } = req.pay
-    if (!ref || !chatId || !price || !domain) return log(t.argsErr) || res.send(html(t.argsErr))
+    if (!ref || !chatId || !price || !domain) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+    const info = await state.findOne({ _id: parseFloat(chatId) })
+    const lang = info?.userLanguage ?? 'en'
 
     // Logs
     del(chatIdOfPayment, ref)
@@ -3037,17 +3110,17 @@ const bankApis = {
     // Update Wallet
     const ngnPrice = await usdToNgn(price)
     if (usdIn * 1.06 < price) {
-      sendMessage(chatId, t.sentLessMoney(`${ngnPrice} NGN`, `${ngnIn} NGN`))
-      addFundsTo(walletOf, chatId, 'ngn', ngnIn)
-      return res.send(html(t.lowPrice))
+      sendMessage(chatId, translation('t.sentLessMoney', lang, `${ngnPrice} NGN`, `${ngnIn} NGN`))
+      addFundsTo(walletOf, chatId, 'ngn', ngnIn, lang)
+      return res.send(html(translation('t.lowPrice')))
     }
     if (ngnIn > ngnPrice) {
-      addFundsTo(walletOf, chatId, 'ngn', ngnIn - ngnPrice)
-      sendMessage(chatId, t.sentMoreMoney(`${ngnPrice} NGN`, `${ngnIn} NGN`))
+      addFundsTo(walletOf, chatId, 'ngn', ngnIn - ngnPrice, lang)
+      sendMessage(chatId, translation('t.sentMoreMoney', lang, `${ngnPrice} NGN`, `${ngnIn} NGN`))
     }
 
     // Buy Domain
-    const error = await buyDomainFullProcess(chatId, domain)
+    const error = await buyDomainFullProcess(chatId, lang, domain)
     if (error) return res.send(html(error))
 
     res.send(html())
@@ -3056,7 +3129,9 @@ const bankApis = {
     // Validate
     const { ref, chatId, price } = req.pay
     const response = req?.query
-    if (!ref || !chatId || !price) return log(t.argsErr) || res.send(html(t.argsErr))
+    if (!ref || !chatId || !price) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+    const info = await state.findOne({ _id: parseFloat(chatId) })
+    const lang = info?.userLanguage ?? 'en'
 
     // Logs
     del(chatIdOfPayment, ref)
@@ -3066,31 +3141,31 @@ const bankApis = {
     // Update Wallet
     const ngnPrice = await usdToNgn(price)
     if (usdIn * 1.06 < price) {
-      sendMessage(chatId, t.sentLessMoney(`${ngnPrice} NGN`, `${ngnIn} NGN`))
-      addFundsTo(walletOf, chatId, 'ngn', ngnIn)
-      return res.send(html(t.lowPrice))
+      sendMessage(chatId, translation('t.sentLessMoney', lang, `${ngnPrice} NGN`, `${ngnIn} NGN`))
+      addFundsTo(walletOf, chatId, 'ngn', ngnIn, lang)
+      return res.send(html(translation('t.lowPrice')))
     }
     if (ngnIn > ngnPrice) {
-      addFundsTo(walletOf, chatId, 'ngn', ngnIn - ngnPrice)
-      sendMessage(chatId, t.sentMoreMoney(`${ngnPrice} NGN`, `${ngnIn} NGN`))
+      addFundsTo(walletOf, chatId, 'ngn', ngnIn - ngnPrice, lang)
+      sendMessage(chatId, translation('t.sentMoreMoney', lang, `${ngnPrice} NGN`, `${ngnIn} NGN`))
     }
 
-    const info = await state.findOne({ _id: parseFloat(chatId) })
-
     // Buy Domain Hosting
-    await registerDomainAndCreateCpanel(send, info, o, state)
+    await registerDomainAndCreateCpanel(send, info, translation('o', lang), state)
 
     res.send(html())
   },
   '/bank-wallet': async (req, res, ngnIn) => {
     // Validate
     const { ref, chatId } = req.pay
-    if (!ref || !chatId) return log(t.argsErr) || res.send(html(t.argsErr))
+    if (!ref || !chatId) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+    const info = await state.findOne({ _id: parseFloat(chatId) })
+    const lang = info?.userLanguage ?? 'en'
 
     // Update Wallet
     const usdIn = await ngnToUsd(ngnIn)
-    addFundsTo(walletOf, chatId, 'ngn', ngnIn)
-    sendMessage(chatId, t.confirmationDepositMoney(`${ngnIn} NGN`, usdIn))
+    addFundsTo(walletOf, chatId, 'ngn', ngnIn, lang)
+    sendMessage(chatId, translation('t.confirmationDepositMoney', lang, `${ngnIn} NGN`, usdIn))
 
     // Logs
     res.send(html())
@@ -3105,7 +3180,7 @@ app.post('/webhook', auth, (req, res) => {
   const value = req?.body?.data?.amountReceived
   const coin = req?.body?.data?.currency
   const endpoint = req?.pay?.endpoint
-  if (coin !== 'NGN' || isNaN(value) || !bankApis[endpoint]) return log(t.argsErr) || res.send(html(t.argsErr))
+  if (coin !== 'NGN' || isNaN(value) || !bankApis[endpoint]) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
 
   bankApis[endpoint](req, res, Number(value))
 })
@@ -3167,7 +3242,9 @@ app.get('/login-count/:chatId', async (req, res) => {
   const chatId = req?.params?.chatId
   const loginData = (await get(loginCountOf, Number(chatId))) || { loginCount: 0, canLogin: true }
   if (!loginData.canLogin) {
-    send(Number(chatId), t.resetLogin, yes_no)
+    const info = await state.findOne({ _id: parseFloat(chatId) })
+    const lang = info?.userLanguage ?? 'en'
+    send(Number(chatId), translation('t.resetLogin', lang), trans('yes_no'))
     // sendMessage(Number(chatId), t.resetLogin, yes_no)
     await set(state, Number(chatId), 'action', 'listen_reset_login')
   }
@@ -3214,7 +3291,10 @@ app.get('/crypto-pay-plan', auth, async (req, res) => {
 
   console.log({ method: '/crypto-pay-plan', ref, chatId, plan, price, coin, value })
 
-  if (!ref || !chatId || !plan || !price || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
+  if (!ref || !chatId || !plan || !price || !coin || !value) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+
+  const info = await state.findOne({ _id: parseFloat(chatId) })
+  const lang = info?.userLanguage ?? 'en'
 
   // Logs
   del(chatIdOfPayment, ref)
@@ -3226,18 +3306,18 @@ app.get('/crypto-pay-plan', auth, async (req, res) => {
   const usdNeed = usdIn * 1.06
   console.log(`usdIn ${usdIn}, usdNeed ${usdNeed}, Crypto, Plan, ${chatId}, ${name}`)
   if (usdNeed < price) {
-    sendMessage(chatId, t.sentLessMoney(`$${price}`, `$${usdIn}`))
-    addFundsTo(walletOf, chatId, 'usd', usdIn)
-    return res.send(html(t.lowPrice))
+    sendMessage(chatId, translation('t.sentLessMoney', lang, `$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn, lang)
+    return res.send(html(translation('t.lowPrice')))
   }
   console.log(`usdIn > price = ${usdIn > price}`)
   if (usdIn > price) {
-    addFundsTo(walletOf, chatId, 'usd', usdIn - price)
-    sendMessage(chatId, t.sentMoreMoney(`$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn - price, lang)
+    sendMessage(chatId, translation('t.sentMoreMoney', lang, `$${price}`, `$${usdIn}`))
   }
 
   // Subscribe Plan
-  subscribePlan(planEndingTime, freeDomainNamesAvailableFor, planOf, chatId, plan, bot)
+  subscribePlan(planEndingTime, freeDomainNamesAvailableFor, planOf, chatId, plan, bot, lang)
   res.send(html())
 })
 app.get('/crypto-pay-domain', auth, async (req, res) => {
@@ -3245,8 +3325,9 @@ app.get('/crypto-pay-domain', auth, async (req, res) => {
   const { ref, chatId, price, domain } = req.pay
   const coin = req?.query?.coin
   const value = req?.query?.value_coin
-  if (!ref || !chatId || !domain || !price || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
-
+  if (!ref || !chatId || !domain || !price || !coin || !value) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+  const info = await state.findOne({ _id: parseFloat(chatId) })
+  const lang = info?.userLanguage ?? 'en'
   // Logs
   del(chatIdOfPayment, ref)
   const name = await get(nameOf, chatId)
@@ -3255,17 +3336,17 @@ app.get('/crypto-pay-domain', auth, async (req, res) => {
   // Update Wallet
   const usdIn = await convert(value, coin, 'usd')
   if (usdIn * 1.06 < price) {
-    sendMessage(chatId, t.sentLessMoney(`$${price}`, `$${usdIn}`))
-    addFundsTo(walletOf, chatId, 'usd', usdIn)
-    return res.send(html(t.lowPrice))
+    sendMessage(chatId, translation('t.sentLessMoney', lang, `$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn, lang)
+    return res.send(html(translation('t.lowPrice')))
   }
   if (usdIn > price) {
-    addFundsTo(walletOf, chatId, 'usd', usdIn - price)
-    sendMessage(chatId, t.sentMoreMoney(`$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn - price, lang)
+    sendMessage(chatId, translation('t.sentMoreMoney', lang, `$${price}`, `$${usdIn}`))
   }
 
   // Buy Domain
-  const error = await buyDomainFullProcess(chatId, domain)
+  const error = await buyDomainFullProcess(chatId, lang, domain)
   if (error) return res.send(html(error))
   res.send(html())
 })
@@ -3278,7 +3359,9 @@ app.get('/crypto-pay-hosting', auth, async (req, res) => {
   const value = req?.query?.value_coin
   const response = req?.query
 
-  if (!ref || !chatId || !price || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
+  if (!ref || !chatId || !price || !coin || !value) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+  const info = await state.findOne({ _id: parseFloat(chatId) })
+  const lang = info?.userLanguage ?? 'en'
 
     // Logs
   del(chatIdOfPayment, ref)
@@ -3286,18 +3369,16 @@ app.get('/crypto-pay-hosting', auth, async (req, res) => {
   // Update Wallet
   const usdIn = await convert(value, coin, 'usd')
   if (usdIn * 1.06 < price) {
-    sendMessage(chatId, t.sentLessMoney(`$${price}`, `$${usdIn}`))
-    addFundsTo(walletOf, chatId, 'usd', usdIn)
-    return res.send(html(t.lowPrice))
+    sendMessage(chatId, translation('t.sentLessMoney', lang, `$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn, lang)
+    return res.send(html(translation('t.lowPrice')))
   }
   if (usdIn > price) {
-    addFundsTo(walletOf, chatId, 'usd', usdIn - price)
-    sendMessage(chatId, t.sentMoreMoney(`$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn - price, lang)
+    sendMessage(chatId, translation('t.sentMoreMoney', lang, `$${price}`, `$${usdIn}`))
   }
 
-  const info = await state.findOne({ _id: parseFloat(chatId) })
-
-  await registerDomainAndCreateCpanel(send, info, o, state)
+  await registerDomainAndCreateCpanel(send, info, translation('o', lang), state)
 
   res.send(html())
 })
@@ -3306,12 +3387,14 @@ app.get('/crypto-wallet', auth, async (req, res) => {
   const { ref, chatId } = req.pay
   const coin = req?.query?.coin
   const value = req?.query?.value_coin
-  if (!ref || !chatId || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
+  if (!ref || !chatId || !coin || !value) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+  const info = await state.findOne({ _id: parseFloat(chatId) })
+  const lang = info?.userLanguage ?? 'en'
 
   // Update Wallet
   const usdIn = await convert(value, coin, 'usd')
-  addFundsTo(walletOf, chatId, 'usd', usdIn)
-  sendMessage(chatId, t.confirmationDepositMoney(value + ' ' + tickerViewOf[coin], usdIn))
+  addFundsTo(walletOf, chatId, 'usd', usdIn, lang)
+  sendMessage(chatId, translation('t.confirmationDepositMoney', lang, value + ' ' + tickerViewOf[coin], usdIn))
 
   // Logs
   res.send(html())
@@ -3328,7 +3411,9 @@ app.post('/dynopay/crypto-pay-plan', authDyno, async (req, res) => {
 
   log({ method: 'dynopay/crypto-pay-plan', ref, chatId, plan, price, coin, value })
 
-  if (!ref || !chatId || !plan || !price || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
+  if (!ref || !chatId || !plan || !price || !coin || !value) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+  const info = await state.findOne({ _id: parseFloat(chatId) })
+  const lang = info?.userLanguage ?? 'en'
 
   // Logs
   del(chatIdOfDynopayPayment, ref)
@@ -3342,18 +3427,18 @@ app.post('/dynopay/crypto-pay-plan', authDyno, async (req, res) => {
   const usdNeed = usdIn * 1.06
   console.log(`usdIn ${usdIn}, usdNeed ${usdNeed}, Crypto, Plan, ${chatId}, ${name}`)
   if (usdNeed < price) {
-    sendMessage(chatId, t.sentLessMoney(`$${price}`, `$${usdIn}`))
-    addFundsTo(walletOf, chatId, 'usd', usdIn)
-    return res.send(html(t.lowPrice))
+    sendMessage(chatId, translation('t.sentLessMoney', lang, `$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn, lang)
+    return res.send(html(translation('t.lowPrice')))
   }
   console.log(`usdIn > price = ${usdIn > price}`)
   if (usdIn > price) {
-    addFundsTo(walletOf, chatId, 'usd', usdIn - price)
-    sendMessage(chatId, t.sentMoreMoney(`$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn - price, lang)
+    sendMessage(chatId, translation('t.sentMoreMoney', lang, `$${price}`, `$${usdIn}`))
   }
 
   // Subscribe Plan
-  subscribePlan(planEndingTime, freeDomainNamesAvailableFor, planOf, chatId, plan, bot)
+  subscribePlan(planEndingTime, freeDomainNamesAvailableFor, planOf, chatId, plan, bot, lang)
   res.send(html())
 })
 
@@ -3365,7 +3450,10 @@ app.post('/dynopay/crypto-pay-domain', authDyno, async (req, res) => {
 
   log({ method: 'dynopay/crypto-pay-domain', ref, chatId, domain, price, coin, value })
 
-  if (!ref || !chatId || !domain || !price || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
+  if (!ref || !chatId || !domain || !price || !coin || !value) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+
+  const info = await state.findOne({ _id: parseFloat(chatId) })
+  const lang = info?.userLanguage ?? 'en'
 
   // Logs
   del(chatIdOfDynopayPayment, ref)
@@ -3376,17 +3464,17 @@ app.post('/dynopay/crypto-pay-domain', authDyno, async (req, res) => {
   const ticker = tickerViewOfDyno[coin]
   const usdIn = await convert(value, ticker , 'usd')
   if (usdIn * 1.06 < price) {
-    sendMessage(chatId, t.sentLessMoney(`$${price}`, `$${usdIn}`))
-    addFundsTo(walletOf, chatId, 'usd', usdIn)
-    return res.send(html(t.lowPrice))
+    sendMessage(chatId, translation('t.sentLessMoney', lang, `$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn, lang)
+    return res.send(html(translation('t.lowPrice')))
   }
   if (usdIn > price) {
-    addFundsTo(walletOf, chatId, 'usd', usdIn - price)
-    sendMessage(chatId, t.sentMoreMoney(`$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn - price, lang)
+    sendMessage(chatId, trans('t.sentMoreMoney', lang, `$${price}`, `$${usdIn}`))
   }
 
   // Buy Domain
-  const error = await buyDomainFullProcess(chatId, domain)
+  const error = await buyDomainFullProcess(chatId, lang, domain)
   if (error) return res.send(html(error))
   res.send(html())
 })
@@ -3399,8 +3487,9 @@ app.post('/dynopay/crypto-pay-hosting', authDyno, async (req, res) => {
 
   log({ method: 'dynopay/crypto-pay-hosting', ref, chatId, price, coin, value })
 
-  if (!ref || !chatId || !price || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
-
+  if (!ref || !chatId || !price || !coin || !value) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+  const info = await state.findOne({ _id: parseFloat(chatId) })
+  const lang = info?.userLanguage ?? 'en'
     // Logs
   del(chatIdOfDynopayPayment, ref)
   await insert(hostingTransactions, chatId, "dynopay", req.body)
@@ -3408,17 +3497,16 @@ app.post('/dynopay/crypto-pay-hosting', authDyno, async (req, res) => {
   const ticker = tickerViewOfDyno[coin]
   const usdIn = await convert(value, ticker , 'usd')
   if (usdIn * 1.06 < price) {
-    sendMessage(chatId, t.sentLessMoney(`$${price}`, `$${usdIn}`))
-    addFundsTo(walletOf, chatId, 'usd', usdIn)
-    return res.send(html(t.lowPrice))
+    sendMessage(chatId, translation('t.sentLessMoney', lang, `$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn, lang)
+    return res.send(html(translation('t.lowPrice')))
   }
   if (usdIn > price) {
-    addFundsTo(walletOf, chatId, 'usd', usdIn - price)
-    sendMessage(chatId, t.sentMoreMoney(`$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', usdIn - price, lang)
+    sendMessage(chatId, translation('t.sentMoreMoney', lang, `$${price}`, `$${usdIn}`))
   }
 
-  const info = await state.findOne({ _id: parseFloat(chatId) })
-  await registerDomainAndCreateCpanel(send, info, o, state)
+  await registerDomainAndCreateCpanel(send, info, translation('o', lang), state)
 
   res.send(html())
 })
@@ -3429,13 +3517,15 @@ app.post('/dynopay/crypto-wallet', authDyno, async (req, res) => {
   const { ref, chatId } = req.pay
   const { paid_amount:value , paid_currency:coin, id } = req.body
   log({ method: 'dynopay/crypto-pay-wallet', ref, chatId, coin, value })
-  if (!ref || !chatId || !coin || !value) return log(t.argsErr) || res.send(html(t.argsErr))
+  if (!ref || !chatId || !coin || !value) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+  const info = await state.findOne({ _id: parseFloat(chatId) })
+  const lang = info?.userLanguage ?? 'en'
 
   // Update Wallet
   const ticker = tickerViewOfDyno[coin]
   const usdIn = await convert(value, ticker , 'usd')
-  addFundsTo(walletOf, chatId, 'usd', usdIn)
-  sendMessage(chatId, t.confirmationDepositMoney(value + ' ' + coin, usdIn))
+  addFundsTo(walletOf, chatId, 'usd', usdIn, lang)
+  sendMessage(chatId, translation('t.confirmationDepositMoney' , lang, value + ' ' + coin, usdIn))
 
   // Logs
   res.send(html())
@@ -3446,8 +3536,14 @@ app.post('/dynopay/crypto-wallet', authDyno, async (req, res) => {
 
 //
 app.get('/', (req, res) => {
-  res.send(html(t.greet))
+  res.send(html(translation('t.greet')))
 })
+
+app.get('/terms-condition', (req, res) => {
+  const { lang } = req.query
+  res.send(html(translation('l.termsAndCondMsg', lang)))
+})
+
 app.get('/ok', (req, res) => {
   res.send(html('ok'))
 })
@@ -3484,13 +3580,13 @@ app.get('/subscribe', (req, res) => {
   const name = req?.query?.['full-name']
 
   log({ phone, name })
-  res.send(html(t.subscribeRCS(phone)))
+  res.send(html(translation('t.subscribeRCS', null, phone)))
 })
 app.get('/unsubscribe', (req, res) => {
   const phone = req?.query?.Phone
 
   log({ phone })
-  res.send(html(t.unsubscribeRCS(phone)))
+  res.send(html(translation('t.subscribeRCS', null, phone)))
 })
 
 app.get('/planInfo', async (req, res) => {
@@ -3532,7 +3628,7 @@ app.get('/:id', async (req, res) => {
   const shortUrlSanitized = shortUrl.replaceAll('.', '@')
   const url = await get(fullUrlOf, shortUrlSanitized)
   if (!url) return res.status(404).send(html('Link not found'))
-  if (!(await isValid(shortUrlSanitized))) return res.status(404).send(html(t.linkExpired))
+  if (!(await isValid(shortUrlSanitized))) return res.status(404).send(html(translation('t.linkExpired')))
 
   res.redirect(url)
   increment(clicksOf, 'total')
