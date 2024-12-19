@@ -452,6 +452,7 @@ bot?.on('message', async msg => {
 
     // user setup
     addUserLanguage: 'addUserLanguage',
+    updateUserLanguage: 'updateUserLanguage',
     askUserEmail: 'askUserEmail',
     askUserTerms: 'askUserTerms',
   }
@@ -1426,7 +1427,8 @@ bot?.on('message', async msg => {
   }
 
   if (message === user.changeSetting) {
-    return goto.userLanguage()
+    set(state, chatId, 'action', a.updateUserLanguage)
+    return send(chatId, trans('l.askPreferredLanguage') , trans('languageMenu'))
   }
   //
   if (message === t.cancel || (firstSteps.includes(action) && message === t.back)) {
@@ -1494,6 +1496,17 @@ bot?.on('message', async msg => {
       return  goto.askUserEmail()
     },500)
     return
+  }
+
+  if (action === a.updateUserLanguage) {
+    const language = message
+    const supportedLanguages = trans('supportedLanguages')
+    const validLanguage = supportedLanguages[language]
+    if (!validLanguage) return send(chatId, trans('l.askValidLanguage'), trans('languageMenu') )
+    info.userLanguage = validLanguage
+    set(state, chatId, 'userLanguage', validLanguage)
+    set(state, chatId, 'action', 'none')
+    return send(chatId, trans('t.welcome'), trans('o')) 
   }
 
   if (action === a.askUserEmail) {
