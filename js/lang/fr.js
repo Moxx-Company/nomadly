@@ -676,7 +676,7 @@ const l = {
   
   Vous pouvez toujours changer votre langue plus tard dans les paramètres.`,
   askValidLanguage: 'Veuillez choisir une langue valide :',
-  welcomeMessage: `👋 Bienvenue sur le bot ${CHAT_BOT_NAME} !
+  welcomeMessage: `👋 Bienvenue sur le ${CHAT_BOT_NAME} !
   Nous sommes ravis de vous avoir ici ! 🎉
   Commençons afin que vous puissiez explorer toutes les fonctionnalités passionnantes que nous proposons. 🌟
   

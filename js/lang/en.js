@@ -726,7 +726,7 @@ const l = {
   
 You can always change your language later in the settings.`,
   askValidLanguage: 'Please choose a valid language:',
-  welcomeMessage: `👋 Welcome to ${CHAT_BOT_NAME} Bot!
+  welcomeMessage: `👋 Welcome to ${CHAT_BOT_NAME}!
 We’re thrilled to have you here! 🎉
 Let’s get you started so you can explore all the exciting features we offer. 🌟
 
