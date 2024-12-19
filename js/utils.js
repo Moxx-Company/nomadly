@@ -3,11 +3,12 @@ const fs = require('fs')
 require('dotenv').config()
 const axios = require('axios')
 const QRCode = require('qrcode')
-const { t, timeOf, freeDomainsOf, o } = require('./config')
+const { timeOf, freeDomainsOf, o } = require('./config')
 const { getAll, get, set } = require('./db')
 const { log } = require('console')
 const resolveDns = require('./resolve-cname.js')
 const { checkExistingDomain, getNewDomain } = require('./cr-check-domain-available')
+const { translation } = require('./translation.js')
 const TELEGRAM_DEV_CHAT_ID = process.env.TELEGRAM_DEV_CHAT_ID
 
 const HIDE_SMS_APP = process.env.HIDE_SMS_APP
@@ -115,14 +116,14 @@ function removeProtocolFromDomain(domain) {
   return domain.toLowerCase().replace('https://', '').replace('http://', '')
 }
 
-const regularCheckDns = (bot, chatId, domain) => {
+const regularCheckDns = (bot, chatId, domain, lang) => {
   const checkDnsPropagation = async () => {
     if (await resolveDns(domain)) {
-      bot.sendMessage(chatId, t.dnsPropagated.replace('{{domain}}', domain))
+      bot.sendMessage(chatId, translation('t.dnsPropagated', lang).replace('{{domain}}', domain))
       clearInterval(intervalDnsPropagation)
       return
     }
-    bot.sendMessage(chatId, t.dnsNotPropagated.replace('{{domain}}', domain))
+    bot.sendMessage(chatId, translation('t.dnsNotPropagated', lang).replace('{{domain}}', domain))
   }
   const intervalDnsPropagation = setInterval(checkDnsPropagation, UPDATE_DNS_INTERVAL * 1000)
 
@@ -155,13 +156,13 @@ const getChatIds = async nameOf => {
   return ans.map(a => a._id)
 }
 
-const sendQrCode = async (bot, chatId, bb) => {
+const sendQrCode = async (bot, chatId, bb, lang) => {
   const qrCode = await bb.getQrcode()
   const buffer = Buffer.from(qrCode?.qr_code, 'base64')
   fs.writeFileSync('image.png', buffer)
   bot
     ?.sendPhoto(chatId, 'image.png', {
-      caption: 'Here is your QR code!',
+      caption: translation('t.qrCodeText', lang),
     })
     ?.then(() => fs.unlinkSync('image.png'))
     ?.catch(log)
@@ -176,10 +177,10 @@ const sendQr = async (bot, chatId, text, caption) => {
     ?.catch(log)
 }
 
-const generateQr = async (bot, chatId, data) => {
+const generateQr = async (bot, chatId, data, lang) => {
   fs.writeFileSync('image.png', data.split(';base64,').pop(), { encoding: 'base64' })
   bot
-    ?.sendPhoto(chatId, 'image.png', {  caption: 'Here is your QR code!', })
+    ?.sendPhoto(chatId, 'image.png', {  caption:  translation('t.qrCodeText', lang), })
     ?.then(() => fs.unlinkSync('image.png'))
     ?.catch(log)
 }
@@ -195,10 +196,11 @@ const getBalance = async (walletOf, chatId) => {
   return { usdBal, ngnBal: ngnIn - ngnOut }
 }
 
-const subscribePlan = async (planEndingTime, freeDomainNamesAvailableFor, planOf, chatId, plan, bot) => {
+const subscribePlan = async (planEndingTime, freeDomainNamesAvailableFor, planOf, chatId, plan, bot, lang) => {
   set(planOf, chatId, plan)
   set(planEndingTime, chatId, Date.now() + timeOf[plan])
   set(freeDomainNamesAvailableFor, chatId, freeDomainsOf[plan])
+  const t = translation('t', lang)
 
   sendMessage(chatId, t.planSubscribed.replace('{{plan}}', plan))
   log('reply:\t' + t.planSubscribed.replace('{{plan}}', plan) + '\tto: ' + chatId)
@@ -208,7 +210,7 @@ const subscribePlan = async (planEndingTime, freeDomainNamesAvailableFor, planOf
       bot,
       chatId,
       `${chatId}`,
-      `Scan QR with sms marketing app to login. You can also use this code to login: ${chatId}`,
+      translation('t.scanQrOrUseChat', lang, chatId),
     )
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms))

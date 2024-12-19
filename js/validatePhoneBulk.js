@@ -1,5 +1,4 @@
 /*global process */
-const { t } = require('./config')
 const { log } = require('console')
 const { customAlphabet } = require('nanoid')
 const { getRandom, sleep } = require('./utils')
@@ -7,6 +6,7 @@ const validatePhoneAlcazar = require('./validatePhoneAlcazar')
 const validatePhoneSignalwire = require('./validatePhoneSignalwire')
 const validatePhoneNpl = require('./validatePhoneNpl')
 const validatePhoneNeutrino = require('./validatePhoneNeutrino')
+const { translation } = require('./translation')
 // const { validatePhoneTwilioV2 } = require('./validatePhoneTwilio')
 const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID
 const part1 = customAlphabet('23456789', 1)
@@ -76,7 +76,7 @@ const validateNumbersParallel = async (carrier, length, countryCode, areaCode, c
   }
 }
 
-const validateBulkNumbers = async (carrier, phonesToGenerate, countryCode, areaCodes, cnam, bot, chatId) => {
+const validateBulkNumbers = async (carrier, phonesToGenerate, countryCode, areaCodes, cnam, bot, chatId, lang) => {
   log({ phonesToGenerate, countryCode, areaCodes, cnam }, '\n')
 
   let i = 0
@@ -84,6 +84,7 @@ const validateBulkNumbers = async (carrier, phonesToGenerate, countryCode, areaC
   let elapsedTime = 0
   let noHitCount = 0
   const startTime = new Date()
+  const t = translation('t', lang)
 
   for (i = 0; res.length < phonesToGenerate; i++) {
     // Gen Phone Numbers and Verify
