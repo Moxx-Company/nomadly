@@ -695,9 +695,7 @@ const l = {
   viewTermsAgainButton: '🔄 Revoir les termes',
   exitSetupButton: '❌ Quitter le setup',
   acceptedTermsMsg: `✅ Vous avez accepté avec succès les conditions générales ! 🎉
-  Vous êtes prêt à commencer à utiliser ${CHAT_BOT_NAME}. Passons à la partie amusante ! 🎯
-  
-  Vous pouvez revoir les conditions générales à tout moment dans les paramètres de votre profil.`,
+  Vous êtes prêt à commencer à utiliser ${CHAT_BOT_NAME}. Passons à la partie amusante ! 🎯`,
   declinedTermsMsg: `⚠️ Vous devez accepter les conditions générales pour continuer à utiliser ${CHAT_BOT_NAME}. 
   Veuillez les revoir quand vous serez prêt.`,
   userExitMsg: 'L’utilisateur a appuyé sur le bouton de sortie.',

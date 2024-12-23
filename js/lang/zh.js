@@ -676,9 +676,7 @@ const l = {
   viewTermsAgainButton: '🔄 查看条款',
   exitSetupButton: '❌ 退出设置',
   acceptedTermsMsg: `✅ 您已成功接受条款和条件！ 🎉
-  您已准备好开始使用 ${CHAT_BOT_NAME}。让我们进入有趣的部分！ 🎯
-  
-  您可以随时在个人资料设置中查看条款和条件。`,
+  您已准备好开始使用 ${CHAT_BOT_NAME}。让我们进入有趣的部分！ 🎯`,
   declinedTermsMsg: `⚠️ 您需要接受条款和条件才能继续使用 ${CHAT_BOT_NAME}。 
   请在您准备好的时候再次查看。`,
   userExitMsg: '用户按下了退出按钮。',

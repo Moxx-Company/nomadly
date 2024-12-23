@@ -748,9 +748,7 @@ Enjoy premium features during your free trial period!
   viewTermsAgainButton: '🔄 View Terms Again',
   exitSetupButton: '❌ Exit Setup',
   acceptedTermsMsg: `✅ You’ve successfully accepted the Terms and Conditions! 🎉
-You’re all set to begin using ${CHAT_BOT_NAME}. Let’s move to the fun part! 🎯
-
-You can revisit the Terms and Conditions anytime in your profile settings`,
+You’re all set to begin using ${CHAT_BOT_NAME}. Let’s move to the fun part! 🎯`,
   declinedTermsMsg: `⚠️ You need to accept the Terms and Conditions to continue using ${CHAT_BOT_NAME}. 
 Please review them again when you’re ready.`,
   userExitMsg: 'User has pressed exit button.',

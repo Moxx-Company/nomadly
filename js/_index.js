@@ -1907,7 +1907,7 @@ bot?.on('message', async msg => {
   }
   if (action === 'choose-link-type') {
     if (message === t.back) return goto['choose-domain-with-shorten'](await getPurchasedDomains(chatId))
-    const linkOptions = trans('linkOption')
+    const linkOptions = trans('linkOptions')
     if (!linkOptions.includes(message)) return send(chatId, t.what)
 
     if (message === t.customLink) {
@@ -2997,7 +2997,7 @@ const buyDomainFullProcess = async (chatId, lang, domain) => {
   try {
     const { error: buyDomainError } = await buyDomain(chatId, domain)
     if (buyDomainError) {
-      const m = t.domainPurchasedFailed(domain, buyDomainError)
+      const m = translation('t.domainPurchasedFailed', lang, domain, buyDomainError)
       log(m)
       sendMessage(TELEGRAM_DEV_CHAT_ID, m)
       sendMessage(chatId, m)
