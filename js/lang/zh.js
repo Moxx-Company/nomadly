@@ -472,12 +472,15 @@ ${CHAT_BOT_NAME}`,
   qrCodeText: `这是您的二维码！`,
   scanQrOrUseChat: chatId => `使用短信营销应用扫描二维码登录。您也可以使用此代码登录：${chatId}`,
   domainPurchasedFailed: (domain, buyDomainError) => `域名购买失败，请尝试其他名称。 ${domain} ${buyDomainError}`,
+  noDomainRegistered: '您还没有购买任何域名。',
+  registeredDomainList: domainsText => `以下是您购买的域名：\n${domainsText}`,
+  comingSoon: `即将推出`,
 }
 
-const phoneNumberLeads = ['💰📲 Buy PhoneLeads', '✅📲 Validate PhoneLeads']
+const phoneNumberLeads = ['💰📲 购买电话线索', '✅📲 验证电话线索']
 
 const buyLeadsSelectCountry = Object.keys(areasOfCountry)
-const buyLeadsSelectSmsVoice = ['SMS (Price 20$ for 1000)', 'Voice (Price 0$ for 1000)']
+const buyLeadsSelectSmsVoice = ['短信 (价格为 20$/1000)', '语音 (价格为 0$/1000)']
 const buyLeadsSelectArea = country => Object.keys(areasOfCountry?.[country])
 const buyLeadsSelectAreaCode = (country, area) => {
   const codes = areasOfCountry?.[country]?.[area].map(c => format(countryCodeOf[country], c))
@@ -487,14 +490,19 @@ const _buyLeadsSelectAreaCode = (country, area) => areasOfCountry?.[country]?.[a
 const buyLeadsSelectCnam = yesNo
 const buyLeadsSelectCarrier = country => carriersOf[country]
 const buyLeadsSelectAmount = ['1000', '2000', '3000', '4000', '5000']
-const buyLeadsSelectFormat = ['Local Format', 'International Format']
+const buyLeadsSelectFormat = ['本地格式', '国际格式']
 
 const validatorSelectCountry = Object.keys(areasOfCountry)
-const validatorSelectSmsVoice = ['SMS (Price 15$ for 1000)', 'Voice (Price 0$ for 1000)']
+const validatorSelectSmsVoice = ['短信 (价格为 20$/1000)', '语音 (价格为 0$/1000)']
 const validatorSelectCarrier = country => carriersOf[country]
 const validatorSelectCnam = yesNo
 const validatorSelectAmount = ['ALL', '1000', '2000', '3000', '4000', '5000']
-const validatorSelectFormat = ['Local Format', 'International Format']
+const validatorSelectFormat = ['本地格式', '国际格式']
+
+const selectFormatOf = {
+  '本地格式': 'Local Format',
+  '国际格式': 'International Format',
+}
 
 //redSelectRandomCustom
 
@@ -1008,6 +1016,7 @@ const zh = {
   l,
   termsAndConditionType,
   hP: hostingPlansText,
+  selectFormatOf
 }
 
 module.exports = {

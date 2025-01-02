@@ -7,24 +7,20 @@ const {
   tickerViewOf,
   buyLeadsSelectCountry,
   priceOf,
-  buyLeadsSelectSmsVoice,
   buyLeadsSelectArea,
   buyLeadsSelectAreaCode,
   buyLeadsSelectCarrier,
   buyLeadsSelectCnam,
   buyLeadsSelectFormat,
-  phoneNumberLeads,
   _buyLeadsSelectAreaCode,
   buyLeadsSelectAmount,
   validatorSelectCountry,
-  validatorSelectSmsVoice,
   validatorSelectCarrier,
   validatorSelectAmount,
   validatorSelectFormat,
   dynopayActions,
   tickerOfDyno,
   tickerViewOfDyno,
-  t,
 } = require('./config.js')
 const createShortBitly = require('./bitly.js')
 const { createShortUrlApi, analyticsCuttly } = require('./cuttly.js')
@@ -267,7 +263,8 @@ async function sendRemindersForExpiringPackages() {
     }).toArray()
 
     for (const user of users) {
-      send(user._id, translation('t.oneHourLeftToExpireTrialPlan'))
+      const lang = user?.userLanguage ?? 'en'
+      send(user._id, translation('t.oneHourLeftToExpireTrialPlan', lang))
 
       await state.updateOne(
         { _id: user._id },
@@ -283,7 +280,8 @@ async function sendRemindersForExpiringPackages() {
     }).toArray()
 
     for (const user of expiredUsers) {
-      send(user._id, t.freePlanExpired)
+      const lang = user?.userLanguage ?? 'en'
+      send(user._id, translation('t.freePlanExpired', lang))
 
       await state.updateOne(
         { _id: user._id },
@@ -2464,7 +2462,7 @@ bot?.on('message', async msg => {
     if (message === t.back) return goto[user.wallet]()
     if (message === u.usd) return goto[a.depositUSD]()
     if (message === u.ngn) return goto[a.depositNGN]()
-    return send(chatId, t.what)
+    return send(chatId, t.what, trans('payOpts'))
   }
 
   if (action === a.depositNGN) {
@@ -2488,7 +2486,7 @@ bot?.on('message', async msg => {
     if (message === t.back) return goto[a.selectCurrencyToDeposit]()
 
     const amount = Number(message)
-    if (isNaN(amount)) return send(chatId, t.whatNum)
+    if (isNaN(amount) || amount < 6) return send(chatId, t.whatNum)
     await saveInfo('amount', amount)
 
     return goto[a.selectCryptoToDeposit]()
@@ -2538,6 +2536,7 @@ bot?.on('message', async msg => {
     return goto.phoneNumberLeads()
   }
   if (action === a.phoneNumberLeads) {
+    const phoneNumberLeads = trans('phoneNumberLeads')
     if (phoneNumberLeads[1] === message) return goto.validatorSelectCountry()
     if (phoneNumberLeads[0] === message) return goto.buyLeadsSelectCountry()
 
@@ -2546,13 +2545,14 @@ bot?.on('message', async msg => {
   if (action === a.buyLeadsSelectCountry) {
     if (message === t.back) goto.phoneNumberLeads()
     if (!buyLeadsSelectCountry.includes(message)) return send(chatId, t.what)
-    if (areasOfCountry[message] && Object.keys(areasOfCountry[message]).length === 0) return send(chatId, `Coming Soon`)
+    if (areasOfCountry[message] && Object.keys(areasOfCountry[message]).length === 0) return send(chatId, t.comingSoon)
     saveInfo('country', message)
     return goto.buyLeadsSelectSmsVoice()
   }
   if (action === a.buyLeadsSelectSmsVoice) {
     if (message === t.back) return goto.buyLeadsSelectCountry()
-    if (buyLeadsSelectSmsVoice[1] === message) return send(chatId, `Coming Soon`)
+    const buyLeadsSelectSmsVoice = trans('buyLeadsSelectSmsVoice')
+    if (buyLeadsSelectSmsVoice[1] === message) return send(chatId, t.comingSoon)
     if (!buyLeadsSelectSmsVoice.includes(message)) return send(chatId, t.what)
     saveInfo('smsVoice', message)
     saveInfo('cameFrom', a.buyLeadsSelectSmsVoice)
@@ -2616,8 +2616,11 @@ bot?.on('message', async msg => {
   }
   if (action === a.buyLeadsSelectFormat) {
     if (message === t.back) return goto.buyLeadsSelectAmount()
-    if (!buyLeadsSelectFormat.includes(message)) return send(chatId, t.what)
-    saveInfo('format', message)
+    const buyLeadsSelectFormatType = trans('buyLeadsSelectFormat')
+    if (!buyLeadsSelectFormatType.includes(message)) return send(chatId, t.what)
+    const formatType = trans('selectFormatOf') 
+    console.log('111111111111111111111', formatType[message], '22222222222222222', formatType)
+    saveInfo('format', formatType[message])
     return goto.askCoupon(a.buyLeadsSelectFormat)
   }
   if (action === a.askCoupon + a.buyLeadsSelectFormat) {
@@ -2680,7 +2683,8 @@ bot?.on('message', async msg => {
 
   if (action === a.validatorSelectSmsVoice) {
     if (message === t.back) return goto.validatorPhoneNumber()
-    if (validatorSelectSmsVoice[1] === message) return send(chatId, `Coming Soon`)
+    const validatorSelectSmsVoice = trans('validatorSelectSmsVoice')
+    if (validatorSelectSmsVoice[1] === message) return send(chatId, t.comingSoon)
     if (!validatorSelectSmsVoice.includes(message)) return send(chatId, t.what)
     saveInfo('smsVoice', message)
     return goto.validatorSelectCarrier() //////
@@ -2731,8 +2735,10 @@ bot?.on('message', async msg => {
   }
   if (action === a.validatorSelectFormat) {
     if (message === t.back) return goBack()
-    if (!validatorSelectFormat.includes(message)) return send(chatId, t.what)
-    saveInfo('format', message)
+    const validatorSelectFormatType = trans('validatorSelectFormat')
+    if (!validatorSelectFormatType.includes(message)) return send(chatId, t.what)
+    const formatType = trans('selectFormatOf') 
+    saveInfo('format', formatType[message])
     return goto.askCoupon(a.validatorSelectFormat)
   }
   if (action === a.askCoupon + a.validatorSelectFormat) {
@@ -2797,12 +2803,12 @@ bot?.on('message', async msg => {
   if (message === user.viewDomainNames) {
     const purchasedDomains = await getPurchasedDomains(chatId)
     if (purchasedDomains.length === 0) {
-      send(chatId, 'You have no purchased domains yet.')
+      send(chatId, t.noDomainRegistered)
       return
     }
 
     const domainsText = purchasedDomains.join('\n')
-    send(chatId, `Here are your purchased domains:\n${domainsText}`)
+    send(chatId, t.registeredDomainList(domainsText))
     return
   }
   if (message === 'Backup Data') {
@@ -3052,7 +3058,7 @@ const auth = async (req, res, next) => {
 const authDyno = async (req, res, next) => {
   log(req.hostname + req.originalUrl)
   const { meta_data } = req.body
-  const ref = meta_data.refId // first for crypto and second for webhook fincra
+  const ref = meta_data?.refId
   const pay = await get(chatIdOfDynopayPayment, ref)
   if (!pay) return log(translation('t.payError', 'en')) || res.send(html(translation('t.payError', 'en')))
   req.pay = { ...pay, ref }
