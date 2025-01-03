@@ -3263,7 +3263,7 @@ app.get('/login-count/:chatId', async (req, res) => {
   if (!loginData.canLogin) {
     const info = await state.findOne({ _id: parseFloat(chatId) })
     const lang = info?.userLanguage ?? 'en'
-    send(Number(chatId), translation('t.resetLogin', lang), trans('yes_no'))
+    send(Number(chatId), translation('t.resetLogin', lang), translation('yes_no', lang))
     // sendMessage(Number(chatId), t.resetLogin, yes_no)
     await set(state, Number(chatId), 'action', 'listen_reset_login')
   }
@@ -3489,7 +3489,7 @@ app.post('/dynopay/crypto-pay-domain', authDyno, async (req, res) => {
   }
   if (usdIn > price) {
     addFundsTo(walletOf, chatId, 'usd', usdIn - price, lang)
-    sendMessage(chatId, trans('t.sentMoreMoney', lang, `$${price}`, `$${usdIn}`))
+    sendMessage(chatId, translation('t.sentMoreMoney', lang, `$${price}`, `$${usdIn}`))
   }
 
   // Buy Domain
