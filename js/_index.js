@@ -2394,7 +2394,7 @@ bot?.on('message', async msg => {
     const nextId = nextNumber(nsRecords.map(r => r.nsId))
     const { error } = await saveServerInDomain(domain, recordContent, t[recordType], domainNameId, nextId, nsRecords)
     if (error) {
-      const m = errorSavingDns
+      const m = t.errorSavingDns(error)
       return send(chatId, m)
     }
 
@@ -2619,7 +2619,6 @@ bot?.on('message', async msg => {
     const buyLeadsSelectFormatType = trans('buyLeadsSelectFormat')
     if (!buyLeadsSelectFormatType.includes(message)) return send(chatId, t.what)
     const formatType = trans('selectFormatOf') 
-    console.log('111111111111111111111', formatType[message], '22222222222222222', formatType)
     saveInfo('format', formatType[message])
     return goto.askCoupon(a.buyLeadsSelectFormat)
   }
