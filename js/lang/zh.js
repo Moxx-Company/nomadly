@@ -130,7 +130,7 @@ const u = {
   withdraw: '➖💵 撤回',
 
   // wallet
-  usd: 'USD',
+  usd: '美元',
   ngn: 'NGN',
 }
 const view = num => Number(num).toFixed(2)
