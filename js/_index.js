@@ -361,7 +361,6 @@ bot?.on('message', async msg => {
   const aO = trans('aO')
   const admin = trans('admin')
   const payIn = trans('payIn')
-  const payBank = trans('payBank')
   const hP = trans('hP')
 
   // actions
@@ -649,7 +648,7 @@ bot?.on('message', async msg => {
       set(state, chatId, 'action', 'none')
       if (error) return send(chatId, error, trans('o'))
       console.log('showDepositNgnInfo', url)
-      send(chatId, t.showDepositNgnInfo(ngn), payBank(url))
+      send(chatId, t.showDepositNgnInfo(ngn), trans('payBank', url))
       return send(chatId, `Bank ₦aira + Card 🌐︎`, trans('o'))
     },
     //
@@ -2070,7 +2069,7 @@ bot?.on('message', async msg => {
     if (error) return send(chatId, error, trans('o'))
     send(chatId, `Bank ₦aira + Card 🌐︎`, trans('o'))
     console.log('showDepositNgnInfo', url)
-    return send(chatId, t.bankPayDomain(priceNGN, domain), payBank(url))
+    return send(chatId, t.bankPayDomain(priceNGN, domain), trans('payBank', url))
   }
   if (action === 'crypto-pay-domain') {
     if (message === t.back) return goto['domain-pay']()
@@ -2148,7 +2147,7 @@ bot?.on('message', async msg => {
     if (error) return send(chatId, error, trans('o'))
     send(chatId, `Bank ₦aira + Card 🌐︎`, trans('o'))
     console.log('showDepositNgnInfo', url)
-    return send(chatId, hP.bankPayDomain(priceNGN, info.plan), payBank(url), k.of([t.iHaveSentThePayment]))
+    return send(chatId, hP.bankPayDomain(priceNGN, info.plan), trans('payBank', url), k.of([t.iHaveSentThePayment]))
   }
   if (action === 'crypto-pay-hosting') {
     if (message === t.back) return goto['hosting-pay']()
@@ -2270,7 +2269,7 @@ bot?.on('message', async msg => {
     if (error) return send(chatId, error, trans('o'))
     send(chatId, `Bank ₦aira + Card 🌐︎`, trans('o'))
     console.log('showDepositNgnInfo', url)
-    return send(chatId, t['bank-pay-plan'](priceNGN, plan), payBank(url))
+    return send(chatId, t['bank-pay-plan'](priceNGN, plan), trans('payBank', url))
   }
   if (action === 'crypto-pay-plan') {
     if (message === t.back) return goto['plan-pay']()
