@@ -761,7 +761,7 @@ const payBank = url => ({
 const html = (text = t.successPayment) => {
   return `
         <html>
-            <body>
+            <body style="background-color: white;">
                 <p style="font-family: 'system-ui';" >${text}</p>
             </body>
         </html>

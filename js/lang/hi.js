@@ -483,12 +483,15 @@ ${CHAT_BOT_NAME}`,
     `क्यूआर को स्कैन करें SMS मार्केटिंग ऐप के साथ लॉगिन करने के लिए। आप इस कोड का उपयोग करके भी लॉगिन कर सकते हैं: ${chatId}`,
   domainPurchasedFailed: (domain, buyDomainError) =>
     `डोमेन खरीद विफल, एक अन्य नाम का प्रयास करें। ${domain} ${buyDomainError}`,
+  noDomainRegistered: 'आपके पास अभी तक कोई खरीदा हुआ डोमेन नहीं है।',
+  registeredDomainList: domainsText => `यहाँ आपके खरीदे हुए डोमेन हैं:\n${domainsText}`,
+  comingSoon: `जल्द आ रहा है`,
 }
 
-const phoneNumberLeads = ['💰📲 Buy PhoneLeads', '✅📲 Validate PhoneLeads']
+const phoneNumberLeads = ['💰📲 फोन लीड्स खरीदें', '✅📲 फोन लीड्स सत्यापित करें']
 
 const buyLeadsSelectCountry = Object.keys(areasOfCountry)
-const buyLeadsSelectSmsVoice = ['SMS (Price 20$ for 1000)', 'Voice (Price 0$ for 1000)']
+const buyLeadsSelectSmsVoice = ['एसएमएस (कीमत 20$ प्रति 1000)', 'वॉयस (कीमत 0$ प्रति 1000)']
 const buyLeadsSelectArea = country => Object.keys(areasOfCountry?.[country])
 const buyLeadsSelectAreaCode = (country, area) => {
   const codes = areasOfCountry?.[country]?.[area].map(c => format(countryCodeOf[country], c))
@@ -498,14 +501,19 @@ const _buyLeadsSelectAreaCode = (country, area) => areasOfCountry?.[country]?.[a
 const buyLeadsSelectCnam = yesNo
 const buyLeadsSelectCarrier = country => carriersOf[country]
 const buyLeadsSelectAmount = ['1000', '2000', '3000', '4000', '5000']
-const buyLeadsSelectFormat = ['Local Format', 'International Format']
+const buyLeadsSelectFormat = ['स्थानीय प्रारूप', 'अंतर्राष्ट्रीय प्रारूप']
 
 const validatorSelectCountry = Object.keys(areasOfCountry)
-const validatorSelectSmsVoice = ['SMS (Price 15$ for 1000)', 'Voice (Price 0$ for 1000)']
+const validatorSelectSmsVoice = ['एसएमएस (कीमत 20$ प्रति 1000)', 'वॉयस (कीमत 0$ प्रति 1000)']
 const validatorSelectCarrier = country => carriersOf[country]
 const validatorSelectCnam = yesNo
 const validatorSelectAmount = ['ALL', '1000', '2000', '3000', '4000', '5000']
-const validatorSelectFormat = ['Local Format', 'International Format']
+const validatorSelectFormat = ['स्थानीय प्रारूप', 'अंतर्राष्ट्रीय प्रारूप']
+
+const selectFormatOf = {
+  'स्थानीय प्रारूप': 'Local Format',
+  'अंतर्राष्ट्रीय प्रारूप': 'International Format',
+}
 
 //redSelectRandomCustom
 
@@ -687,9 +695,7 @@ const l = {
   viewTermsAgainButton: '🔄 पुनः देखें शर्तें',
   exitSetupButton: '❌ सेटअप छोड़ें',
   acceptedTermsMsg: `✅ आपने सफलतापूर्वक शर्तें और नीतियाँ स्वीकार की हैं! 🎉
-आप ${CHAT_BOT_NAME} का उपयोग शुरू करने के लिए तैयार हैं। चलिए मज़ेदार हिस्से में चलते हैं! 🎯
-
-आप अपने प्रोफ़ाइल सेटिंग्स में शर्तें और नीतियाँ कभी भी पुनः देख सकते हैं।`,
+आप ${CHAT_BOT_NAME} का उपयोग शुरू करने के लिए तैयार हैं। चलिए मज़ेदार हिस्से में चलते हैं! 🎯`,
   declinedTermsMsg: `⚠️ आपको ${CHAT_BOT_NAME} का उपयोग जारी रखने के लिए शर्तें और नीतियाँ स्वीकार करनी होंगी। 
 जब आप तैयार हों, तो उन्हें पुनः समीक्षा करें।`,
   userExitMsg: 'उपयोगकर्ता ने निकास बटन दबाया।',
@@ -1027,6 +1033,7 @@ const hi = {
   l,
   termsAndConditionType,
   hp: hostingPlansText,
+  selectFormatOf
 }
 
 module.exports = {

@@ -373,7 +373,7 @@ ${CHAT_BOT_NAME}`,
     `Veuillez envoyer ${priceCrypto} ${tickerView} à\n\n<code>${address}</code>\n\nVeuillez noter que les transactions cryptographiques peuvent prendre jusqu'à 30 minutes pour être confirmées. Une fois la transaction confirmée, vous serez notifié rapidement et votre portefeuille sera mis à jour.\n\nCordialement,\n${CHAT_BOT_NAME}`,
 
   confirmationDepositMoney: (amount, usd) =>
-    `Votre paiement de ${amount} ($${usd}) est traité. Merci de nous avoir choisi.\nCordialement,\n${CHAT_BOT_NAME}`,
+    `Votre paiement de ${amount} ($${usd}) a été traité. Merci de nous avoir choisi.\nCordialement,\n${CHAT_BOT_NAME}`,
 
   showWallet: (usd, ngn) => `Solde du portefeuille :\n\n${bal(usd, ngn)}`,
 
@@ -492,12 +492,15 @@ ${CHAT_BOT_NAME}`,
     `Scannez le QR avec l'application de marketing SMS pour vous connecter. Vous pouvez également utiliser ce code pour vous connecter : ${chatId}`,
   domainPurchasedFailed: (domain, buyDomainError) =>
     `Échec de l'achat du domaine, essayez un autre nom. ${domain} ${buyDomainError}`,
+  noDomainRegistered: `Vous n'avez pas encore acheté de domaines.`,
+  registeredDomainList: domainsText => `Voici vos domaines achetés :\n${domainsText}`,
+  comingSoon: `Bientôt disponible`,
 }
 
-const phoneNumberLeads = ['💰📲 Buy PhoneLeads', '✅📲 Validate PhoneLeads']
+const phoneNumberLeads = ['💰📲 Acheter des leads téléphoniques', '✅📲 Valider les leads téléphoniques']
 
 const buyLeadsSelectCountry = Object.keys(areasOfCountry)
-const buyLeadsSelectSmsVoice = ['SMS (Price 20$ for 1000)', 'Voice (Price 0$ for 1000)']
+const buyLeadsSelectSmsVoice = ['SMS (Prix 20$ pour 1000)', 'Voix (Prix 0$ pour 1000)']
 const buyLeadsSelectArea = country => Object.keys(areasOfCountry?.[country])
 const buyLeadsSelectAreaCode = (country, area) => {
   const codes = areasOfCountry?.[country]?.[area].map(c => format(countryCodeOf[country], c))
@@ -507,14 +510,19 @@ const _buyLeadsSelectAreaCode = (country, area) => areasOfCountry?.[country]?.[a
 const buyLeadsSelectCnam = yesNo
 const buyLeadsSelectCarrier = country => carriersOf[country]
 const buyLeadsSelectAmount = ['1000', '2000', '3000', '4000', '5000']
-const buyLeadsSelectFormat = ['Local Format', 'International Format']
+const buyLeadsSelectFormat = ['Format Local', 'Format International']
 
 const validatorSelectCountry = Object.keys(areasOfCountry)
-const validatorSelectSmsVoice = ['SMS (Price 15$ for 1000)', 'Voice (Price 0$ for 1000)']
+const validatorSelectSmsVoice = ['SMS (Prix 20$ pour 1000)', 'Voix (Prix 0$ pour 1000)']
 const validatorSelectCarrier = country => carriersOf[country]
 const validatorSelectCnam = yesNo
 const validatorSelectAmount = ['ALL', '1000', '2000', '3000', '4000', '5000']
-const validatorSelectFormat = ['Local Format', 'International Format']
+const validatorSelectFormat = ['Format Local', 'Format International']
+
+const selectFormatOf = {
+  'Format Local': 'Local Format',
+  'Format International': 'International Format',
+}
 
 //redSelectRandomCustom
 
@@ -695,9 +703,7 @@ const l = {
   viewTermsAgainButton: '🔄 Revoir les termes',
   exitSetupButton: '❌ Quitter le setup',
   acceptedTermsMsg: `✅ Vous avez accepté avec succès les conditions générales ! 🎉
-  Vous êtes prêt à commencer à utiliser ${CHAT_BOT_NAME}. Passons à la partie amusante ! 🎯
-  
-  Vous pouvez revoir les conditions générales à tout moment dans les paramètres de votre profil.`,
+  Vous êtes prêt à commencer à utiliser ${CHAT_BOT_NAME}. Passons à la partie amusante ! 🎯`,
   declinedTermsMsg: `⚠️ Vous devez accepter les conditions générales pour continuer à utiliser ${CHAT_BOT_NAME}. 
   Veuillez les revoir quand vous serez prêt.`,
   userExitMsg: 'L’utilisateur a appuyé sur le bouton de sortie.',
@@ -1040,6 +1046,7 @@ const fr = {
   l,
   termsAndConditionType,
   hP: hostingPlansText,
+  selectFormatOf
 }
 
 module.exports = {

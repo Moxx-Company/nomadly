@@ -376,7 +376,7 @@ ${CHAT_BOT_NAME}`,
   depositNGN: `Please enter NGN Amount:`,
   askEmailForNGN: `Please provide an email for payment confirmation`,
 
-  depositUSD: `Please enter USD Amount, note that minium value is $6:`,
+  depositUSD: `Please enter USD Amount, note that minimum value is $6:`,
   selectCryptoToDeposit: `Please choose a crypto currency:`,
 
   'bank-pay-plan': (
@@ -538,10 +538,14 @@ ${bal(usd, ngn)}`,
   noShortenedUrlLink: 'You have no shortened links yet.',
   shortenedLinkText: linksText => `Here are your shortened links:\n${linksText}`,
 
-  //////////
-  qrCodeText:'Here is your QR code!',
-  scanQrOrUseChat: (chatId) => `Scan QR with sms marketing app to login. You can also use this code to login: ${chatId}`,
-  domainPurchasedFailed: (domain, buyDomainError) => `Domain purchase fails, try another name. ${domain} ${buyDomainError}`
+  qrCodeText: 'Here is your QR code!',
+  scanQrOrUseChat: chatId => `Scan QR with sms marketing app to login. You can also use this code to login: ${chatId}`,
+  domainPurchasedFailed: (domain, buyDomainError) =>
+    `Domain purchase fails, try another name. ${domain} ${buyDomainError}`,
+
+  noDomainRegistered: 'You have no purchased domains yet.',
+  registeredDomainList: domainsText => `Here are your purchased domains:\n${domainsText}`,
+  comingSoon: `Coming Soon`,
 }
 
 const phoneNumberLeads = ['💰📲 Buy PhoneLeads', '✅📲 Validate PhoneLeads']
@@ -565,6 +569,11 @@ const validatorSelectCarrier = country => carriersOf[country]
 const validatorSelectCnam = yesNo
 const validatorSelectAmount = ['ALL', '1000', '2000', '3000', '4000', '5000']
 const validatorSelectFormat = ['Local Format', 'International Format']
+
+const selectFormatOf = {
+  'Local Format': 'Local Format',
+  'International Format': 'International Format',
+}
 
 //redSelectRandomCustom
 
@@ -748,9 +757,7 @@ Enjoy premium features during your free trial period!
   viewTermsAgainButton: '🔄 View Terms Again',
   exitSetupButton: '❌ Exit Setup',
   acceptedTermsMsg: `✅ You’ve successfully accepted the Terms and Conditions! 🎉
-You’re all set to begin using ${CHAT_BOT_NAME}. Let’s move to the fun part! 🎯
-
-You can revisit the Terms and Conditions anytime in your profile settings`,
+You’re all set to begin using ${CHAT_BOT_NAME}. Let’s move to the fun part! 🎯`,
   declinedTermsMsg: `⚠️ You need to accept the Terms and Conditions to continue using ${CHAT_BOT_NAME}. 
 Please review them again when you’re ready.`,
   userExitMsg: 'User has pressed exit button.',
@@ -1084,6 +1091,7 @@ const en = {
   termsAndConditionType,
   planOptionsOf,
   hP: hostingPlansText,
+  selectFormatOf
 }
 
 module.exports = {
