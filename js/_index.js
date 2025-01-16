@@ -328,7 +328,7 @@ bot?.on('message', async msg => {
   const username = nameOfChatId || msg?.from?.username || nanoid()
 
   const blocked = await get(chatIdBlocked, chatId)
-  if (blocked) return send(chatId, t.blockedUser, rem)
+  if (blocked) return send(chatId, translation('t.blockedUser', 'en'), rem)
 
   if (!nameOfChatId) {
     set(nameOf, chatId, username)
