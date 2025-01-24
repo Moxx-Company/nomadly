@@ -6,7 +6,7 @@ require('dotenv').config()
 const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL
 const X_API_KEY = process.env.NAMEWORD_API_KEY
 const VM_PROJECT_ID = process.env.GOOGLE_CONSOLE_PROJECTID
-const PERCENT_INCREASE_VPS = Number(process.env.VM_PLAN_DISCOUNT_PERC)
+const PERCENT_INCREASE_VPS = Number(process.env.VPS_PLAN_PRICE_INCREASE_PERC)
 
 const headers = {
   accept: 'application/json',
