@@ -1307,13 +1307,12 @@ bot?.on('message', async msg => {
 
       // wallet update
       if (coin === u.usd) {
-        // @TODO set transactions 
         set(payments, nanoid(), `Wallet,VPSPlan,${vpsDetails?.plan},$${priceUsd},${chatId},${name},${new Date()}`)
         const usdOut = (wallet?.usdOut || 0) + priceUsd
         await set(walletOf, chatId, 'usdOut', usdOut)
       }
       if (coin === u.ngn) {
-        // set(payments, nanoid(), `Wallet,Domain,${domain},$${priceUsd},${chatId},${name},${new Date()},${priceNgn} NGN`)
+        set(payments, nanoid(), `Wallet,VPSPlan,${vpsDetails?.plan},$${priceUsd},${chatId},${name},${new Date()},${priceNgn} NGN`)
         const ngnOut = isNaN(wallet?.ngnOut) ? 0 : Number(wallet?.ngnOut)
         await set(walletOf, chatId, 'ngnOut', ngnOut + priceNgn)
       }
@@ -3414,9 +3413,9 @@ const buyDomainFullProcess = async (chatId, lang, domain) => {
   }
 }
 
-// schedule.scheduleJob('* * * * *', function() {
-//   checkVPSPlansExpiryandPayment()
-// })
+schedule.scheduleJob('* * * * *', function() {
+  checkVPSPlansExpiryandPayment()
+})
 
 async function checkVPSPlansExpiryandPayment() {
   const now = new Date()
