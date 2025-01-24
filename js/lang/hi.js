@@ -31,6 +31,7 @@ const MONTHLY_PLAN_FREE_DOMAINS = Number(process.env.MONTHLY_PLAN_FREE_DOMAINS)
 const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
+const VPS_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_PLAN_MINIMUM_AMOUNT_PAYABLE) || 20
 
 const npl = {
   // New Zealand
@@ -1110,6 +1111,7 @@ const vp = {
   showDepositCryptoInfoVps: (priceCrypto, tickerView, address, vpsDetails) =>
     `कृपया ${priceCrypto} ${tickerView} इस पर जमा करें:\n\n<code>${address}</code>
 
+${vpsDetails.plan === 'hourly' ? `कृपया ध्यान दें, प्रति घंटा योजना के लिए आपको कम से कम ${VPS_PLAN_MINIMUM_AMOUNT_PAYABLE}$ का भुगतान करना होगा। शेष राशि आपके वॉलेट में जमा की जाएगी।` : ''}
 कृपया ध्यान दें, क्रिप्टो लेन-देन को पूरा होने में 30 मिनट तक का समय लग सकता है। एक बार लेन-देन की पुष्टि हो जाने पर, आपको तुरंत सूचित किया जाएगा, और आपकी VPS योजना को सक्रिय कर दिया जाएगा।
 
 सादर,

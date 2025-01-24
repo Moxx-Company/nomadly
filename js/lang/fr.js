@@ -31,6 +31,7 @@ const MONTHLY_PLAN_FREE_DOMAINS = Number(process.env.MONTHLY_PLAN_FREE_DOMAINS)
 const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
+const VPS_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_PLAN_MINIMUM_AMOUNT_PAYABLE) || 20
 
 const npl = {
   // New Zealand
@@ -1118,6 +1119,7 @@ Ceci est une facture de prépaiement. Veuillez effectuer le paiement dans l'heur
   showDepositCryptoInfoVps: (priceCrypto, tickerView, address, vpsDetails) =>
     `Veuillez transférer ${priceCrypto} ${tickerView} à\n\n<code>${address}</code>
 
+  ${vpsDetails.plan === 'hourly' ? `Veuillez noter que, pour le plan horaire, vous devez payer au moins ${VPS_PLAN_MINIMUM_AMOUNT_PAYABLE}$. Le montant restant sera ajouté à votre portefeuille.` : ''}
 Veuillez noter que les transactions cryptographiques peuvent prendre jusqu'à 30 minutes pour être confirmées. Une fois la transaction confirmée, vous serez immédiatement informé et votre plan VPS sera activé sans problème.
 
 Cordialement,

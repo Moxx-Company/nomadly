@@ -31,6 +31,7 @@ const APP_SUPPORT_LINK = process.env.APP_SUPPORT_LINK
 const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
+const VPS_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_PLAN_MINIMUM_AMOUNT_PAYABLE) || 20
 
 const npl = {
   // New Zealand
@@ -1087,6 +1088,7 @@ const vp = {
   showDepositCryptoInfoVps: (priceCrypto, tickerView, address, vpsDetails) =>
     `请将 ${priceCrypto} ${tickerView} 转入以下地址：\n\n<code>${address}</code>
 
+${vpsDetails.plan === 'hourly' ? `请注意，对于小时计划，您需要支付至少 ${VPS_PLAN_MINIMUM_AMOUNT_PAYABLE}$。剩余金额将存入您的钱包。` : ''}
 请注意，加密货币交易可能需要长达 30 分钟才能完成。一旦交易被确认，您将立即收到通知，您的 VPS 计划将无缝激活。
 
 此致，

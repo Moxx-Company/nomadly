@@ -525,7 +525,7 @@ bot?.on('message', async msg => {
     },
     'vps-plan-pay' : () => {
       set(state, chatId, 'action', 'vps-plan-pay')
-      if (info.vpsDetails.plan === 'hourly') return send(chatId, vp.generateBillSummary(info?.vpsDetails), k.of([payIn.wallet]))
+      // if (info.vpsDetails.plan === 'hourly') return send(chatId, vp.generateBillSummary(info?.vpsDetails), k.of([payIn.wallet]))
       send(chatId, vp.generateBillSummary(info?.vpsDetails), k.pay)
     },
     'choose-domain-to-buy': async () => {
@@ -2516,7 +2516,7 @@ bot?.on('message', async msg => {
     if (message === t.back) return goto['vps-plan-pay']()
     const email = message
     const vpsDetails = info?.vpsDetails
-    const price = vpsDetails?.couponApplied ? vpsDetails?.newPrice : vpsDetails?.totalPrice
+    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_PLAN_MINIMUM_AMOUNT_PAYABLE || 20 : vpsDetails?.couponApplied ? vpsDetails?.newPrice : vpsDetails?.totalPrice
     if (!isValidEmail(email)) return send(chatId, t.askValidEmail)
 
     const ref = nanoid()
@@ -2538,7 +2538,7 @@ bot?.on('message', async msg => {
     const ticker = supportedCryptoView[tickerView]
     if (!ticker) return send(chatId, t.askValidCrypto)
     const vpsDetails = info.vpsDetails
-    const price = vpsDetails?.couponApplied ? vpsDetails?.newPrice : vpsDetails?.totalPrice
+    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_PLAN_MINIMUM_AMOUNT_PAYABLE || 20 : vpsDetails?.couponApplied ? vpsDetails?.newPrice : vpsDetails?.totalPrice
     const ref = nanoid()
     if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
       const coin = tickerOf[ticker]
@@ -3651,9 +3651,10 @@ const bankApis = {
     const name = await get(nameOf, chatId)
     set(payments, ref, `Bank, VPSPlan, ${vpsDetails?.plan}, $${usdIn}, ${chatId}, ${name}, ${new Date()}, ₦${ngnIn}`)
 
+    const totalPrice = vpsDetails?.couponApplied ? vpsDetails?.newPrice : vpsDetails?.totalPrice
     // Update Wallet
-    const ngnPrice = await usdToNgn(price)
-    if (usdIn * 1.06 < price) {
+    const ngnPrice = await usdToNgn(totalPrice)
+    if (usdIn * 1.06 < totalPrice) {
       sendMessage(chatId, translation('t.sentLessMoney', lang, `${ngnPrice} NGN`, `${ngnIn} NGN`))
       addFundsTo(walletOf, chatId, 'ngn', ngnIn, lang)
       return res.send(html(translation('t.lowPrice')))
@@ -4067,6 +4068,7 @@ app.post('/dynopay/crypto-pay-vps', authDyno, async (req, res) => {
 
   const info = await state.findOne({ _id: parseFloat(chatId) })
   const lang = info?.userLanguage ?? 'en'
+  const totalPrice = vpsDetails?.couponApplied ? vpsDetails?.newPrice : vpsDetails?.totalPrice
 
   // Logs
   del(chatIdOfDynopayPayment, ref)
@@ -4076,12 +4078,12 @@ app.post('/dynopay/crypto-pay-vps', authDyno, async (req, res) => {
   // Update Wallet
   const ticker = tickerViewOfDyno[coin]
   const usdIn = await convert(value, ticker , 'usd')
-  if (usdIn * 1.06 < price) {
+  if (usdIn * 1.06 < totalPrice) {
     sendMessage(chatId, translation('t.sentLessMoney', lang, `$${price}`, `$${usdIn}`))
     addFundsTo(walletOf, chatId, 'usd', usdIn, lang)
     return res.send(html(translation('t.lowPrice')))
   }
-  if (usdIn > price) {
+  if (usdIn > totalPrice) {
     addFundsTo(walletOf, chatId, 'usd', usdIn - price, lang)
     sendMessage(chatId, translation('t.sentMoreMoney', lang, `$${price}`, `$${usdIn}`))
   }
