@@ -772,7 +772,8 @@ const dynopayActions = {
   walletFund: 'walletFund',
   payHosting: 'payHosting',
   payDomain: 'payDomain',
-  payPlan: 'payPlan'
+  payPlan: 'payPlan',
+  payVps: 'payVps'
 }
 
 module.exports = {

@@ -72,6 +72,7 @@ const user = {
   phoneNumberLeads: '📲 HQ SMS Lead',
   wallet: '👛 My Wallet',
   urlShortenerMain: '🔗✂️ URL Shortener',
+  vpsPlans: 'VPS Plans 🔒',
   buyPlan: '🔔 Subscribe Here',
   domainNames: '🌐 Domain Names',
   viewPlan: '🔔 My Plan',
@@ -96,6 +97,9 @@ const user = {
   proPlan: '🔷 Pro Plan',
   businessPlan: '👑 Business Plan',
   contactSupport: '📞 Contact Support',
+
+  // Sub Menu 4: VPS Plans
+  buyVpsPlan: '🔼 Buy VPS Plan',
 
   // Free Trial
   freeTrialMenuButton: '🚀 Free Trial (12 Hours)',
@@ -700,6 +704,7 @@ const userKeyboard = {
     keyboard: [
       [user.cPanelWebHostingPlans],
       [user.pleskWebHostingPlans],
+      [user.vpsPlans],
       [user.joinChannel, user.wallet],
       [user.phoneNumberLeads],
       HIDE_SMS_APP === 'true' ? [user.domainNames] : [user.freeTrialAvailable, user.domainNames],
@@ -1035,6 +1040,158 @@ Your ${info.hostingType} credentials has been successfully sent to your email ${
   ${CHAT_BOT_NAME}`,
 }
 
+const vpsPlans = {
+  hourly: 'Hourly',
+  monthly: 'Monthly',
+  quaterly: 'Quaterly',
+  annually: 'Annually',
+}
+
+const vpsConfig = {
+  basic: 'Basic',
+  standard: 'Standard',
+  premium: 'Premium',
+}
+const vpsPlanMenu = ['Hourly', 'Monthly', 'Quarterly', 'Annually']
+const vpsConfigurationMenu = ['Basic', 'Standard', 'Premium']
+const vpsOsMenu = ['Ubuntu', 'CentOS', 'Windows Server', 'Other (Specify)']
+const vpsCpanelOptional = ['WHM (TRIAL)', 'WHM (PAID)', 'PLESK (TRIAL)', 'PLESK (PAID)', 'No Control Panel']
+
+const vpsPlanOf = {
+  Hourly: 'hourly',
+  Monthly: 'monthly',
+  Quarterly: 'quaterly',
+  Annually: 'annually',
+}
+
+const vpsConfigurationDetails = {
+  Basic: {
+    name: 'basic',
+    label: 'Basic',
+    vcpuCount: '1',
+    ramGb: '2',
+    diskStorageGb: '20',
+    bandwidthTB: '1',
+  },
+  Standard: {
+    name: 'standard',
+    vcpuCount: '2',
+    label: 'Standard',
+    ramGb: '4',
+    diskStorageGb: '40',
+    bandwidthTB: '2',
+  },
+  Premium: {
+    name: 'premium',
+    vcpuCount: '4',
+    label: 'Premium',
+    ramGb: '8',
+    diskStorageGb: '80',
+    bandwidthTB: '5',
+  },
+}
+
+const vp = {
+  askCountryForUser: 'First, select your country:',
+  chooseValidCountry: 'Please choose country from the list:',
+  askRegionForUser: 'Next, select your region:',
+  chooseValidRegion: 'Please choose valid region from the list:',
+  askZoneForUser: 'Now, select your Zone (City/Data Center within the Region):',
+  chooseValidZone: 'Please choose valid zone from the list:',
+  askPlanType: 'Choose a billing plan:',
+  planTypeMenu: kOf(vpsPlanMenu),
+  askVpsConfig: 'Select a VPS configuration:',
+  validVpsConfig: 'Please select a valid vps configuration:',
+  configMenu: kOf(vpsConfigurationMenu),
+  generateSelectedConfig: type => {
+    const config = vpsConfigurationDetails[type]
+    return `
+  🚀 <strong>${type} configuration</strong>
+  
+<strong>- vCPU:</strong> ${config.vcpuCount} vCPU
+<strong>- RAM:</strong> ${config.ramGb} GB RAM
+<strong>- Disk Storage:</strong> ${config.diskStorageGb} GB DISK
+<strong>- BandWidth:</strong> ${config.bandwidthTB} TB`
+  },
+  askVpsOS: 'Choose a preinstalled OS:',
+  osMenu: kOf(vpsOsMenu),
+  otherOs: 'Other (Specify)',
+  specifyOtherOs: 'Please specify other OS:',
+  askVpsCpanel: 'Choose a control panel (optional).',
+  cpanelMenu: kOf(vpsCpanelOptional),
+  trialWHM: vpsCpanelOptional[0],
+  paidWHM: vpsCpanelOptional[1],
+  trialPlesk: vpsCpanelOptional[2],
+  paidPlesk: vpsCpanelOptional[3],
+  noControlPanel: vpsCpanelOptional[4],
+  validCpanel: 'Please choose a valid control panel or skip it.',
+  askVpsDiskType: 'Choose a disk type:',
+  chooseValidDiskType: 'Please choose a valid disk type',
+  failedFetchingAddress: 'Error fetching, Please try again after some time.',
+  vpsDiskTypeMenu: ['pd-standard', 'pd-balanced', 'pd-ssd'],
+  askVpsMachineType: 'Choose a machine type:',
+  chooseValidMachineType: 'Please choose a valid machine type',
+  vpsMachineTypeMenu: ['e2-micro', 'f1-micro'],
+  vpsWaitingTime: 'Retrieving cost information... This will only take a moment.',
+  failedCostRetrieval: 'Failied in retrieving cost information... Please try again after some time.',
+  errorPurchasingVPS: plan => `Something went wrong while setting up your ${plan} VPS Plan|${statusCode}. 
+                                                Please contact support ${SUPPORT_USERNAME}.
+                                                Discover more ${TG_HANDLE}.`,
+  generateBillSummary: vpsDetails => `
+  🚀 <strong>Here’s your order summary:</strong> 
+
+<strong>- Billing Plan:</strong> ${vpsPlans[vpsDetails.plan]}
+<strong>- VPS Configuration:</strong> ${vpsConfig[vpsDetails.config.name]} ( ${vpsDetails.config.vcpuCount}vCPU, ${
+    vpsDetails.config.ramGb
+  }GB RAM, ${vpsDetails.config.diskStorageGb}GB DISK, ${vpsDetails.config.bandwidthTB}TB bandwidth)
+<strong>- Operating System:</strong> ${vpsDetails.os}
+<strong>- Control Panel:</strong> ${vpsDetails.panel ? vpsDetails.panel : 'No Panel Selected'}
+<strong>- Disk Type:</strong> ${vpsDetails.diskType}
+<strong>- Machine Type:</strong> ${vpsDetails.machineType}
+
+<b>Total Amount Due:</b>
+<b>- Coupon Discount: </b> $${vpsDetails.couponDiscount}
+<b>- USD: </b> $${vpsDetails.couponApplied ? vpsDetails.newPrice : vpsDetails.totalPrice}
+<b>- Tax: </b> $0.00
+  
+<b>Payment Terms</b>
+This is a prepayment invoice. Please ensure payment is completed within 1 hr to activate your VPS plan. Once payment is received, we will proceed with the activation of your service.`,
+  no: '❌ No',
+  yes: '✅ Yes',
+  showDepositCryptoInfoVps: (priceCrypto, tickerView, address, vpsDetails) =>
+    `Please remit ${priceCrypto} ${tickerView} to\n\n<code>${address}</code>
+
+Please note, crypto transactions can take up to 30 minutes to complete. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan will be seamlessly activated.
+
+Best regards,
+${CHAT_BOT_NAME}`,
+  lowWalletBalance: vpsName => `
+Your VPS Plan for instance ${vpsName} has been stopped due to low balance.
+
+Please top up your wallet to continue using your VPS Plan.
+`,
+  vpsBoughtSuccess: (info, vpsDetails, response) =>
+    `Your VPS is ready! Here are the details:
+  
+Name: ${response.name}
+Plan: ${vpsPlans[vpsDetails.plan]}
+Network Name: ${response.networkInterfaces[0].name}
+Network IP: ${response.networkInterfaces[0].networkIP}
+oS System: ${vpsDetails.os}
+Zone: ${vpsDetails.zone},
+Disk Type: ${response.disks[0].deviceName}
+Control Panel: ${vpsDetails.panel}
+Configurations: ${vpsConfig[vpsDetails.config.name]} ( ${vpsDetails.config.vcpuCount}vCPU, ${
+      vpsDetails.config.ramGb
+    }GB RAM, ${vpsDetails.config.diskStorageGb}GB DISK, ${vpsDetails.config.bandwidthTB}TB bandwidth)
+    
+Your credentials has been successfully sent to your email ${info.userEmail} as well.
+`,
+  vpsHourlyPlanRenewed: (vpsName, price) => `
+Your VPS Plan for instance ${vpsName} has been renewed successfully.
+${price}$ has been deducted from your wallet.`,
+}
+
 const en = {
   k,
   t,
@@ -1091,7 +1248,11 @@ const en = {
   termsAndConditionType,
   planOptionsOf,
   hP: hostingPlansText,
-  selectFormatOf
+  selectFormatOf,
+  vp,
+  vpsPlanOf,
+  vpsConfigurationDetails,
+  vpsCpanelOptional,
 }
 
 module.exports = {

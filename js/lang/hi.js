@@ -72,6 +72,7 @@ const user = {
   phoneNumberLeads: '📲 HQ एसएमएस लीड',
   wallet: '👛 मेरा वॉलेट',
   urlShortenerMain: '🔗✂️ URL छोटा करें',
+  vpsPlans: 'वीपीएस योजनाएँ 🔒',
   buyPlan: '🔔 यहां सब्सक्राइब करें',
   domainNames: '🌐 डोमेन नाम',
   viewPlan: '🔔 मेरा प्लान',
@@ -96,6 +97,9 @@ const user = {
   proPlan: '🔷 प्रो प्लान',
   businessPlan: '👑 बिज़नेस प्लान',
   contactSupport: '📞 समर्थन से संपर्क करें',
+
+  // Sub Menu 4: VPS Plans
+  buyVpsPlan: '🔼 वीपीएस योजना खरीदें',
 
   // Free Trial
   freeTrialMenuButton: '🚀 फ्री ट्रायल (12 घंटे)',
@@ -640,6 +644,7 @@ const userKeyboard = {
     keyboard: [
       [user.cPanelWebHostingPlans],
       [user.pleskWebHostingPlans],
+      [user.vpsPlans],
       [user.joinChannel, user.wallet],
       [user.phoneNumberLeads],
       HIDE_SMS_APP === 'true' ? [user.domainNames] : [user.freeTrialAvailable, user.domainNames],
@@ -977,6 +982,165 @@ ${CHAT_BOT_NAME}`,
 ${CHAT_BOT_NAME}`,
 }
 
+const vpsPlans = {
+  hourly: 'प्रति घंटा',
+  monthly: 'मासिक',
+  quaterly: 'त्रैमासिक',
+  annually: 'वार्षिक',
+}
+
+const vpsConfig = {
+  basic: 'मूल',
+  standard: 'मानक',
+  premium: 'प्रीमियम',
+}
+
+const vpsPlanMenu = ['प्रति घंटा', 'मासिक', 'त्रैमासिक', 'वार्षिक']
+const vpsConfigurationMenu = ['मूल', 'मानक', 'प्रीमियम']
+const vpsOsMenu = ['Ubuntu', 'CentOS', 'Windows Server', 'अन्य (निर्दिष्ट करें)']
+const vpsCpanelOptional = [
+  'WHM (परीक्षण)',
+  'WHM (भुगतान)',
+  'PLESK (परीक्षण)',
+  'PLESK (भुगतान)',
+  'कोई नियंत्रण पैनल नहीं',
+]
+
+const vpsPlanOf = {
+  'प्रति घंटा': 'hourly',
+  मासिक: 'monthly',
+  त्रैमासिक: 'quaterly',
+  वार्षिक: 'annually',
+}
+
+const vpsConfigurationDetails = {
+  मूल: {
+    name: 'basic',
+    label: 'Basic',
+    vcpuCount: '1',
+    ramGb: '2',
+    diskStorageGb: '20',
+    bandwidthTB: '1',
+  },
+  मानक: {
+    name: 'standard',
+    vcpuCount: '2',
+    label: 'Standard',
+    ramGb: '4',
+    diskStorageGb: '40',
+    bandwidthTB: '2',
+  },
+  प्रीमियम: {
+    name: 'premium',
+    vcpuCount: '4',
+    label: 'Premium',
+    ramGb: '8',
+    diskStorageGb: '80',
+    bandwidthTB: '5',
+  },
+}
+
+const vp = {
+  askCountryForUser: 'सबसे पहले, अपना देश चुनें:',
+  chooseValidCountry: 'कृपया सूची से देश चुनें:',
+  askRegionForUser: 'अब, अपना क्षेत्र चुनें:',
+  chooseValidRegion: 'कृपया सूची से मान्य क्षेत्र चुनें:',
+  askZoneForUser: 'अब, अपना ज़ोन चुनें (क्षेत्र के भीतर का शहर/डेटा सेंटर):',
+  chooseValidZone: 'कृपया सूची से मान्य ज़ोन चुनें:',
+  askPlanType: 'एक बिलिंग योजना चुनें:',
+  planTypeMenu: kOf(vpsPlanMenu),
+  askVpsConfig: 'एक वीपीएस कॉन्फ़िगरेशन चुनें:',
+  validVpsConfig: 'कृपया एक मान्य वीपीएस कॉन्फ़िगरेशन चुनें:',
+  configMenu: kOf(vpsConfigurationMenu),
+  generateSelectedConfig: type => {
+    const config = vpsConfigurationDetails[type]
+    return `
+  🚀 <strong>${type} कॉन्फ़िगरेशन</strong>
+  
+<strong>- vCPU:</strong> ${config.vcpuCount} vCPU
+<strong>- RAM:</strong> ${config.ramGb} GB RAM
+<strong>- Disk Storage:</strong> ${config.diskStorageGb} GB डिस्क
+<strong>- BandWidth:</strong> ${config.bandwidthTB} TB`
+  },
+  askVpsOS: 'एक पूर्व-स्थापित ऑपरेटिंग सिस्टम चुनें:',
+  osMenu: kOf(vpsOsMenu),
+  otherOs: 'अन्य (निर्दिष्ट करें)',
+  specifyOtherOs: 'कृपया अन्य ऑपरेटिंग सिस्टम निर्दिष्ट करें:',
+  askVpsCpanel: 'एक नियंत्रण पैनल चुनें (वैकल्पिक)।',
+  cpanelMenu: kOf(vpsCpanelOptional),
+  trialWHM: vpsCpanelOptional[0],
+  paidWHM: vpsCpanelOptional[1],
+  trialPlesk: vpsCpanelOptional[2],
+  paidPlesk: vpsCpanelOptional[3],
+  noControlPanel: vpsCpanelOptional[4],
+  validCpanel: 'कृपया एक मान्य नियंत्रण पैनल चुनें या इसे छोड़ें।',
+  askVpsDiskType: 'डिस्क प्रकार चुनें:',
+  chooseValidDiskType: 'कृपया एक मान्य डिस्क प्रकार चुनें।',
+  failedFetchingAddress: 'त्रुटि, कृपया कुछ समय बाद पुनः प्रयास करें।',
+  vpsDiskTypeMenu: ['pd-standard', 'pd-balanced', 'pd-ssd'],
+  askVpsMachineType: 'मशीन प्रकार चुनें:',
+  chooseValidMachineType: 'कृपया एक मान्य मशीन प्रकार चुनें।',
+  vpsMachineTypeMenu: ['e2-micro', 'f1-micro'],
+  vpsWaitingTime: 'लागत जानकारी प्राप्त की जा रही है... यह केवल एक क्षण लगेगा।',
+  failedCostRetrieval: 'लागत जानकारी प्राप्त करने में विफल... कृपया कुछ समय बाद पुनः प्रयास करें।',
+  errorPurchasingVPS: plan => `आपका ${plan} VPS योजना सेटअप करते समय कुछ त्रुटि हुई |${statusCode}। 
+                                                कृपया समर्थन से संपर्क करें ${SUPPORT_USERNAME}।
+                                                अधिक जानें ${TG_HANDLE}।`,
+  generateBillSummary: vpsDetails => `
+  🚀 <strong>यहां आपका ऑर्डर सारांश है:</strong> 
+
+<strong>- बिलिंग योजना:</strong> ${vpsPlans[vpsDetails.plan]}
+<strong>- VPS कॉन्फ़िगरेशन:</strong> ${vpsConfig[vpsDetails.config.name]} ( ${vpsDetails.config.vcpuCount}vCPU, ${
+    vpsDetails.config.ramGb
+  }GB RAM, ${vpsDetails.config.diskStorageGb}GB डिस्क, ${vpsDetails.config.bandwidthTB}TB बैंडविड्थ)
+<strong>- ऑपरेटिंग सिस्टम:</strong> ${vpsDetails.os}
+<strong>- नियंत्रण पैनल:</strong> ${vpsDetails.panel ? vpsDetails.panel : 'कोई पैनल चयनित नहीं'}
+<strong>- डिस्क प्रकार:</strong> ${vpsDetails.diskType}
+<strong>- मशीन प्रकार:</strong> ${vpsDetails.machineType}
+
+<b>कुल देय राशि:</b>
+<b>- कूपन छूट:</b> $${vpsDetails.couponDiscount}
+<b>- USD:</b> $${vpsDetails.couponApplied ? vpsDetails.newPrice : vpsDetails.totalPrice}
+<b>- टैक्स:</b> $0.00
+  
+<b>भुगतान की शर्तें</b>
+यह एक अग्रिम भुगतान चालान है। कृपया भुगतान को 1 घंटे के भीतर पूरा करें ताकि आपका VPS योजना सक्रिय हो सके। भुगतान प्राप्त होने के बाद, हम आपकी सेवा को सक्रिय करेंगे।`,
+  no: '❌ नहीं',
+  yes: '✅ हाँ',
+  showDepositCryptoInfoVps: (priceCrypto, tickerView, address, vpsDetails) =>
+    `कृपया ${priceCrypto} ${tickerView} इस पर जमा करें:\n\n<code>${address}</code>
+
+कृपया ध्यान दें, क्रिप्टो लेन-देन को पूरा होने में 30 मिनट तक का समय लग सकता है। एक बार लेन-देन की पुष्टि हो जाने पर, आपको तुरंत सूचित किया जाएगा, और आपकी VPS योजना को सक्रिय कर दिया जाएगा।
+
+सादर,
+${CHAT_BOT_NAME}`,
+  lowWalletBalance: vpsName => `
+आपकी VPS योजना ${vpsName} वॉलेट में कम शेष राशि के कारण बंद कर दी गई है।
+
+कृपया अपनी वॉलेट बैलेंस को टॉप अप करें ताकि आप अपनी VPS योजना का उपयोग जारी रख सकें।
+`,
+  vpsBoughtSuccess: (info, vpsDetails, response) =>
+    `आपकी VPS तैयार है! यहां विवरण है:
+  
+नाम: ${response.name}
+योजना: ${vpsPlans[vpsDetails.plan]}
+नेटवर्क नाम: ${response.networkInterfaces[0].name}
+नेटवर्क IP: ${response.networkInterfaces[0].networkIP}
+OS सिस्टम: ${vpsDetails.os}
+ज़ोन: ${vpsDetails.zone},
+डिस्क प्रकार: ${response.disks[0].deviceName}
+कंट्रोल पैनल: ${vpsDetails.panel}
+कॉन्फ़िगरेशन: ${vpsConfig[vpsDetails.config.name]} ( ${vpsDetails.config.vcpuCount}vCPU, ${
+      vpsDetails.config.ramGb
+    }GB RAM, ${vpsDetails.config.diskStorageGb}GB डिस्क, ${vpsDetails.config.bandwidthTB}TB बैंडविड्थ)
+    
+आपके क्रेडेंशियल्स सफलतापूर्वक आपके ईमेल ${info.userEmail} पर भेज दिए गए हैं।
+`,
+  vpsHourlyPlanRenewed: (vpsName, price) => `
+आपकी VPS योजना ${vpsName} सफलतापूर्वक नवीनीकृत हो गई है।
+${price}$ आपकी वॉलेट से काट लिया गया है।`,
+}
+
 const hi = {
   k,
   t,
@@ -1033,7 +1197,11 @@ const hi = {
   l,
   termsAndConditionType,
   hp: hostingPlansText,
-  selectFormatOf
+  selectFormatOf,
+  vp,
+  vpsPlanOf,
+  vpsConfigurationDetails,
+  vpsCpanelOptional,
 }
 
 module.exports = {

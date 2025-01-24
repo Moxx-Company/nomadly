@@ -72,6 +72,7 @@ const user = {
   phoneNumberLeads: '📲 HQ 短信线索',
   wallet: '👛 我的钱包',
   urlShortenerMain: '🔗✂️ URL 缩短器',
+  vpsPlans: 'VPS计划 🔒',
   buyPlan: '🔔 订阅这里',
   domainNames: '🌐 域名',
   viewPlan: '🔔 我的计划',
@@ -96,6 +97,9 @@ const user = {
   proPlan: '🔷 专业计划',
   businessPlan: '👑 商业计划',
   contactSupport: '📞 联系支持',
+
+  // Sub Menu 4: VPS Plans
+  buyVpsPlan: '🔼 购买VPS计划',
 
   // Free Trial
   freeTrialMenuButton: '🚀 免费试用（12小时）',
@@ -500,8 +504,8 @@ const validatorSelectAmount = ['ALL', '1000', '2000', '3000', '4000', '5000']
 const validatorSelectFormat = ['本地格式', '国际格式']
 
 const selectFormatOf = {
-  '本地格式': 'Local Format',
-  '国际格式': 'International Format',
+  本地格式: 'Local Format',
+  国际格式: 'International Format',
 }
 
 //redSelectRandomCustom
@@ -629,6 +633,7 @@ const userKeyboard = {
     keyboard: [
       [user.cPanelWebHostingPlans],
       [user.pleskWebHostingPlans],
+      [user.vpsPlans],
       [user.joinChannel, user.wallet],
       [user.phoneNumberLeads],
       HIDE_SMS_APP === 'true' ? [user.domainNames] : [user.freeTrialAvailable, user.domainNames],
@@ -960,6 +965,159 @@ ${CHAT_BOT_NAME}`,
 ${CHAT_BOT_NAME}`,
 }
 
+const vpsPlans = {
+  hourly: '按小时',
+  monthly: '每月',
+  quaterly: '季度',
+  annually: '每年',
+}
+
+const vpsConfig = {
+  basic: '基本',
+  standard: '标准',
+  premium: '高级',
+}
+
+const vpsPlanMenu = ['按小时', '每月', '季度', '每年']
+const vpsConfigurationMenu = ['基本', '标准', '高级']
+const vpsOsMenu = ['Ubuntu', 'CentOS', 'Windows Server', '其他（请指定）']
+const vpsCpanelOptional = ['WHM（试用）', 'WHM（付费）', 'PLESK（试用）', 'PLESK（付费）', '无控制面板']
+
+const vpsPlanOf = {
+  按小时: 'hourly',
+  每月: 'monthly',
+  季度: 'quaterly',
+  每年: 'annually',
+}
+
+const vpsConfigurationDetails = {
+  基本: {
+    name: 'basic',
+    label: 'Basic',
+    vcpuCount: '1',
+    ramGb: '2',
+    diskStorageGb: '20',
+    bandwidthTB: '1',
+  },
+  标准: {
+    name: 'standard',
+    vcpuCount: '2',
+    label: 'Standard',
+    ramGb: '4',
+    diskStorageGb: '40',
+    bandwidthTB: '2',
+  },
+  高级: {
+    name: 'premium',
+    vcpuCount: '4',
+    label: 'Premium',
+    ramGb: '8',
+    diskStorageGb: '80',
+    bandwidthTB: '5',
+  },
+}
+
+const vp = {
+  askCountryForUser: '首先，选择您的国家：',
+  chooseValidCountry: '请选择列表中的国家：',
+  askRegionForUser: '接下来，选择您的区域：',
+  chooseValidRegion: '请选择列表中的有效区域：',
+  askZoneForUser: '现在，选择您的区域（区域内的城市/数据中心）：',
+  chooseValidZone: '请选择列表中的有效区域：',
+  askPlanType: '选择一个计费计划：',
+  planTypeMenu: kOf(vpsPlanMenu),
+  askVpsConfig: '选择一个 VPS 配置：',
+  validVpsConfig: '请选择一个有效的 VPS 配置：',
+  configMenu: kOf(vpsConfigurationMenu),
+  generateSelectedConfig: type => {
+    const config = vpsConfigurationDetails[type]
+    return `
+  🚀 <strong>${type} 配置</strong>
+  
+<strong>- vCPU：</strong> ${config.vcpuCount} vCPU
+<strong>- 内存：</strong> ${config.ramGb} GB RAM
+<strong>- 磁盘存储：</strong> ${config.diskStorageGb} GB 磁盘
+<strong>- 带宽：</strong> ${config.bandwidthTB} TB`
+  },
+  askVpsOS: '选择一个预装的操作系统：',
+  osMenu: kOf(vpsOsMenu),
+  otherOs: '其他（请注明）',
+  specifyOtherOs: '请指定其他操作系统：',
+  askVpsCpanel: '选择一个控制面板（可选）。',
+  cpanelMenu: kOf(vpsCpanelOptional),
+  trialWHM: vpsCpanelOptional[0],
+  paidWHM: vpsCpanelOptional[1],
+  trialPlesk: vpsCpanelOptional[2],
+  paidPlesk: vpsCpanelOptional[3],
+  noControlPanel: vpsCpanelOptional[4],
+  validCpanel: '请选择一个有效的控制面板或跳过。',
+  askVpsDiskType: '选择磁盘类型：',
+  chooseValidDiskType: '请选择一个有效的磁盘类型。',
+  failedFetchingAddress: '获取失败，请稍后重试。',
+  vpsDiskTypeMenu: ['pd-standard', 'pd-balanced', 'pd-ssd'],
+  askVpsMachineType: '选择机器类型：',
+  chooseValidMachineType: '请选择一个有效的机器类型。',
+  vpsMachineTypeMenu: ['e2-micro', 'f1-micro'],
+  vpsWaitingTime: '正在获取成本信息... 这只需要一小会儿。',
+  failedCostRetrieval: '获取成本信息失败... 请稍后重试。',
+  errorPurchasingVPS: plan => `设置您的 ${plan} VPS 计划时出了点问题 |${statusCode}。
+                                                请联系支持人员 ${SUPPORT_USERNAME}。
+                                                了解更多信息 ${TG_HANDLE}。`,
+  generateBillSummary: vpsDetails => `
+  🚀 <strong>以下是您的订单摘要：</strong> 
+
+<strong>- 计费计划：</strong> ${vpsPlans[vpsDetails.plan]}
+<strong>- VPS 配置：</strong> ${vpsConfig[vpsDetails.config.name]} ( ${vpsDetails.config.vcpuCount}vCPU, ${
+    vpsDetails.config.ramGb
+  }GB RAM, ${vpsDetails.config.diskStorageGb}GB 磁盘, ${vpsDetails.config.bandwidthTB}TB 带宽)
+<strong>- 操作系统：</strong> ${vpsDetails.os}
+<strong>- 控制面板：</strong> ${vpsDetails.panel ? vpsDetails.panel : '未选择控制面板'}
+<strong>- 磁盘类型：</strong> ${vpsDetails.diskType}
+<strong>- 机器类型：</strong> ${vpsDetails.machineType}
+
+<b>总金额：</b>
+<b>- 优惠券折扣：</b> $${vpsDetails.couponDiscount}
+<b>- USD：</b> $${vpsDetails.couponApplied ? vpsDetails.newPrice : vpsDetails.totalPrice}
+<b>- 税费：</b> $0.00
+  
+<b>付款条款</b>
+这是预付款发票。请在1小时内完成付款以激活您的 VPS 计划。一旦收到付款，我们将继续激活您的服务。`,
+  no: '❌ 不',
+  yes: '✅ 是',
+  showDepositCryptoInfoVps: (priceCrypto, tickerView, address, vpsDetails) =>
+    `请将 ${priceCrypto} ${tickerView} 转入以下地址：\n\n<code>${address}</code>
+
+请注意，加密货币交易可能需要长达 30 分钟才能完成。一旦交易被确认，您将立即收到通知，您的 VPS 计划将无缝激活。
+
+此致，
+${CHAT_BOT_NAME}`,
+  lowWalletBalance: vpsName => `
+由于余额不足，您的 VPS 计划 ${vpsName} 已停止。
+
+请充值您的钱包以继续使用您的 VPS 计划。
+`,
+  vpsBoughtSuccess: (info, vpsDetails, response) =>
+    `您的 VPS 已准备好！以下是详细信息：
+  
+名称：${response.name}
+计划：${vpsPlans[vpsDetails.plan]}
+网络名称：${response.networkInterfaces[0].name}
+网络 IP：${response.networkInterfaces[0].networkIP}
+操作系统：${vpsDetails.os}
+区域：${vpsDetails.zone},
+磁盘类型：${response.disks[0].deviceName}
+控制面板：${vpsDetails.panel}
+配置：${vpsConfig[vpsDetails.config.name]} ( ${vpsDetails.config.vcpuCount}vCPU, ${vpsDetails.config.ramGb}GB RAM, ${
+      vpsDetails.config.diskStorageGb
+    }GB 磁盘, ${vpsDetails.config.bandwidthTB}TB 带宽)
+    
+您的凭证已成功发送至您的邮箱 ${info.userEmail}。
+`,
+  vpsHourlyPlanRenewed: (vpsName, price) => `
+您的 VPS 计划 ${vpsName} 已成功续订。
+${price}$ 已从您的钱包中扣除。`,
+}
+
 const zh = {
   k,
   t,
@@ -1016,7 +1174,11 @@ const zh = {
   l,
   termsAndConditionType,
   hP: hostingPlansText,
-  selectFormatOf
+  selectFormatOf,
+  vp,
+  vpsPlanOf,
+  vpsConfigurationDetails,
+  vpsCpanelOptional,
 }
 
 module.exports = {
