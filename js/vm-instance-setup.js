@@ -248,8 +248,7 @@ async function sendVPSCredentialsEmail(info, response, vpsDetails) {
   try {
     const mailResponse = await transporter.sendMail({
       from: process.env.MAIL_SENDER,
-      // to: info.userEmail,
-      to: 'yuvraj.inno2018@gmail.com',
+      to: info.userEmail,
       subject: `🎉 Your ${plan} has been Activated!`,
       html: emailHtml,
     })
