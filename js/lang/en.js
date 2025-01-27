@@ -1055,7 +1055,7 @@ const vpsConfig = {
 }
 const vpsPlanMenu = ['Hourly', 'Monthly', 'Quarterly', 'Annually']
 const vpsConfigurationMenu = ['Basic', 'Standard', 'Premium']
-const vpsOsMenu = ['Ubuntu', 'CentOS', 'Windows Server', 'Other (Specify)']
+const vpsOsMenu = ['Ubuntu', 'CentOS', 'Windows Server', 'Other OS']
 const vpsCpanelOptional = ['WHM (TRIAL)', 'WHM (PAID)', 'PLESK (TRIAL)', 'PLESK (PAID)', 'No Control Panel']
 
 const vpsPlanOf = {
@@ -1092,16 +1092,32 @@ const vpsConfigurationDetails = {
   },
 }
 
+const formattedConfigurations = Object.entries(vpsConfigurationDetails)
+  .map(
+    ([key, { vcpuCount, ramGb, diskStorageGb, bandwidthTB }]) =>
+      `<strong>- ${key} </strong> (${vcpuCount} vCPU, ${ramGb}GB RAM, ${diskStorageGb}GB Disk, ${bandwidthTB}TB Bandwidth)`,
+  )
+  .join('\n')
+
 const vp = {
-  askCountryForUser: 'First, select your country:',
+  askCountryForUser: '🌍 Select the country where you’d like to host your VPS.',
   chooseValidCountry: 'Please choose country from the list:',
-  askRegionForUser: 'Next, select your region:',
+  askRegionForUser:
+    '🌍 Next, Select the region where you’d like to host your VPS to ensure optimal performance and connectivity',
   chooseValidRegion: 'Please choose valid region from the list:',
-  askZoneForUser: 'Now, select your Zone (City/Data Center within the Region):',
+  askZoneForUser: '📍 Choose the data center location within the selected region',
   chooseValidZone: 'Please choose valid zone from the list:',
-  askPlanType: 'Choose a billing plan:',
+  confirmZone: (region, zone) => `✅  You’ve selected the ${region} (${zone}) Do you want to proceed with this choice?`,
+  confirmBtn: `✅ Confirm Selection`,
+  askPlanType: `💳 Choose a billing plan based on your needs:
+
+<strong>- Hourly:</strong> Flexible for temporary or short-term projects.
+<strong>- Monthly/Quarterly/Annually:</strong> Best for long-term use with discounts for longer .
+`,
   planTypeMenu: kOf(vpsPlanMenu),
-  askVpsConfig: 'Select a VPS configuration:',
+  askVpsConfig: `⚙️ Choose the VPS configuration that suits your needs. We offer basic, standard, and premium plans for different workloads.
+  
+${formattedConfigurations}`,
   validVpsConfig: 'Please select a valid vps configuration:',
   configMenu: kOf(vpsConfigurationMenu),
   generateSelectedConfig: type => {
@@ -1114,11 +1130,13 @@ const vp = {
 <strong>- Disk Storage:</strong> ${config.diskStorageGb} GB DISK
 <strong>- BandWidth:</strong> ${config.bandwidthTB} TB`
   },
-  askVpsOS: 'Choose a preinstalled OS:',
+  askVpsOS:
+    '💻 Choose the operating system for your VPS. Popular options include Ubuntu and CentOS, with other available OS choices.',
   osMenu: kOf(vpsOsMenu),
-  otherOs: 'Other (Specify)',
-  specifyOtherOs: 'Please specify other OS:',
-  askVpsCpanel: 'Choose a control panel (optional).',
+  otherOs: 'Other OS',
+  specifyOtherOs: '🔤 Please specify the operating system you would like to use.',
+  askVpsCpanel:
+    '🛠️ Would you like to add a control panel for easy server management? Choose from WHM, Plesk, or no control panel.',
   cpanelMenu: kOf(vpsCpanelOptional),
   trialWHM: vpsCpanelOptional[0],
   paidWHM: vpsCpanelOptional[1],
@@ -1126,72 +1144,107 @@ const vp = {
   paidPlesk: vpsCpanelOptional[3],
   noControlPanel: vpsCpanelOptional[4],
   validCpanel: 'Please choose a valid control panel or skip it.',
-  askVpsDiskType: 'Choose a disk type:',
+  askVpsDiskType: '💿 Please specify the disk type you would like to use.',
   chooseValidDiskType: 'Please choose a valid disk type',
   failedFetchingAddress: 'Error fetching, Please try again after some time.',
   vpsDiskTypeMenu: ['pd-standard', 'pd-balanced', 'pd-ssd'],
-  askVpsMachineType: 'Choose a machine type:',
+  askVpsMachineType: '💻 Please specify the machine type you would like to use.',
   chooseValidMachineType: 'Please choose a valid machine type',
   vpsMachineTypeMenu: ['e2-micro', 'f1-micro'],
-  vpsWaitingTime: 'Retrieving cost information... This will only take a moment.',
+  vpsWaitingTime: '⚙️ Retrieving cost information... This will only take a moment.',
   failedCostRetrieval: 'Failied in retrieving cost information... Please try again after some time.',
+
   errorPurchasingVPS: plan => `Something went wrong while setting up your ${plan} VPS Plan|${statusCode}. 
                                                 Please contact support ${SUPPORT_USERNAME}.
                                                 Discover more ${TG_HANDLE}.`,
-  generateBillSummary: vpsDetails => `
-  🚀 <strong>Here’s your order summary:</strong> 
 
-<strong>- Billing Plan:</strong> ${vpsPlans[vpsDetails.plan]}
-<strong>- VPS Configuration:</strong> ${vpsConfig[vpsDetails.config.name]} ( ${vpsDetails.config.vcpuCount}vCPU, ${
+  generateBillSummary: vpsDetails => `<strong>📋 Here’s a summary of your selections:</strong>
+
+    <strong>•	Billing Plan:</strong> ${vpsPlans[vpsDetails.plan]}
+    <strong>•	Auto-Renewal:</strong> No
+    <strong>•	VPS Configuration: </strong> ${vpsConfig[vpsDetails.config.name]} ( ${vpsDetails.config.vcpuCount}vCPU, ${
     vpsDetails.config.ramGb
   }GB RAM, ${vpsDetails.config.diskStorageGb}GB DISK, ${vpsDetails.config.bandwidthTB}TB bandwidth)
-<strong>- Operating System:</strong> ${vpsDetails.os}
-<strong>- Control Panel:</strong> ${vpsDetails.panel ? vpsDetails.panel : 'No Panel Selected'}
-<strong>- Disk Type:</strong> ${vpsDetails.diskType}
-<strong>- Machine Type:</strong> ${vpsDetails.machineType}
+    <strong>•	Operating System:</strong> ${vpsDetails.os}
+	  <strong>•	Control Panel:</strong>  ${
+      vpsDetails.panel
+        ? `${vpsDetails.panel} ${vpsDetails.panelMode === 'paid' ? `(PAID)` : '(TRIAL)'}`
+        : 'No Panel Selected'
+    }
+	  <strong>•	SSH Key:</strong> None Linked
+    <strong>•	Disk Type:</strong> ${vpsDetails.diskType}
+    <strong>•	Machine Type:</strong> ${vpsDetails.machineType}
+    <strong>•	Zone:</strong> ${vpsDetails.regionName} ( ${vpsDetails.zone})
 
-<b>Total Amount Due:</b>
-<b>- Coupon Discount: </b> $${vpsDetails.couponDiscount}
-<b>- USD: </b> $${vpsDetails.couponApplied ? vpsDetails.newPrice : vpsDetails.totalPrice}
-<b>- Tax: </b> $0.00
-  
-<b>Payment Terms</b>
-This is a prepayment invoice. Please ensure payment is completed within 1 hr to activate your VPS plan. Once payment is received, we will proceed with the activation of your service.`,
-  no: '❌ No',
-  yes: '✅ Yes',
+💰 Cost Breakdown:
+	  <strong>•	VPS Cost ([Billing Cycle]): </strong> $${vpsDetails.totalPrice}
+	  <strong>•	License Cost (if applicable): </strong> $0
+	  <strong>•	Coupon Discount: </strong> -$${vpsDetails.couponDiscount}
+	  <strong>•	Total Cost: </strong> $${vpsDetails.couponApplied ? vpsDetails.newPrice : vpsDetails.totalPrice}
+
+🎉 You Save: $${vpsDetails.couponDiscount}`,
+  no: '❌ Cancel Order',
+  yes: '✅ Confirm Order',
+
   showDepositCryptoInfoVps: (priceCrypto, tickerView, address, vpsDetails) =>
     `Please remit ${priceCrypto} ${tickerView} to\n\n<code>${address}</code>
 
- ${vpsDetails.plan === 'hourly' ? `Please note, for hourly plan you need to pay atleast ${VPS_PLAN_MINIMUM_AMOUNT_PAYABLE}$. The remaining amount will go into you wallet.` : ''}
+${
+  vpsDetails.plan === 'hourly'
+    ? `Please note, for hourly plan you need to pay atleast ${VPS_PLAN_MINIMUM_AMOUNT_PAYABLE}$. The remaining amount will go into you wallet.`
+    : ''
+}
 Please note, crypto transactions can take up to 30 minutes to complete. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan will be seamlessly activated.
 
 Best regards,
 ${CHAT_BOT_NAME}`,
+
+  extraMoney: 'The remaining amount for your hourly plan has been deposited to wallet.',
+  paymentRecieved: `✅ Payment successful! Your VPS is being set up. Details will be available shortly and sent to your email for your convenience.`,
+  paymentFailed: `❌ Payment failed. Please check your payment method or try again.`,
+
   lowWalletBalance: vpsName => `
 Your VPS Plan for instance ${vpsName} has been stopped due to low balance.
 
 Please top up your wallet to continue using your VPS Plan.
 `,
+
   vpsBoughtSuccess: (info, vpsDetails, response) =>
-    `Your VPS is ready! Here are the details:
+    `🎉 Your VPS is ready! Below are the details of your server:
   
-Name: ${response.name}
-Plan: ${vpsPlans[vpsDetails.plan]}
-Network Name: ${response.networkInterfaces[0].name}
-Network IP: ${response.networkInterfaces[0].networkIP}
-oS System: ${vpsDetails.os}
-Zone: ${vpsDetails.zone},
-Disk Type: ${response.disks[0].deviceName}
-Control Panel: ${vpsDetails.panel}
-Configurations: ${vpsConfig[vpsDetails.config.name]} ( ${vpsDetails.config.vcpuCount}vCPU, ${
+<strong>🚀 Name:</strong> ${response.name}
+<strong>💳 Billing Plan:</strong> ${vpsPlans[vpsDetails.plan]}
+<strong>🛠️ Control Panel:</strong> ${vpsDetails.panel} ${vpsDetails.panelMode === 'paid' ? `(PAID)` : '(TRIAL)'}
+<strong>🌐 Server IP: </strong> ${response.networkInterfaces[0].networkIP}
+<strong>💻 Operating System:</strong> ${vpsDetails.os}
+<strong>⚙️ Configurations:</strong> ${vpsConfig[vpsDetails.config.name]} ( ${vpsDetails.config.vcpuCount}vCPU, ${
       vpsDetails.config.ramGb
     }GB RAM, ${vpsDetails.config.diskStorageGb}GB DISK, ${vpsDetails.config.bandwidthTB}TB bandwidth)
+<strong>🌍 Zone:</strong> ${vpsDetails.zone}
+<strong>💿 Disk Type:</strong> ${response.disks[0].deviceName}
     
-Your credentials has been successfully sent to your email ${info.userEmail} as well.
+📧 These details have also been sent to your registered email. Please keep them secure.
+Thank you for choosing our service
+${CHAT_BOT_NAME}
 `,
   vpsHourlyPlanRenewed: (vpsName, price) => `
 Your VPS Plan for instance ${vpsName} has been renewed successfully.
 ${price}$ has been deducted from your wallet.`,
+
+  bankPayVPS: (
+    priceNGN,
+    plan,
+  ) => `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your  ${
+    vpsPlans[plan]
+  } VPS plan will be seamlessly activated.
+${
+  plan === 'hourly'
+    ? `Please note, for hourly plan you need to pay atleast ${VPS_PLAN_MINIMUM_AMOUNT_PAYABLE}$. The remaining amount will go into you wallet.`
+    : ''
+},
+
+Best regards,
+${CHAT_BOT_NAME}`,
 }
 
 const en = {

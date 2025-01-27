@@ -63,7 +63,7 @@ async function fetchAvailableZones(region) {
 
 async function calculateVpsInstanceCost(payload) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/cost/vm/instance?region=${payload.region}&vcpuCount=${payload.config.vcpuCount}&memoryGb=30&diskType=${payload.diskType}&diskSizeGb=${payload.config.diskStorageGb}&preemptible=false`
+    const url = `${NAMEWORD_BASE_URL}/cost/vm/instance?region=${payload.region}&vcpuCount=${payload.config.vcpuCount}&memoryGb=${payload.config.ramGb}&diskType=${payload.diskType}&diskSizeGb=${payload.config.diskStorageGb}&preemptible=false`
     let response = await axios.get(url, { headers })
     if (response?.data?.data) {
       console.log(response?.data.data)
@@ -178,7 +178,7 @@ const transporter = nodemailer.createTransport({
 })
 
 async function sendVPSCredentialsEmail(info, response, vpsDetails) {
-  const plan = 'VPS Plan';
+  const plan = 'VPS Plan'
   const emailHtml = `
     <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
@@ -259,28 +259,28 @@ async function sendVPSCredentialsEmail(info, response, vpsDetails) {
   }
 }
 
-const getExpiryDateVps = (plan) => {
+const getExpiryDateVps = plan => {
   const now = new Date()
-  let expiresAt;
+  let expiresAt
   switch (plan) {
     case 'hourly':
-      expiresAt = new Date(now.getTime() + 1 * 60 * 60 * 1000);
-      break;
+      expiresAt = new Date(now.getTime() + 1 * 60 * 60 * 1000)
+      break
     case 'monthly':
-      expiresAt = new Date(now);
-      expiresAt.setMonth(expiresAt.getMonth() + 1);
-      break;
+      expiresAt = new Date(now)
+      expiresAt.setMonth(expiresAt.getMonth() + 1)
+      break
     case 'quaterly':
-      expiresAt = new Date(now);
-      expiresAt.setMonth(expiresAt.getMonth() + 3);
-      break;
+      expiresAt = new Date(now)
+      expiresAt.setMonth(expiresAt.getMonth() + 3)
+      break
     case 'annually':
-      expiresAt = new Date(now);
-      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-      break;
-  
+      expiresAt = new Date(now)
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1)
+      break
+
     default:
-      break;
+      break
   }
   return expiresAt
 }
@@ -293,5 +293,5 @@ module.exports = {
   createVPSInstance,
   sendVPSCredentialsEmail,
   getExpiryDateVps,
-  stopVPSInstance
+  stopVPSInstance,
 }

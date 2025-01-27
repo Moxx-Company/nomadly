@@ -1018,7 +1018,7 @@ const vpsPlanOf = {
 
 const vpsPlanMenu = ["À l'heure", 'Mensuel', 'Trimestriel', 'Annuel']
 const vpsConfigurationMenu = ['De base', 'Standard', 'Premium']
-const vpsOsMenu = ['Ubuntu', 'CentOS', 'Windows Server', 'Autre (Précisez)']
+const vpsOsMenu = ['Ubuntu', 'CentOS', 'Windows Server', 'Autre OS']
 const vpsCpanelOptional = ['WHM (ESSAI)', 'WHM (PAYÉ)', 'PLESK (ESSAI)', 'PLESK (PAYÉ)', 'Pas de panneau de contrôle']
 
 const vpsConfigurationDetails = {
@@ -1048,16 +1048,32 @@ const vpsConfigurationDetails = {
   },
 }
 
+const formattedConfigurations = Object.entries(vpsConfigurationDetails)
+  .map(
+    ([key, { vcpuCount, ramGb, diskStorageGb, bandwidthTB }]) =>
+      `<strong>- ${key} </strong> (${vcpuCount} vCPU, ${ramGb}GB RAM, ${diskStorageGb}GB Disque, ${bandwidthTB}TB Bande passante)`,
+  )
+  .join('\n')
+
 const vp = {
-  askCountryForUser: "Tout d'abord, sélectionnez votre pays :",
+  askCountryForUser: '🌍 Sélectionnez le pays où vous souhaitez héberger votre VPS.',
   chooseValidCountry: 'Veuillez choisir un pays dans la liste :',
-  askRegionForUser: 'Ensuite, sélectionnez votre région :',
+  askRegionForUser:
+    '🌍 Ensuite, sélectionnez la région où vous souhaitez héberger votre VPS pour garantir des performances et une connectivité optimales.',
   chooseValidRegion: 'Veuillez choisir une région valide dans la liste :',
-  askZoneForUser: 'Maintenant, sélectionnez votre zone (Ville/Centre de données dans la région) :',
-  chooseValidZone: 'Veuillez choisir une zone valide dans la liste :',
-  askPlanType: 'Choisissez un plan de facturation :',
+  askZoneForUser: 'Choisissez l’emplacement du centre de données dans la région sélectionnée.',
+  chooseValidZone: '📍 Veuillez choisir une zone valide dans la liste :',
+  confirmZone: (region, zone) =>
+    `✅  Vous avez sélectionné ${region} (${zone}). Souhaitez-vous continuer avec ce choix ?`,
+  confirmBtn: `✅ Confirmer la sélection`,
+  askPlanType: `💳 Choisissez un plan de facturation en fonction de vos besoins :
+
+<strong>- Horaire :</strong> Flexible pour des projets temporaires ou de courte durée.
+<strong>- Mensuel/Trimestriel/Annuel :</strong> Idéal pour une utilisation à long terme avec des réductions pour des périodes plus longues.`,
   planTypeMenu: kOf(vpsPlanMenu),
-  askVpsConfig: 'Sélectionnez une configuration VPS :',
+  askVpsConfig: `⚙️ Choisissez la configuration VPS qui correspond à vos besoins. Nous proposons des plans basique, standard et premium pour différentes charges de travail.
+  
+${formattedConfigurations}`,
   validVpsConfig: 'Veuillez sélectionner une configuration VPS valide :',
   configMenu: kOf(vpsConfigurationMenu),
   generateSelectedConfig: type => {
@@ -1067,88 +1083,129 @@ const vp = {
   
 <strong>- vCPU :</strong> ${config.vcpuCount} vCPU
 <strong>- RAM :</strong> ${config.ramGb} GB RAM
-<strong>- Stockage Disque :</strong> ${config.diskStorageGb} GB DISQUE
-<strong>- Bande Passante :</strong> ${config.bandwidthTB} TB`
+<strong>- Stockage disque :</strong> ${config.diskStorageGb} GB DISQUE
+<strong>- Bande passante :</strong> ${config.bandwidthTB} TB`
   },
-  askVpsOS: "Choisissez un système d'exploitation préinstallé :",
+  askVpsOS:
+    '💻 Choisissez le système d’exploitation pour votre VPS. Les options populaires incluent Ubuntu et CentOS, avec d’autres choix de systèmes disponibles.',
   osMenu: kOf(vpsOsMenu),
-  otherOs: 'Autre (Précisez)',
-  specifyOtherOs: "Veuillez préciser un autre système d'exploitation :",
-  askVpsCpanel: 'Choisissez un panneau de contrôle (facultatif).',
+  otherOs: 'Autre OS',
+  specifyOtherOs: '🔤 Veuillez préciser le système d’exploitation que vous souhaitez utiliser.',
+  askVpsCpanel:
+    '🛠️ Souhaitez-vous ajouter un panneau de contrôle pour une gestion facile du serveur ? Choisissez parmi WHM, Plesk ou aucun panneau de contrôle.',
   cpanelMenu: kOf(vpsCpanelOptional),
   trialWHM: vpsCpanelOptional[0],
   paidWHM: vpsCpanelOptional[1],
   trialPlesk: vpsCpanelOptional[2],
   paidPlesk: vpsCpanelOptional[3],
   noControlPanel: vpsCpanelOptional[4],
-  validCpanel: 'Veuillez choisir un panneau de contrôle valide ou ignorer.',
-  askVpsDiskType: 'Choisissez un type de disque :',
+  validCpanel: 'Veuillez choisir un panneau de contrôle valide ou passer cette étape.',
+  askVpsDiskType: '💿 Veuillez préciser le type de disque que vous souhaitez utiliser.',
   chooseValidDiskType: 'Veuillez choisir un type de disque valide.',
-  failedFetchingAddress: 'Erreur lors de la récupération, veuillez réessayer plus tard.',
+  failedFetchingAddress: 'Erreur de récupération. Veuillez réessayer plus tard.',
   vpsDiskTypeMenu: ['pd-standard', 'pd-balanced', 'pd-ssd'],
-  askVpsMachineType: 'Choisissez un type de machine :',
+  askVpsMachineType: '💻 Veuillez préciser le type de machine que vous souhaitez utiliser.',
   chooseValidMachineType: 'Veuillez choisir un type de machine valide.',
   vpsMachineTypeMenu: ['e2-micro', 'f1-micro'],
-  vpsWaitingTime: 'Récupération des informations sur les coûts... Cela ne prendra qu’un moment.',
-  failedCostRetrieval: 'Échec de la récupération des informations sur les coûts... Veuillez réessayer plus tard.',
+  vpsWaitingTime: '⚙️ Récupération des informations de coût... Cela prendra juste un moment.',
+  failedCostRetrieval: 'Échec de la récupération des informations de coût... Veuillez réessayer plus tard.',
+
   errorPurchasingVPS:
-    plan => `Une erreur s'est produite lors de la configuration de votre plan VPS ${plan} |${statusCode}.
-                                                Veuillez contacter le support ${SUPPORT_USERNAME}.
-                                                En savoir plus ${TG_HANDLE}.`,
-  generateBillSummary: vpsDetails => `
-  🚀 <strong>Voici votre résumé de commande :</strong> 
+    plan => `Une erreur s’est produite lors de la configuration de votre plan VPS ${plan} | ${statusCode}.
+                                                  Veuillez contacter le support ${SUPPORT_USERNAME}.
+                                                  Découvrez plus ${TG_HANDLE}.`,
 
-<strong>- Plan de facturation :</strong> ${vpsPlans[vpsDetails.plan]}
-<strong>- Configuration VPS :</strong> ${vpsConfig[vpsDetails.config.name]} ( ${vpsDetails.config.vcpuCount}vCPU, ${
-    vpsDetails.config.ramGb
-  }GB RAM, ${vpsDetails.config.diskStorageGb}GB DISQUE, ${vpsDetails.config.bandwidthTB}TB bande passante)
-<strong>- Système d'exploitation :</strong> ${vpsDetails.os}
-<strong>- Panneau de contrôle :</strong> ${vpsDetails.panel ? vpsDetails.panel : 'Aucun panneau sélectionné'}
-<strong>- Type de disque :</strong> ${vpsDetails.diskType}
-<strong>- Type de machine :</strong> ${vpsDetails.machineType}
-
-<b>Montant total dû :</b>
-<b>- Réduction de coupon :</b> $${vpsDetails.couponDiscount}
-<b>- USD :</b> $${vpsDetails.couponApplied ? vpsDetails.newPrice : vpsDetails.totalPrice}
-<b>- Taxe :</b> $0.00
+  generateBillSummary: vpsDetails => `<strong>📋 Voici un récapitulatif de vos sélections :</strong>
   
-<b>Conditions de paiement</b>
-Ceci est une facture de prépaiement. Veuillez effectuer le paiement dans l'heure pour activer votre plan VPS. Une fois le paiement reçu, nous activerons votre service.`,
-  no: '❌ Non',
-  yes: '✅ Oui',
+      <strong>•	Plan de facturation :</strong> ${vpsPlans[vpsDetails.plan]}
+      <strong>•	Renouvellement automatique :</strong> Non
+      <strong>•	Configuration VPS :</strong> ${vpsConfig[vpsDetails.config.name]} ( ${
+    vpsDetails.config.vcpuCount
+  } vCPU, ${vpsDetails.config.ramGb} Go RAM, ${vpsDetails.config.diskStorageGb} Go DISQUE, ${
+    vpsDetails.config.bandwidthTB
+  } To de bande passante)
+      <strong>•	Système d’exploitation :</strong> ${vpsDetails.os}
+      <strong>•	Panneau de contrôle :</strong>  ${
+        vpsDetails.panel
+          ? `${vpsDetails.panel} ${vpsDetails.panelMode === 'paid' ? `(PAYANT)` : '(ESSAI)'}`
+          : 'Aucun panneau sélectionné'
+      }
+      <strong>•	Clé SSH :</strong> Aucune clé liée
+      <strong>•	Type de disque :</strong> ${vpsDetails.diskType}
+      <strong>•	Type de machine :</strong> ${vpsDetails.machineType}
+      <strong>•	Zone :</strong> ${vpsDetails.regionName} ( ${vpsDetails.zone})
+  
+💰 Détail des coûts :
+      <strong>• Coût VPS ([Cycle de facturation]) :</strong> $${vpsDetails.totalPrice}
+      <strong>• Coût de licence (si applicable) :</strong> $0
+      <strong>• Réduction avec coupon :</strong> -$${vpsDetails.couponDiscount}
+      <strong>• Coût total :</strong> $${vpsDetails.couponApplied ? vpsDetails.newPrice : vpsDetails.totalPrice}
+  
+🎉 Vous économisez : $${vpsDetails.couponDiscount}`,
+  no: '❌ Annuler la commande',
+  yes: '✅ Confirmer la commande',
+
   showDepositCryptoInfoVps: (priceCrypto, tickerView, address, vpsDetails) =>
-    `Veuillez transférer ${priceCrypto} ${tickerView} à\n\n<code>${address}</code>
+    `Veuillez envoyer ${priceCrypto} ${tickerView} à\n\n<code>${address}</code>
+  
+  ${
+    vpsDetails.plan === 'hourly'
+      ? `Veuillez noter que pour un plan horaire, vous devez payer au moins ${VPS_PLAN_MINIMUM_AMOUNT_PAYABLE}$. Le montant restant sera crédité sur votre portefeuille.`
+      : ''
+  }
+  Veuillez noter que les transactions crypto peuvent prendre jusqu’à 30 minutes pour être complétées. Une fois la transaction confirmée, vous serez rapidement notifié, et votre plan VPS sera activé sans problème.
+  
+  Cordialement,
+  ${CHAT_BOT_NAME}`,
 
-  ${vpsDetails.plan === 'hourly' ? `Veuillez noter que, pour le plan horaire, vous devez payer au moins ${VPS_PLAN_MINIMUM_AMOUNT_PAYABLE}$. Le montant restant sera ajouté à votre portefeuille.` : ''}
-Veuillez noter que les transactions cryptographiques peuvent prendre jusqu'à 30 minutes pour être confirmées. Une fois la transaction confirmée, vous serez immédiatement informé et votre plan VPS sera activé sans problème.
+  extraMoney: 'Le montant restant pour votre plan horaire a été crédité sur votre portefeuille.',
+  paymentRecieved: `✅ Paiement réussi ! Votre VPS est en cours de configuration. Les détails seront bientôt disponibles et envoyés à votre e-mail pour votre commodité.`,
+  paymentFailed: `❌ Paiement échoué. Veuillez vérifier votre méthode de paiement ou réessayer.`,
 
-Cordialement,
-${CHAT_BOT_NAME}`,
   lowWalletBalance: vpsName => `
 Votre plan VPS pour l'instance ${vpsName} a été arrêté en raison d'un solde insuffisant.
 
-Veuillez recharger votre portefeuille pour continuer à utiliser votre plan VPS.
+Veuillez approvisionner votre portefeuille pour continuer à utiliser votre plan VPS.
 `,
+
   vpsBoughtSuccess: (info, vpsDetails, response) =>
-    `Votre VPS est prêt ! Voici les détails :
+    `🎉 Votre VPS est prêt ! Voici les détails de votre serveur :
   
-Nom : ${response.name}
-Plan : ${vpsPlans[vpsDetails.plan]}
-Nom du réseau : ${response.networkInterfaces[0].name}
-IP du réseau : ${response.networkInterfaces[0].networkIP}
-Système OS : ${vpsDetails.os}
-Zone : ${vpsDetails.zone},
-Type de disque : ${response.disks[0].deviceName}
-Panneau de contrôle : ${vpsDetails.panel}
-Configuration : ${vpsConfig[vpsDetails.config.name]} ( ${vpsDetails.config.vcpuCount}vCPU, ${
+<strong>🚀 Nom :</strong> ${response.name}
+<strong>💳 Plan de facturation :</strong> ${vpsPlans[vpsDetails.plan]}
+<strong>🛠️ Panneau de contrôle :</strong> ${vpsDetails.panel} ${vpsDetails.panelMode === 'paid' ? `(PAYÉ)` : '(ESSAI)'}
+<strong>🌐 IP du serveur :</strong> ${response.networkInterfaces[0].networkIP}
+<strong>💻 Système d'exploitation :</strong> ${vpsDetails.os}
+<strong>⚙️ Configurations :</strong> ${vpsConfig[vpsDetails.config.name]} (${vpsDetails.config.vcpuCount}vCPU, ${
       vpsDetails.config.ramGb
     }GB RAM, ${vpsDetails.config.diskStorageGb}GB DISQUE, ${vpsDetails.config.bandwidthTB}TB bande passante)
+<strong>🌍 Zone :</strong> ${vpsDetails.zone}
+<strong>💿 Type de disque :</strong> ${response.disks[0].deviceName}
     
-Vos identifiants ont été envoyés avec succès à votre email ${info.userEmail}.
+📧 Ces détails ont également été envoyés à votre e-mail enregistré. Veuillez les conserver en toute sécurité.
+Merci d'avoir choisi notre service.
+${CHAT_BOT_NAME}
 `,
+
   vpsHourlyPlanRenewed: (vpsName, price) => `
 Votre plan VPS pour l'instance ${vpsName} a été renouvelé avec succès.
-${price}$ a été déduit de votre portefeuille.`,
+${price}$ ont été débité de votre portefeuille.
+`,
+
+  bankPayVPS: (
+    priceNGN,
+    plan,
+  ) => `Veuillez envoyer ${priceNGN} NGN en cliquant sur “Effectuer le paiement” ci-dessous. Une fois la transaction confirmée, vous serez immédiatement informé et votre plan VPS ${
+    vpsPlans[plan]
+  } sera activé sans interruption.
+${
+  plan === 'hourly'
+    ? `Veuillez noter que pour le plan horaire, vous devez payer au moins ${VPS_PLAN_MINIMUM_AMOUNT_PAYABLE}$. Le montant restant sera déposé dans votre portefeuille.`
+    : ''
+},
+
+Cordialement,
+${CHAT_BOT_NAME}`,
 }
 
 const fr = {
