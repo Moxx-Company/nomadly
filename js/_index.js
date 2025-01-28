@@ -1940,13 +1940,13 @@ bot?.on('message', async msg => {
 
   if (action === a.confirmZoneForVPS) {
     if (message === t.back) return goto.askZoneForVps()
-    if (message === vp.confirmBtn) return goto.askUserVpsPlan()
+    if (message === vp.confirmBtn) return goto.askVpsConfig()
     return goto.confirmZoneForVPS()
   }
 
   // save vps plan
   if (action === a.askUserVpsPlan) {
-    if (message === t.back) return goto.askZoneForVps()
+    if (message === t.back) return goto.askVpsConfig()
     const vpsPlans = trans('vpsPlanOf')
     const plan = vpsPlans[message]
     if (!plan) return send(chatId, t.chooseValidPlan, vp.planTypeMenu)
@@ -1955,12 +1955,12 @@ bot?.on('message', async msg => {
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)
     saveInfo('vpsPlan', plan)
-    return goto.askVpsConfig()
+    return goto.askVpsOS()
   }
 
   // save vps configs
   if (action === a.askVpsConfig) {
-    if (message === t.back) return goto.askUserVpsPlan()
+    if (message === t.back) return goto.askZoneForVps()
     const vpsConfigurations = trans('vpsConfigurationDetails')
     const config = vpsConfigurations[message]
     if (!config) return send(chatId, vp.validVpsConfig, vp.configMenu)
@@ -1968,7 +1968,7 @@ bot?.on('message', async msg => {
     vpsDetails.config = config
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)
-    return goto.askVpsOS()
+    return goto.askUserVpsPlan()
   }
 
   if (action === a.askVpsOS) {
@@ -3424,9 +3424,9 @@ const buyDomainFullProcess = async (chatId, lang, domain) => {
   }
 }
 
-// schedule.scheduleJob('* * * * *', function() {
-//   checkVPSPlansExpiryandPayment()
-// })
+schedule.scheduleJob('* * * * *', function() {
+  checkVPSPlansExpiryandPayment()
+})
 
 async function checkVPSPlansExpiryandPayment() {
   const now = new Date()
