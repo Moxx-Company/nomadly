@@ -31,7 +31,7 @@ const MONTHLY_PLAN_FREE_DOMAINS = Number(process.env.MONTHLY_PLAN_FREE_DOMAINS)
 const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
-const VPS_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_PLAN_MINIMUM_AMOUNT_PAYABLE) || 20
+const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) || 20
 
 const npl = {
   // New Zealand
@@ -1150,7 +1150,7 @@ ${formattedConfigurations}`,
   
   ${
     vpsDetails.plan === 'hourly'
-      ? `Veuillez noter que pour un plan horaire, vous devez payer au moins ${VPS_PLAN_MINIMUM_AMOUNT_PAYABLE}$. Le montant restant sera crédité sur votre portefeuille.`
+      ? `Veuillez noter que pour un plan horaire, vous devez payer au moins ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$. Le montant restant sera crédité sur votre portefeuille.`
       : ''
   }
   Veuillez noter que les transactions crypto peuvent prendre jusqu’à 30 minutes pour être complétées. Une fois la transaction confirmée, vous serez rapidement notifié, et votre plan VPS sera activé sans problème.
@@ -1200,7 +1200,7 @@ ${price}$ ont été débité de votre portefeuille.
   } sera activé sans interruption.
 ${
   plan === 'hourly'
-    ? `Veuillez noter que pour le plan horaire, vous devez payer au moins ${VPS_PLAN_MINIMUM_AMOUNT_PAYABLE}$. Le montant restant sera déposé dans votre portefeuille.`
+    ? `Veuillez noter que pour le plan horaire, vous devez payer au moins ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$. Le montant restant sera déposé dans votre portefeuille.`
     : ''
 },
 

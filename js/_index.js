@@ -2527,7 +2527,7 @@ bot?.on('message', async msg => {
     if (message === t.back) return goto['vps-plan-pay']()
     const email = message
     const vpsDetails = info?.vpsDetails
-    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_PLAN_MINIMUM_AMOUNT_PAYABLE || 20 : vpsDetails?.couponApplied ? vpsDetails?.newPrice : vpsDetails?.totalPrice
+    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE || 20 : vpsDetails?.couponApplied ? vpsDetails?.newPrice : vpsDetails?.totalPrice
     if (!isValidEmail(email)) return send(chatId, t.askValidEmail)
 
     const ref = nanoid()
@@ -2549,7 +2549,7 @@ bot?.on('message', async msg => {
     const ticker = supportedCryptoView[tickerView]
     if (!ticker) return send(chatId, t.askValidCrypto)
     const vpsDetails = info.vpsDetails
-    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_PLAN_MINIMUM_AMOUNT_PAYABLE || 20 : vpsDetails?.couponApplied ? vpsDetails?.newPrice : vpsDetails?.totalPrice
+    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE || 20 : vpsDetails?.couponApplied ? vpsDetails?.newPrice : vpsDetails?.totalPrice
     const ref = nanoid()
     if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
       const coin = tickerOf[ticker]

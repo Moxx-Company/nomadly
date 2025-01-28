@@ -31,7 +31,7 @@ const MONTHLY_PLAN_FREE_DOMAINS = Number(process.env.MONTHLY_PLAN_FREE_DOMAINS)
 const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
-const VPS_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_PLAN_MINIMUM_AMOUNT_PAYABLE) || 20
+const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) || 20
 
 const npl = {
   // New Zealand
@@ -1140,7 +1140,7 @@ ${formattedConfigurations}`,
 
 ${
   vpsDetails.plan === 'hourly'
-    ? `कृपया ध्यान दें, प्रति घंटे की योजना के लिए आपको कम से कम ${VPS_PLAN_MINIMUM_AMOUNT_PAYABLE}$ का भुगतान करना होगा। शेष राशि आपके वॉलेट में जाएगी।`
+    ? `कृपया ध्यान दें, प्रति घंटे की योजना के लिए आपको कम से कम ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$ का भुगतान करना होगा। शेष राशि आपके वॉलेट में जाएगी।`
     : ''
 }
 कृपया ध्यान दें कि क्रिप्टो लेनदेन पूरा होने में 30 मिनट तक लग सकते हैं। एक बार लेनदेन की पुष्टि हो जाने के बाद, आपको तुरंत सूचित किया जाएगा और आपका VPS प्लान सक्रिय हो जाएगा।
@@ -1190,7 +1190,7 @@ ${CHAT_BOT_NAME}
   } VPS प्लान निर्बाध रूप से सक्रिय कर दिया जाएगा।
 ${
   plan === 'hourly'
-    ? `कृपया ध्यान दें, प्रति घंटे की योजना के लिए आपको कम से कम ${VPS_PLAN_MINIMUM_AMOUNT_PAYABLE}$ का भुगतान करना होगा। शेष राशि आपके वॉलेट में जमा कर दी जाएगी।`
+    ? `कृपया ध्यान दें, प्रति घंटे की योजना के लिए आपको कम से कम ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$ का भुगतान करना होगा। शेष राशि आपके वॉलेट में जमा कर दी जाएगी।`
     : ''
 },
 

@@ -31,7 +31,7 @@ const APP_SUPPORT_LINK = process.env.APP_SUPPORT_LINK
 const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
-const VPS_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_PLAN_MINIMUM_AMOUNT_PAYABLE) || 20
+const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) || 20
 
 const npl = {
   // New Zealand
@@ -1114,7 +1114,7 @@ ${formattedConfigurations}`,
 
 ${
   vpsDetails.plan === 'hourly'
-    ? `请注意，对于按小时计费计划，您需要至少支付 ${VPS_PLAN_MINIMUM_AMOUNT_PAYABLE}$。其余金额将存入您的钱包。`
+    ? `请注意，对于按小时计费计划，您需要至少支付 ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$。其余金额将存入您的钱包。`
     : ''
 }
 请注意，加密货币交易可能需要长达 30 分钟完成。一旦交易确认，您将立即收到通知，您的 VPS 计划将被激活。
@@ -1164,7 +1164,7 @@ ${price}$ 已从您的钱包中扣除。
   } VPS 计划将无缝激活。
 ${
   plan === 'hourly'
-    ? `请注意，对于按小时计费计划，您需要至少支付 ${VPS_PLAN_MINIMUM_AMOUNT_PAYABLE}$。剩余金额将存入您的钱包。`
+    ? `请注意，对于按小时计费计划，您需要至少支付 ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$。剩余金额将存入您的钱包。`
     : ''
 },
 
