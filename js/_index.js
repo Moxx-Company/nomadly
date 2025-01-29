@@ -1065,8 +1065,8 @@ bot?.on('message', async msg => {
 
     // Step 6.1: I have sent the payment
     iHaveSentThePayment: async () => {
-      set(state, chatId, 'action', a.iHaveSentThePayment)
-      send(chatId, hP.generatePlanStepText('paymentSuccess'), k.of([t.iHaveSentThePayment]))
+      set(state, chatId, 'action', 'none')
+      send(chatId, hP.generatePlanStepText('paymentSuccess'), trans('o'))
     },
     userLanguage : () => {
       set(state, chatId, 'action', a.addUserLanguage)
