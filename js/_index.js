@@ -1130,7 +1130,7 @@ bot?.on('message', async msg => {
     },
 
     // ask vps plan
-    startVpsFlow: async () => {
+    createNewVpsFlow: async () => {
       set(state, chatId, 'action', a.askCountryForVPS)
       const availableCountry = await fetchAvailableCountries()
       if (!availableCountry) return send(chatId, vp.failedFetchingData, trans('o'))
@@ -1916,7 +1916,7 @@ bot?.on('message', async msg => {
   }
 
   if (message === user.buyVpsPlan) {
-    return goto.startVpsFlow()
+    return goto.createNewVpsFlow()
   }
 
   if (action === a.askCountryForVPS) {
@@ -1932,7 +1932,7 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.askRegionAreaForVPS) {
-    if (message === vp.back) return goto.startVpsFlow()
+    if (message === vp.back) return goto.createNewVpsFlow()
     const areaList = info?.vpsAreaList
     const regionsList = areaList.map((item) => item.label)
     if (!regionsList.includes(message)) return send(chatId, vp.chooseValidRegion, vp.of(regionsList))
@@ -3471,9 +3471,9 @@ const buyDomainFullProcess = async (chatId, lang, domain) => {
   }
 }
 
-// schedule.scheduleJob('* * * * *', function() {
-//   checkVPSPlansExpiryandPayment()
-// })
+schedule.scheduleJob('* * * * *', function() {
+  checkVPSPlansExpiryandPayment()
+})
 
 async function checkVPSPlansExpiryandPayment() {
   const now = new Date()
