@@ -2046,7 +2046,7 @@ bot?.on('message', async msg => {
       name: osDetails.name,
       sourceImage: osDetails.sourceImage,
       paid: osDetails.paid,
-      pricePerMonth: 15
+      pricePerMonth:  osDetails.paid ? 15 : 0
     }
     if (message != vp.skipOSBtn && osDetails.paid) {
       vpsDetails.selectedOSPrice = calculatePriceForVPS(15, vpsDetails.plan)
