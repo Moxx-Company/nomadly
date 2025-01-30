@@ -1163,13 +1163,13 @@ ${CHAT_BOT_NAME}`,
 请充值您的钱包以继续使用 VPS 计划。`,
 
   vpsBoughtSuccess: (vpsDetails, response) =>
-    `<strong>🎉 VPS [ID] 已激活！
+    `<strong>🎉 VPS [${response.name}] 已激活！</strong>
 
-<strong>🔑 登录凭据:
-  <strong>• IP: ${response.networkInterfaces[0].networkIP}
-  <strong>• 操作系统: ${vpsDetails.os ? vpsDetails.os.name : '未选择'}
-  <strong>• 用户名: [User]
-  <strong>• 密码: 通过电子邮件发送（立即更改）。
+<strong>🔑 登录凭据:</strong>
+  <strong>• IP:</strong> ${response.networkInterfaces[0].networkIP}
+  <strong>• 操作系统:</strong> ${vpsDetails.os ? vpsDetails.os.name : '未选择'}
+  <strong>• 用户名:</strong> [User]
+  <strong>• 密码:</strong> 通过电子邮件发送（立即更改）。
     
 📧 这些详细信息也已发送到您的注册电子邮件。请保管好它们。
 感谢您选择我们的服务

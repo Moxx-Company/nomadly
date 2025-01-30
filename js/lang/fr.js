@@ -1207,13 +1207,13 @@ Votre plan VPS pour l'instance ${vpsName} a été arrêté en raison d'un solde 
 Veuillez recharger votre portefeuille pour continuer à utiliser votre plan VPS.`,
 
   vpsBoughtSuccess: (vpsDetails, response) =>
-    `<strong>🎉 VPS [ID] est actif !
+    `<strong>🎉 VPS [${response.name}] est actif !</strong>
 
-<strong>🔑 Informations de connexion:
-  <strong>• IP: ${response.networkInterfaces[0].networkIP}
-  <strong>• OS: ${vpsDetails.os ? vpsDetails.os.name : 'Non sélectionné'}
-  <strong>• Nom d'utilisateur: [User]
-  <strong>• Mot de passe: Envoyé par email (changez immédiatement).
+<strong>🔑 Informations de connexion:</strong>
+  <strong>• IP:</strong> ${response.networkInterfaces[0].networkIP}
+  <strong>• OS:</strong> ${vpsDetails.os ? vpsDetails.os.name : 'Non sélectionné'}
+  <strong>• Nom d'utilisateur:</strong> [User]
+  <strong>• Mot de passe:</strong> Envoyé par email (changez immédiatement).
     
 📧 Ces détails ont également été envoyés à votre email enregistré. Veuillez les garder en sécurité.
 Merci d'avoir choisi notre service

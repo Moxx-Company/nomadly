@@ -1244,13 +1244,13 @@ Please top up your wallet to continue using your VPS Plan.
 `,
 
   vpsBoughtSuccess: (vpsDetails, response) =>
-    `<strong>🎉 VPS [ID] is active!
+    `<strong>🎉 VPS [${response.name}] is active!</strong>
 
-<strong>🔑 Login Credentials:
-  <strong>• IP: ${response.networkInterfaces[0].networkIP }
-  <strong>• OS: ${vpsDetails.os ? vpsDetails.os.name : 'Not Selected'}
-  <strong>• Username: [User]
-  <strong>• Password: Sent via email (change immediately).
+<strong>🔑 Login Credentials:</strong>
+  <strong>• IP:</strong> ${response.networkInterfaces[0].networkIP }
+  <strong>• OS:</strong> ${vpsDetails.os ? vpsDetails.os.name : 'Not Selected'}
+  <strong>• Username:</strong> [User]
+  <strong>• Password:</strong> Sent via email (change immediately).
     
 📧 These details have also been sent to your registered email. Please keep them secure.
 Thank you for choosing our service

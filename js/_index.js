@@ -3546,7 +3546,7 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
       config: vpsDetails.config.name,
       price: vpsDetails.totalPrice, 
       cpanel: vpsDetails.panel ? vpsDetails.panel.name : null,
-      cpanelMode: vpsDetails.panel ? vpsDetails.panel.name : null,
+      cpanelMode: vpsDetails.panel ? vpsDetails.panel.mode : null,
       cpanelTrialExpiryDate: getExpiryDateVps('monthly'),
       os: vpsDetails.os ? vpsDetails.os : null,
       vmsDetails: vpsData,
