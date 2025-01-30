@@ -1,4 +1,5 @@
 const { areasOfCountry, carriersOf, countryCodeOf } = require('../areasOfCountry')
+const { generateBilingCost } = require('../vm-instance-setup')
 
 const format = (cc, n) => `+${cc}(${n.toString().padStart(2, '0')})`
 
@@ -74,7 +75,7 @@ const user = {
   phoneNumberLeads: '📲 Pistes SMS HQ',
   wallet: '👛 Mon portefeuille',
   urlShortenerMain: "🔗✂️ Raccourcisseur d'URL",
-  vpsPlans: 'Plans VPS 🔒',
+  vpsPlans: '🔧 Gérer votre VPS',
   buyPlan: '🔔 Souscrire ici',
   domainNames: '🌐 Noms de domaine',
   viewPlan: '🔔 Mon plan',
@@ -101,7 +102,9 @@ const user = {
   contactSupport: '📞 Contacter le support',
 
   // Sub Menu 4: VPS Plans
-  buyVpsPlan: '🔼 Acheter un plan VPS',
+  buyVpsPlan: '⚙️ Créer un nouveau VPS',
+  manageVpsPlan: '🖥️ Afficher/Gérer le VPS',
+  manageVpsSSH: '🔑 Clés SSH',
 
   // Free Trial
   freeTrialMenuButton: '🚀 Essai gratuit (12 heures)',
@@ -500,6 +503,7 @@ ${CHAT_BOT_NAME}`,
   noDomainRegistered: `Vous n'avez pas encore acheté de domaines.`,
   registeredDomainList: domainsText => `Voici vos domaines achetés :\n${domainsText}`,
   comingSoon: `Bientôt disponible`,
+  goBackToCoupon: '❌ Retourner & Appliquer le Coupon',
 }
 
 const phoneNumberLeads = ['💰📲 Acheter des leads téléphoniques', '✅📲 Valider les leads téléphoniques']
@@ -996,6 +1000,23 @@ Cordialement,
 ${CHAT_BOT_NAME}`,
 }
 
+const vpsBC = ['🔙 Retour', 'Annuler']
+
+const vpsOptionsOf = list => ({
+  reply_markup: {
+    // Handle if there are multiples buttons in a row
+    keyboard: [
+      ...list.map(a => (Array.isArray(a) ? a : [a])),
+      ...(list.some(
+        a => Array.isArray(a) && a.some(item => typeof item === 'string' && item.includes(t.goBackToCoupon)),
+      )
+        ? []
+        : [vpsBC]),
+    ],
+  },
+  parse_mode: 'HTML',
+})
+
 const vpsPlans = {
   hourly: "À l'heure",
   monthly: 'Mensuel',
@@ -1007,6 +1028,7 @@ const vpsConfig = {
   basic: 'De base',
   standard: 'Standard',
   premium: 'Premium',
+  enterprise: 'Entreprise',
 }
 
 const vpsPlanOf = {
@@ -1017,190 +1039,199 @@ const vpsPlanOf = {
 }
 
 const vpsPlanMenu = ["À l'heure", 'Mensuel', 'Trimestriel', 'Annuel']
-const vpsConfigurationMenu = ['De base', 'Standard', 'Premium']
-const vpsOsMenu = ['Ubuntu', 'CentOS', 'Windows Server', 'Autre OS']
-const vpsCpanelOptional = ['WHM (ESSAI)', 'WHM (PAYÉ)', 'PLESK (ESSAI)', 'PLESK (PAYÉ)', 'Pas de panneau de contrôle']
+const vpsConfigurationMenu = ['De base', 'Standard', 'Premium', 'Entreprise']
+const vpsCpanelOptional = [
+  'WHM (ESSAI)',
+  'WHM (PAYÉ)',
+  'PLESK (ESSAI)',
+  'PLESK (PAYÉ)',
+  '❌ Passer le panneau de contrôle',
+]
 
 const vpsConfigurationDetails = {
   'De base': {
     name: 'basic',
-    label: 'Basic',
-    vcpuCount: '1',
-    ramGb: '2',
-    diskStorageGb: '20',
-    bandwidthTB: '1',
+    vcpuCount: '2',
+    ramGb: '4',
+    diskStorageGb: '64',
+    amountMonthly: '32',
+    amountHourly: '0.045',
   },
   Standard: {
     name: 'standard',
-    vcpuCount: '2',
-    label: 'Standard',
-    ramGb: '4',
-    diskStorageGb: '40',
-    bandwidthTB: '2',
+    vcpuCount: '4',
+    ramGb: '8',
+    diskStorageGb: '80',
+    amountMonthly: '65',
+    amountHourly: '0.09',
   },
   Premium: {
     name: 'premium',
-    vcpuCount: '4',
-    label: 'Premium',
-    ramGb: '8',
-    diskStorageGb: '80',
-    bandwidthTB: '5',
+    vcpuCount: '8',
+    ramGb: '16',
+    diskStorageGb: '160',
+    amountMonthly: '129',
+    amountHourly: '0.18',
+  },
+  Entreprise: {
+    name: 'enterprise',
+    vcpuCount: '16',
+    ramGb: '32',
+    diskStorageGb: '200',
+    amountMonthly: '256',
+    amountHourly: '0.35',
   },
 }
 
 const formattedConfigurations = Object.entries(vpsConfigurationDetails)
   .map(
-    ([key, { vcpuCount, ramGb, diskStorageGb, bandwidthTB }]) =>
-      `<strong>- ${key} </strong> (${vcpuCount} vCPU, ${ramGb}GB RAM, ${diskStorageGb}GB Disque, ${bandwidthTB}TB Bande passante)`,
+    ([key, { vcpuCount, ramGb, diskStorageGb, amountMonthly, amountHourly }]) =>
+      `<strong>• ${key} -</strong>  $${amountMonthly}/mois ($${amountHourly}/heure) – ${vcpuCount} vCPU, ${ramGb}Go RAM, ${diskStorageGb}Go Disque`,
   )
   .join('\n')
 
 const vp = {
+  of: vpsOptionsOf,
+  back: '🔙 Retour',
+  skip: '❌ Passer',
+
   askCountryForUser: '🌍 Sélectionnez le pays où vous souhaitez héberger votre VPS.',
   chooseValidCountry: 'Veuillez choisir un pays dans la liste :',
-  askRegionForUser:
-    '🌍 Ensuite, sélectionnez la région où vous souhaitez héberger votre VPS pour garantir des performances et une connectivité optimales.',
+  askRegionForUser: '🌍 Ensuite, choisissez la meilleure région pour des performances optimales et une faible latence.',
   chooseValidRegion: 'Veuillez choisir une région valide dans la liste :',
-  askZoneForUser: 'Choisissez l’emplacement du centre de données dans la région sélectionnée.',
-  chooseValidZone: '📍 Veuillez choisir une zone valide dans la liste :',
-  confirmZone: (region, zone) =>
-    `✅  Vous avez sélectionné ${region} (${zone}). Souhaitez-vous continuer avec ce choix ?`,
+  askZoneForUser: region =>
+    `📍 Choisissez l’emplacement du centre de données dans ${region}. Les prix peuvent varier en fonction de l'emplacement.`,
+  chooseValidZone: 'Veuillez choisir une zone valide dans la liste :',
+  confirmZone: (region, zone) => `✅  Vous avez sélectionné ${region} (${zone}). Voulez-vous continuer avec ce choix ?`,
+  failedFetchingData: 'Erreur lors de la récupération, veuillez réessayer dans quelques instants.',
   confirmBtn: `✅ Confirmer la sélection`,
-  askPlanType: `💳 Choisissez un plan de facturation en fonction de vos besoins :
 
-<strong>- Horaire :</strong> Flexible pour des projets temporaires ou de courte durée.
-<strong>- Mensuel/Trimestriel/Annuel :</strong> Idéal pour une utilisation à long terme avec des réductions pour des périodes plus longues.`,
-  planTypeMenu: kOf(vpsPlanMenu),
-  askVpsConfig: `⚙️ Choisissez la configuration VPS qui correspond à vos besoins. Nous proposons des plans basique, standard et premium pour différentes charges de travail.
+  askVpsDiskType: list => `💾 Choisissez votre type de stockage en fonction des performances et du budget :
+
+${list.map(item => `• ${item.description}`).join('\n')}`,
+
+  chooseValidDiskType: 'Veuillez choisir un type de disque valide',
+
+  askPlanType: vpsDetails => `💳 Choisissez un cycle de facturation :
+
+<strong>• Horaire –</strong> $${generateBilingCost(vpsDetails, 'hourly')} (Pas de réduction)
+<strong>• Mensuel –</strong> $${generateBilingCost(vpsDetails, 'monthly')} → Économisez 10%
+<strong>• Trimestriel –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} → Économisez 15%
+<strong>• Annuel –</strong> $${generateBilingCost(vpsDetails, 'annually')} → Économisez 20%
+`,
+
+  planTypeMenu: vpsOptionsOf(vpsPlanMenu),
+
+  askVpsConfig: `⚙️ Choisissez la configuration VPS qui correspond à vos besoins. Nous proposons des plans de base, standard et premium pour différents types de charges de travail.
   
 ${formattedConfigurations}`,
+
   validVpsConfig: 'Veuillez sélectionner une configuration VPS valide :',
-  configMenu: kOf(vpsConfigurationMenu),
-  generateSelectedConfig: type => {
-    const config = vpsConfigurationDetails[type]
-    return `
-  🚀 <strong>Configuration ${type}</strong>
-  
-<strong>- vCPU :</strong> ${config.vcpuCount} vCPU
-<strong>- RAM :</strong> ${config.ramGb} GB RAM
-<strong>- Stockage disque :</strong> ${config.diskStorageGb} GB DISQUE
-<strong>- Bande passante :</strong> ${config.bandwidthTB} TB`
-  },
-  askVpsOS:
-    '💻 Choisissez le système d’exploitation pour votre VPS. Les options populaires incluent Ubuntu et CentOS, avec d’autres choix de systèmes disponibles.',
-  osMenu: kOf(vpsOsMenu),
-  otherOs: 'Autre OS',
-  specifyOtherOs: '🔤 Veuillez préciser le système d’exploitation que vous souhaitez utiliser.',
+
+  configMenu: vpsOptionsOf(vpsConfigurationMenu),
+
+  askForCoupon: `🎟️ Entrez un code de coupon pour bénéficier d'une réduction, ou sautez cette étape.`,
+  couponInvalid: `❌ Invalide : code invalide. Essayez à nouveau.`,
+  couponValid: amt => `✅ Valide : réduction appliquée : -$${amt}.`,
+  skipCouponwarning: `⚠️ Passer cette étape signifie que vous ne pourrez pas appliquer de réduction plus tard.`,
+  confirmSkip: "✅ Confirmer l'ignorance",
+  goBackToCoupon: '❌ Retourner et appliquer le coupon',
+
+  askVpsOS: '💻 Sélectionnez un OS (Windows Server ajoute $15/mois).',
+  chooseValidOS: `Veuillez sélectionner un OS valide dans la liste disponible :`,
+  skipOSBtn: "❌ Passer la sélection de l'OS",
+  skipOSwarning:
+    '⚠️ Votre VPS sera lancé sans OS. Vous devrez en installer un manuellement via SSH ou en mode de récupération.',
+
   askVpsCpanel:
-    '🛠️ Souhaitez-vous ajouter un panneau de contrôle pour une gestion facile du serveur ? Choisissez parmi WHM, Plesk ou aucun panneau de contrôle.',
-  cpanelMenu: kOf(vpsCpanelOptional),
+    '🛠️ Souhaitez-vous ajouter un panneau de contrôle pour une gestion facile du serveur ? Choisissez entre WHM, Plesk ou aucun panneau de contrôle.',
+  cpanelMenu: vpsOptionsOf(vpsCpanelOptional),
   trialWHM: vpsCpanelOptional[0],
   paidWHM: vpsCpanelOptional[1],
   trialPlesk: vpsCpanelOptional[2],
   paidPlesk: vpsCpanelOptional[3],
   noControlPanel: vpsCpanelOptional[4],
-  validCpanel: 'Veuillez choisir un panneau de contrôle valide ou passer cette étape.',
-  askVpsDiskType: '💿 Veuillez préciser le type de disque que vous souhaitez utiliser.',
-  chooseValidDiskType: 'Veuillez choisir un type de disque valide.',
-  failedFetchingAddress: 'Erreur de récupération. Veuillez réessayer plus tard.',
-  vpsDiskTypeMenu: ['pd-standard', 'pd-balanced', 'pd-ssd'],
-  askVpsMachineType: '💻 Veuillez préciser le type de machine que vous souhaitez utiliser.',
-  chooseValidMachineType: 'Veuillez choisir un type de machine valide.',
-  vpsMachineTypeMenu: ['e2-micro', 'f1-micro'],
-  vpsWaitingTime: '⚙️ Récupération des informations de coût... Cela prendra juste un moment.',
-  failedCostRetrieval: 'Échec de la récupération des informations de coût... Veuillez réessayer plus tard.',
+  validCpanel: 'Veuillez choisir un panneau de contrôle valide ou le sauter.',
+  trialPanelWarning: panel => `ℹ️ L'essai de ${panel} se renouvelle automatiquement pour $20/mois sauf si annulé.`,
 
-  errorPurchasingVPS:
-    plan => `Une erreur s’est produite lors de la configuration de votre plan VPS ${plan} | ${statusCode}.
-                                                  Veuillez contacter le support ${SUPPORT_USERNAME}.
-                                                  Découvrez plus ${TG_HANDLE}.`,
+  vpsWaitingTime: "⚙️ Récupération des informations de coût... Cela ne prendra qu'un instant.",
+  failedCostRetrieval: 'Échec de la récupération des informations de coût... Veuillez réessayer après un moment.',
 
-  generateBillSummary: vpsDetails => `<strong>📋 Voici un récapitulatif de vos sélections :</strong>
-  
-      <strong>•	Plan de facturation :</strong> ${vpsPlans[vpsDetails.plan]}
-      <strong>•	Renouvellement automatique :</strong> Non
-      <strong>•	Configuration VPS :</strong> ${vpsConfig[vpsDetails.config.name]} ( ${
-    vpsDetails.config.vcpuCount
-  } vCPU, ${vpsDetails.config.ramGb} Go RAM, ${vpsDetails.config.diskStorageGb} Go DISQUE, ${
-    vpsDetails.config.bandwidthTB
-  } To de bande passante)
-      <strong>•	Système d’exploitation :</strong> ${vpsDetails.os}
-      <strong>•	Panneau de contrôle :</strong>  ${
-        vpsDetails.panel
-          ? `${vpsDetails.panel} ${vpsDetails.panelMode === 'paid' ? `(PAYANT)` : '(ESSAI)'}`
-          : 'Aucun panneau sélectionné'
-      }
-      <strong>•	Clé SSH :</strong> Aucune clé liée
-      <strong>•	Type de disque :</strong> ${vpsDetails.diskType}
-      <strong>•	Type de machine :</strong> ${vpsDetails.machineType}
-      <strong>•	Zone :</strong> ${vpsDetails.regionName} ( ${vpsDetails.zone})
-  
-💰 Détail des coûts :
-      <strong>• Coût VPS ([Cycle de facturation]) :</strong> $${vpsDetails.totalPrice}
-      <strong>• Coût de licence (si applicable) :</strong> $0
-      <strong>• Réduction avec coupon :</strong> -$${vpsDetails.couponDiscount}
-      <strong>• Coût total :</strong> $${vpsDetails.couponApplied ? vpsDetails.newPrice : vpsDetails.totalPrice}
-  
-🎉 Vous économisez : $${vpsDetails.couponDiscount}`,
+  errorPurchasingVPS: plan => `Une erreur est survenue lors de la configuration de votre plan VPS ${plan}.
+
+Veuillez contacter le support ${SUPPORT_USERNAME}.
+Découvrez-en plus sur ${TG_HANDLE}.`,
+
+  generateBillSummary: vpsDetails => `<strong>📋 Détail du coût final :</strong>
+
+<strong>• VPS (${vpsPlans[vpsDetails.plan]} Plan) –</strong> $${vpsDetails.plantotalPrice}
+<strong>• Licence OS (${vpsDetails.os ? vpsDetails.os.name : 'Non sélectionné'}) –</strong> $${
+    vpsDetails.selectedOSPrice
+  }
+<strong>• Panneau de contrôle (${
+    vpsDetails.panel
+      ? `${vpsDetails.panel.name} ${vpsDetails.panel.mode === 'paid' ? 'PAYANT' : 'ESSAI'}`
+      : 'Non sélectionné'
+  }) –</strong> $${vpsDetails.selectedCpanelPrice}
+<strong>• Remise coupon –</strong> -$${vpsDetails.couponDiscount}
+<strong>💰 Total :</strong> $${vpsDetails.totalPrice}
+
+<strong>Voulez-vous continuer ?</strong>`,
+
   no: '❌ Annuler la commande',
   yes: '✅ Confirmer la commande',
 
+  askPaymentMethod: 'Choisissez une méthode de paiement :',
+
   showDepositCryptoInfoVps: (priceCrypto, tickerView, address, vpsDetails) =>
     `Veuillez envoyer ${priceCrypto} ${tickerView} à\n\n<code>${address}</code>
-  
-  ${
-    vpsDetails.plan === 'hourly'
-      ? `Veuillez noter que pour un plan horaire, vous devez payer au moins ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$. Le montant restant sera crédité sur votre portefeuille.`
-      : ''
-  }
-  Veuillez noter que les transactions crypto peuvent prendre jusqu’à 30 minutes pour être complétées. Une fois la transaction confirmée, vous serez rapidement notifié, et votre plan VPS sera activé sans problème.
-  
-  Cordialement,
-  ${CHAT_BOT_NAME}`,
 
-  extraMoney: 'Le montant restant pour votre plan horaire a été crédité sur votre portefeuille.',
-  paymentRecieved: `✅ Paiement réussi ! Votre VPS est en cours de configuration. Les détails seront bientôt disponibles et envoyés à votre e-mail pour votre commodité.`,
-  paymentFailed: `❌ Paiement échoué. Veuillez vérifier votre méthode de paiement ou réessayer.`,
+${
+  vpsDetails.plan === 'hourly'
+    ? `Veuillez noter que pour le plan horaire, vous devez payer au moins ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$. Le montant restant sera crédité dans votre portefeuille.`
+    : ''
+}
+
+Veuillez noter que les transactions en crypto-monnaie peuvent prendre jusqu'à 30 minutes pour être confirmées. Une fois la transaction confirmée, vous serez rapidement notifié et votre plan VPS sera activé.
+
+Cordialement,
+${CHAT_BOT_NAME}`,
+
+  extraMoney: 'Le montant restant pour votre plan horaire a été déposé dans votre portefeuille.',
+  paymentRecieved: `✅ Paiement réussi ! Votre VPS est en cours de configuration. Les détails seront bientôt disponibles et envoyés à votre adresse email pour votre commodité.`,
+  paymentFailed: `❌ Échec du paiement. Veuillez vérifier votre méthode de paiement ou réessayer.`,
 
   lowWalletBalance: vpsName => `
 Votre plan VPS pour l'instance ${vpsName} a été arrêté en raison d'un solde insuffisant.
 
-Veuillez approvisionner votre portefeuille pour continuer à utiliser votre plan VPS.
-`,
+Veuillez recharger votre portefeuille pour continuer à utiliser votre plan VPS.`,
 
-  vpsBoughtSuccess: (info, vpsDetails, response) =>
-    `🎉 Votre VPS est prêt ! Voici les détails de votre serveur :
-  
-<strong>🚀 Nom :</strong> ${response.name}
-<strong>💳 Plan de facturation :</strong> ${vpsPlans[vpsDetails.plan]}
-<strong>🛠️ Panneau de contrôle :</strong> ${vpsDetails.panel} ${vpsDetails.panelMode === 'paid' ? `(PAYÉ)` : '(ESSAI)'}
-<strong>🌐 IP du serveur :</strong> ${response.networkInterfaces[0].networkIP}
-<strong>💻 Système d'exploitation :</strong> ${vpsDetails.os}
-<strong>⚙️ Configurations :</strong> ${vpsConfig[vpsDetails.config.name]} (${vpsDetails.config.vcpuCount}vCPU, ${
-      vpsDetails.config.ramGb
-    }GB RAM, ${vpsDetails.config.diskStorageGb}GB DISQUE, ${vpsDetails.config.bandwidthTB}TB bande passante)
-<strong>🌍 Zone :</strong> ${vpsDetails.zone}
-<strong>💿 Type de disque :</strong> ${response.disks[0].deviceName}
+  vpsBoughtSuccess: (vpsDetails, response) =>
+    `<strong>🎉 VPS [ID] est actif !
+
+<strong>🔑 Informations de connexion:
+  <strong>• IP: ${response.networkInterfaces[0].networkIP}
+  <strong>• OS: ${vpsDetails.os ? vpsDetails.os.name : 'Non sélectionné'}
+  <strong>• Nom d'utilisateur: [User]
+  <strong>• Mot de passe: Envoyé par email (changez immédiatement).
     
-📧 Ces détails ont également été envoyés à votre e-mail enregistré. Veuillez les conserver en toute sécurité.
-Merci d'avoir choisi notre service.
+📧 Ces détails ont également été envoyés à votre email enregistré. Veuillez les garder en sécurité.
+Merci d'avoir choisi notre service
 ${CHAT_BOT_NAME}
 `,
-
   vpsHourlyPlanRenewed: (vpsName, price) => `
 Votre plan VPS pour l'instance ${vpsName} a été renouvelé avec succès.
-${price}$ ont été débité de votre portefeuille.
-`,
+${price}$ ont été débités de votre portefeuille.`,
 
   bankPayVPS: (
     priceNGN,
     plan,
-  ) => `Veuillez envoyer ${priceNGN} NGN en cliquant sur “Effectuer le paiement” ci-dessous. Une fois la transaction confirmée, vous serez immédiatement informé et votre plan VPS ${
+  ) => `Veuillez envoyer ${priceNGN} NGN en cliquant sur "Effectuer le paiement" ci-dessous. Une fois la transaction confirmée, vous serez rapidement notifié et votre ${
     vpsPlans[plan]
-  } sera activé sans interruption.
+  } plan VPS sera activé.
 ${
   plan === 'hourly'
-    ? `Veuillez noter que pour le plan horaire, vous devez payer au moins ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$. Le montant restant sera déposé dans votre portefeuille.`
+    ? `Veuillez noter que pour le plan horaire, vous devez payer au moins ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$. Le montant restant sera crédité dans votre portefeuille.`
     : ''
 },
 

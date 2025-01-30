@@ -91,7 +91,11 @@ const {
   createVPSInstance,
   sendVPSCredentialsEmail,
   getExpiryDateVps,
-  stopVPSInstance
+  stopVPSInstance,
+  generateBilingCost,
+  fetchAvailableDiskTpes,
+  fetchAvailableOS,
+  calculatePriceForVPS
 } = require('./vm-instance-setup.js')
 
 process.env['NTBA_FIX_350'] = 1
@@ -476,8 +480,9 @@ bot?.on('message', async msg => {
     askVpsConfig: 'askVpsConfig',
     askVpsOS: 'askVpsOS',
     askVpsCpanel: 'askVpsCpanel',
+    askCouponForVPSPlan: 'askCouponForVPSPlan',
+    skipCouponVps: 'skipCouponVps',
     askVpsDiskType: 'askVpsDiskType',
-    askVpsMachineType: 'askVpsMachineType',
     proceedWithVpsPayment: 'proceedWithVpsPayment'
   }
 
@@ -526,8 +531,7 @@ bot?.on('message', async msg => {
     },
     'vps-plan-pay' : () => {
       set(state, chatId, 'action', 'vps-plan-pay')
-      // if (info.vpsDetails.plan === 'hourly') return send(chatId, vp.generateBillSummary(info?.vpsDetails), k.of([payIn.wallet]))
-      send(chatId, vp.generateBillSummary(info?.vpsDetails), k.pay)
+      send(chatId, vp.askPaymentMethod, k.pay)
     },
     'choose-domain-to-buy': async () => {
       let text = ``
@@ -1129,47 +1133,71 @@ bot?.on('message', async msg => {
     startVpsFlow: async () => {
       set(state, chatId, 'action', a.askCountryForVPS)
       const availableCountry = await fetchAvailableCountries()
-      if (!availableCountry) return send(chatId, vp.failedFetchingAddress, trans('o'))
+      if (!availableCountry) return send(chatId, vp.failedFetchingData, trans('o'))
       saveInfo('vpsAreaList', availableCountry)
-      return send(chatId, vp.askCountryForUser, k.of(availableCountry))
+      return send(chatId, vp.askCountryForUser, vp.of(availableCountry))
     },
 
     askRegionAreaForVps: async () => {
       set(state, chatId, 'action', a.askRegionAreaForVPS)
       const availableRegions = await fetchAvailableRegionsOfCountry(info?.vpsDetails?.country)
-      if (!availableRegions) return send(chatId, vp.failedFetchingAddress, trans('o'))
+      if (!availableRegions) return send(chatId, vp.failedFetchingData, trans('o'))
       const regionsList = availableRegions.map((item) => item.label)
       saveInfo('vpsAreaList', availableRegions)
-      return send(chatId, vp.askRegionForUser, k.of(regionsList))    
+      return send(chatId, vp.askRegionForUser, vp.of(regionsList))    
     },
 
     askZoneForVps: async () => {
       set(state, chatId, 'action', a.askZoneForVPS)
       const availableZones = await fetchAvailableZones(info?.vpsDetails?.region)
-      if (!availableZones) return send(chatId, vp.failedFetchingAddress, trans('o'))
+      if (!availableZones) return send(chatId, vp.failedFetchingData, trans('o'))
+      const zoneList = availableZones.map((item) => item.label)
       saveInfo('vpsAreaList', availableZones)
-      return send(chatId, vp.askZoneForUser, k.of(availableZones))    
+      return send(chatId, vp.askZoneForUser(info?.vpsDetails.regionName), vp.of(zoneList))    
     },
 
     confirmZoneForVPS: async () => {
       set(state, chatId, 'action', a.confirmZoneForVPS)
       const vpsDetails = info?.vpsDetails
-      return send(chatId, vp.confirmZone(vpsDetails.regionName, vpsDetails.zone), k.of([vp.confirmBtn]))  
+      return send(chatId, vp.confirmZone(vpsDetails.regionName, vpsDetails.zone), vp.of([vp.confirmBtn]))  
     },
 
-    askUserVpsPlan: () => {
-      set(state, chatId, 'action', a.askUserVpsPlan)
-      return send(chatId, vp.askPlanType, vp.planTypeMenu)  
+    askVpsDiskType: async () => {
+      set(state, chatId, 'action', a.askVpsDiskType)
+      const diskTypes = await fetchAvailableDiskTpes(info?.vpsDetails?.zone)
+      if (!diskTypes) return send(chatId, vp.failedFetchingData, trans('o'))
+      const diskList = diskTypes.map((item) => item.value)
+      saveInfo('vpsDiskTypes', diskList)
+      return send(chatId, vp.askVpsDiskType(diskTypes), vp.of(diskList))
     },
-
+   
     askVpsConfig: () => {
       set(state, chatId, 'action', a.askVpsConfig)
       return send(chatId, vp.askVpsConfig, vp.configMenu)  
     },
 
-    askVpsOS: () => {
+    askUserVpsPlan: () => {
+      set(state, chatId, 'action', a.askUserVpsPlan)
+      return send(chatId, vp.askPlanType(info?.vpsDetails), vp.planTypeMenu)  
+    },
+
+    askCouponForVPSPlan: () => {
+      set(state, chatId, 'action', a.askCouponForVPSPlan)
+      return send(chatId, vp.askForCoupon, vp.of([vp.skip]))  
+    },
+
+    skipCouponVps: () => {
+      set(state, chatId, 'action', a.skipCouponVps)
+      return send(chatId, vp.skipCouponwarning, vp.of([vp.confirmSkip, t.goBackToCoupon]))  
+    },
+
+    askVpsOS: async () => {
       set(state, chatId, 'action', a.askVpsOS)
-      return send(chatId, vp.askVpsOS, vp.osMenu)
+      const osData = await fetchAvailableOS()
+      if (!osData) return send(chatId, vp.failedFetchingData, trans('o'))
+      const osList = osData.map((item) => item.name)
+      saveInfo('vpsOSList', osData)
+      return send(chatId, vp.askVpsOS, vp.of([...osList, vp.skipOSBtn]))
     },
 
     askVpsCpanel: () => {
@@ -1177,19 +1205,9 @@ bot?.on('message', async msg => {
       return send(chatId, vp.askVpsCpanel, vp.cpanelMenu)
     },
 
-    askVpsDiskType: () => {
-      set(state, chatId, 'action', a.askVpsDiskType)
-      return send(chatId, vp.askVpsDiskType, k.of(vp.vpsDiskTypeMenu))
-    },
-
-    askVpsMachineType : () => {
-      set(state, chatId, 'action', a.askVpsMachineType)
-      return send(chatId, vp.askVpsMachineType, k.of(vp.vpsMachineTypeMenu))
-    },
-
     vpsAskPaymentConfirmation: () => {
       set(state, chatId, 'action', 'proceedWithVpsPayment')
-      return send(chatId, vp.generateBillSummary(info?.vpsDetails), k.of([vp.yes, vp.no]))
+      return send(chatId, vp.generateBillSummary(info?.vpsDetails), vp.of([vp.yes, vp.no]))
     }
   }
 
@@ -1292,7 +1310,7 @@ bot?.on('message', async msg => {
     },
     'vps-plan-pay': async coin => {
       set(state, chatId, 'action', 'none')
-      const price = info?.vpsDetails.couponApplied ? info?.vpsDetails.newPrice : info?.vpsDetails.totalPrice
+      const price = info?.vpsDetails.totalPrice
       const wallet = await get(walletOf, chatId)
       const { usdBal, ngnBal } = await getBalance(walletOf, chatId)
 
@@ -1307,10 +1325,6 @@ bot?.on('message', async msg => {
       // buy domain
       const vpsDetails = info?.vpsDetails
       const lang = info?.userLanguage ?? 'en'
-      sendMessage(chatId, translation('vp.paymentRecieved', lang), rem)
-      //@TODO create function
-      const isSuccess = await buyVPSPlanFullProcess(chatId, lang, vpsDetails, )
-      if (!isSuccess) return
       const name = await get(nameOf, chatId)
 
       // wallet update
@@ -1324,6 +1338,9 @@ bot?.on('message', async msg => {
         const ngnOut = isNaN(wallet?.ngnOut) ? 0 : Number(wallet?.ngnOut)
         await set(walletOf, chatId, 'ngnOut', ngnOut + priceNgn)
       }
+      sendMessage(chatId, translation('vp.paymentRecieved', lang), rem)
+      const isSuccess = await buyVPSPlanFullProcess(chatId, lang, vpsDetails)
+      if (!isSuccess) return
       const { usdBal: usd, ngnBal: ngn } = await getBalance(walletOf, chatId)
       send(chatId, t.showWallet(usd, ngn), trans('o'))
     },
@@ -1903,8 +1920,9 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.askCountryForVPS) {
+    if (message === vp.back) return goto.submenu4()
     const areaList = info?.vpsAreaList
-    if (!areaList.includes(message)) return send(chatId, vp.chooseValidCountry, k.of(areaList))
+    if (!areaList.includes(message)) return send(chatId, vp.chooseValidCountry, vp.of(areaList))
     const vpsDetails = {
       country: message
     }
@@ -1914,10 +1932,10 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.askRegionAreaForVPS) {
-    if (message === t.back) return goto.startVpsFlow()
+    if (message === vp.back) return goto.startVpsFlow()
     const areaList = info?.vpsAreaList
     const regionsList = areaList.map((item) => item.label)
-    if (!regionsList.includes(message)) return send(chatId, vp.chooseValidRegion, k.of(regionsList))
+    if (!regionsList.includes(message)) return send(chatId, vp.chooseValidRegion, vp.of(regionsList))
     let vpsDetails = info?.vpsDetails
     const regionDetails = areaList.find((ar) => ar.label === message)
     vpsDetails.region = regionDetails.value
@@ -1928,126 +1946,155 @@ bot?.on('message', async msg => {
   }
 
   if (action === a.askZoneForVPS) {
-    if (message === t.back) return goto.askRegionAreaForVps()
+    if (message === vp.back) return goto.askRegionAreaForVps()
     const areaList = info?.vpsAreaList
-    if (!areaList.includes(message)) return send(chatId, vp.chooseValidZone, k.of(areaList))
+    const zoneList = areaList.map((item) => item.label)
+    if (!zoneList.includes(message)) return send(chatId, vp.chooseValidZone, vp.of(zoneList))
     let vpsDetails = info?.vpsDetails
-    vpsDetails.zone = message
+    const zoneDetails = areaList.find((ar) => ar.label === message)
+    vpsDetails.zone = zoneDetails.name
+    vpsDetails.zoneName = zoneDetails.label
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)
     return goto.confirmZoneForVPS()
   }
 
   if (action === a.confirmZoneForVPS) {
-    if (message === t.back) return goto.askZoneForVps()
-    if (message === vp.confirmBtn) return goto.askVpsConfig()
+    if (message === vp.back) return goto.askZoneForVps()
+    if (message === vp.confirmBtn) return goto.askVpsDiskType()
     return goto.confirmZoneForVPS()
   }
 
-  // save vps plan
-  if (action === a.askUserVpsPlan) {
-    if (message === t.back) return goto.askVpsConfig()
-    const vpsPlans = trans('vpsPlanOf')
-    const plan = vpsPlans[message]
-    if (!plan) return send(chatId, t.chooseValidPlan, vp.planTypeMenu)
+  if (action === a.askVpsDiskType) {
+    if (message === vp.back) return goto.askZoneForVps()
+    const options = info?.vpsDiskTypes
+    if (!options.includes(message)) return send (chatId, vp.chooseValidDiskType, vp.of(options))
     let vpsDetails = info?.vpsDetails
-    vpsDetails.plan = plan
+    vpsDetails.diskType = message
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)
-    saveInfo('vpsPlan', plan)
-    return goto.askVpsOS()
+    return goto.askVpsConfig()
   }
 
-  // save vps configs
+    // save vps configs
   if (action === a.askVpsConfig) {
-    if (message === t.back) return goto.askZoneForVps()
+    if (message === vp.back) return goto.askVpsDiskType()
     const vpsConfigurations = trans('vpsConfigurationDetails')
     const config = vpsConfigurations[message]
     if (!config) return send(chatId, vp.validVpsConfig, vp.configMenu)
     let vpsDetails = info?.vpsDetails
     vpsDetails.config = config
+    const calculatedCost = await calculateVpsInstanceCost(vpsDetails)
+    if (calculatedCost) {
+      vpsDetails.totalCostInHour = calculatedCost.totalCostInHour
+      vpsDetails.totalCostInMonth = calculatedCost.totalCostInMonth
+    }
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)
     return goto.askUserVpsPlan()
   }
 
-  if (action === a.askVpsOS) {
-    if (message === t.back) return goto.askVpsConfig()
-    if (message === vp.otherOs) return send(chatId, vp.specifyOtherOs, bc)
+  // save vps plan
+  if (action === a.askUserVpsPlan) {
+    if (message === vp.back) return goto.askVpsConfig()
+    const vpsPlans = trans('vpsPlanOf')
+    const plan = vpsPlans[message]
+    if (!plan) return send(chatId, t.chooseValidPlan, vp.planTypeMenu)
     let vpsDetails = info?.vpsDetails
-    vpsDetails.os = message
+    vpsDetails.plan = plan
+    const planCost = generateBilingCost(vpsDetails, plan)
+    vpsDetails.plantotalPrice = planCost
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)
+    return goto.askCouponForVPSPlan()
+  }
+
+  if (action === a.askCouponForVPSPlan) {
+    if (message === vp.back) return goto.askUserVpsPlan()
+    let vpsDetails = info.vpsDetails
+    const coupon = message.toUpperCase()
+    const discount = discountOn[coupon]
+
+    if (isNaN(discount) && message != vp.skip) return send(chatId, vp.couponInvalid)
+    const couponApplied = message === vp.skip ? false : true
+    const couponDiscount = couponApplied ? (vpsDetails.plantotalPrice * discount) / 100 : 0;
+    const newPrice = couponApplied ? vpsDetails.plantotalPrice - couponDiscount : 0;
+    vpsDetails.couponApplied = couponApplied
+    vpsDetails.couponDiscount = couponDiscount
+    vpsDetails.planNewPrice = newPrice
+
+    info.vpsDetails = vpsDetails
+    await saveInfo('vpsDetails', vpsDetails)
+    if (message === vp.skip) return goto.skipCouponVps()
+    send(chatId, vp.couponValid(couponDiscount))
+    return goto.askVpsOS() // @TODO change this for auto renewal later
+  }
+
+  if (action === a.skipCouponVps) {
+    if (message === t.goBackToCoupon || message === vp.back) return goto.askCouponForVPSPlan()
+    return goto.askVpsOS() // @TODO change this for auto renewal later
+  }
+
+  if (action === a.askVpsOS) {
+    if (message === vp.back) return goto.askCouponForVPSPlan()
+    const osData = info?.vpsOSList
+    const osList = osData.map((item) => item.name)     
+    if (!osList.includes(message) && message != vp.skipOSBtn) return send(chatId, vp.chooseValidOS, vp.of([...osList, vp.skipOSBtn]))
+    const osDetails = osData.find((ar) => ar.name === message)
+    let vpsDetails = info?.vpsDetails
+    vpsDetails.os = message === vp.skipOSBtn ? null : {
+      name: osDetails.name,
+      sourceImage: osDetails.sourceImage,
+      paid: osDetails.paid,
+      pricePerMonth: 15
+    }
+    if (message != vp.skipOSBtn && osDetails.paid) {
+      vpsDetails.selectedOSPrice = calculatePriceForVPS(15, vpsDetails.plan)
+    } else {
+      vpsDetails.selectedOSPrice = 0
+    }
+    info.vpsDetails = vpsDetails
+    saveInfo('vpsDetails', vpsDetails)
+    if (message === vp.skipOSBtn) {
+      send(chatId, vp.skipOSwarning)
+    }
     return goto.askVpsCpanel()
   }
 
   if (action === a.askVpsCpanel) {
-    if (message === t.back) return goto.askVpsOS()
+    if (message === vp.back) return goto.askVpsOS()
     const cpanels = trans('vpsCpanelOptional') 
     if (!cpanels.includes(message)) return send (chatId, vp.validCpanel, vp.cpanelMenu)
     let vpsDetails = info?.vpsDetails
     const cpanel = message === vp.trialWHM || message === vp.paidWHM ? 'WHM' : 'PLESK'  
-    vpsDetails.panel = message === vp.noControlPanel ? null : cpanel
-    vpsDetails.panelMode = message === vp.paidWHM || message === vp.paidPlesk ? 'paid' : 'trial'
+    const selectedCpanelPrice = message === vp.paidWHM || message === vp.paidPlesk ? calculatePriceForVPS(20, vpsDetails.plan) : 0
+    vpsDetails.panel = message === vp.noControlPanel ? null : {
+      name: cpanel,
+      mode: message === vp.paidWHM || message === vp.paidPlesk ? 'paid' : 'trial',
+      pricePerMonth: 20
+    }
+    const planPrice = vpsDetails.couponApplied ? vpsDetails.planNewPrice : vpsDetails.plantotalPrice
+    const OSprice = vpsDetails.selectedOSPrice
+    const totalPrice = Number(selectedCpanelPrice) + Number(planPrice) + Number(OSprice)
+    vpsDetails.selectedCpanelPrice = selectedCpanelPrice
+    vpsDetails.totalPrice = totalPrice
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)
-    return goto.askVpsDiskType()
-  }
-
-  if (action === a.askVpsDiskType) {
-    if (message === t.back) return goto.askVpsCpanel()
-    const options = vp.vpsDiskTypeMenu 
-    if (!options.includes(message)) return send (chatId, vp.chooseValidDiskType, k.of(vp.vpsDiskTypeMenu))
-    let vpsDetails = info?.vpsDetails
-    vpsDetails.diskType = message
-    info.vpsDetails = vpsDetails
-    saveInfo('vpsDetails', vpsDetails)
-    return goto.askVpsMachineType()
-  }
-
-  if (action === a.askVpsMachineType) {
-    if (message === t.back) return goto.askVpsDiskType()
-    const options = vp.vpsMachineTypeMenu 
-    if (!options.includes(message)) return send (chatId, vp.chooseValidMachineType, k.of(vp.vpsMachineTypeMenu))
-    let vpsDetails = info?.vpsDetails
-    vpsDetails.machineType = message
-    send(chatId, vp.vpsWaitingTime, rem)
-    const calculatedCost = await calculateVpsInstanceCost(vpsDetails)
-    if (!calculatedCost) return send(chatId, vp.failedCostRetrieval, trans('o'))
-    vpsDetails.totalPrice = calculatedCost
-    vpsDetails.couponDiscount = 0
-    info.vpsDetails = vpsDetails
-    saveInfo('vpsDetails', vpsDetails)
-    return goto.vpsAskPaymentConfirmation()
+    if (vpsDetails.panel && vpsDetails.panel.mode === 'trial') {
+      send(chatId, vp.trialPanelWarning(vpsDetails.panel.name))
+    }
+    return goto.vpsAskPaymentConfirmation() // @TODO change this for SSH Flow
   }
 
   if (action === a.proceedWithVpsPayment) {
-    if (message === t.back) return goto.askVpsMachineType()
+    if (message === vp.back) return goto.askVpsCpanel() // @TODO change this for SSH flow
     if (message === vp.no) {
+      saveInfo('vpsDetails', null)
       set(state, chatId, 'action', 'none')
       return send(chatId, t.welcome, trans('o'))
     }
-    if (message === vp.yes)
-      return goto.plansAskCoupon('choose-vps-to-buy')
-  }
-
-  if (action === a.askCoupon + 'choose-vps-to-buy') {
-    if (message === t.back) return goto.vpsAskPaymentConfirmation()
-    // if (message === t.skip) return goto.skipCoupon('vps-pay')
-    const coupon = message.toUpperCase()
-    const discount = discountOn[coupon]
-
-    if (isNaN(discount) && message != t.skip) return send(chatId, t.couponInvalid)
-    let vpsDetails = info?.vpsDetails
-    const couponApplied = message === t.skip ? false : true
-    const couponDiscount = couponApplied ? (vpsDetails.totalPrice * discount) / 100 : 0;
-    const newPrice = couponApplied ? vpsDetails.totalPrice - couponDiscount : null;
-    vpsDetails.couponApplied = couponApplied
-    vpsDetails.couponDiscount = couponDiscount
-    vpsDetails.newPrice = newPrice
-
-    await saveInfo('vpsDetails', vpsDetails)
-    return goto['vps-plan-pay']()
+    if (message === vp.yes) return goto['vps-plan-pay']()
+    send(chatId, t.selectValidOption)
   }
 
   if (action === a.redSelectUrl) {
@@ -2502,7 +2549,7 @@ bot?.on('message', async msg => {
 
   // VPS Payments
   if (action === 'vps-plan-pay') {
-    if (message === t.back) return goto.plansAskCoupon('choose-vps-to-buy')
+    if (message === t.back) return goto.vpsAskPaymentConfirmation()
     const payOption = message
 
     if (payOption === payIn.crypto) {
@@ -2527,7 +2574,7 @@ bot?.on('message', async msg => {
     if (message === t.back) return goto['vps-plan-pay']()
     const email = message
     const vpsDetails = info?.vpsDetails
-    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE || 20 : vpsDetails?.couponApplied ? vpsDetails?.newPrice : vpsDetails?.totalPrice
+    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE || 20 : vpsDetails?.totalPrice
     if (!isValidEmail(email)) return send(chatId, t.askValidEmail)
 
     const ref = nanoid()
@@ -2549,7 +2596,7 @@ bot?.on('message', async msg => {
     const ticker = supportedCryptoView[tickerView]
     if (!ticker) return send(chatId, t.askValidCrypto)
     const vpsDetails = info.vpsDetails
-    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE || 20 : vpsDetails?.couponApplied ? vpsDetails?.newPrice : vpsDetails?.totalPrice
+    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE || 20 : vpsDetails?.totalPrice
     const ref = nanoid()
     if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
       const coin = tickerOf[ticker]
@@ -3424,9 +3471,9 @@ const buyDomainFullProcess = async (chatId, lang, domain) => {
   }
 }
 
-schedule.scheduleJob('* * * * *', function() {
-  checkVPSPlansExpiryandPayment()
-})
+// schedule.scheduleJob('* * * * *', function() {
+//   checkVPSPlansExpiryandPayment()
+// })
 
 async function checkVPSPlansExpiryandPayment() {
   const now = new Date()
@@ -3495,17 +3542,20 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
       start_time: now, 
       end_time: expiresAt, 
       zone: vpsDetails.zone, 
-      plan: vpsDetails.plan, 
+      plan: vpsDetails.plan,
+      config: vpsDetails.config.name,
       price: vpsDetails.totalPrice, 
-      cpanel: vpsDetails.panel,
-      cpanelMode: vpsDetails.panelMode,
+      cpanel: vpsDetails.panel ? vpsDetails.panel.name : null,
+      cpanelMode: vpsDetails.panel ? vpsDetails.panel.name : null,
+      cpanelTrialExpiryDate: getExpiryDateVps('monthly'),
+      os: vpsDetails.os ? vpsDetails.os : null,
       vmsDetails: vpsData,
       status: vpsData.status,
       serverIP: vpsData.networkInterfaces[0].networkIP 
     })
 
     set(state, info._id, 'action', 'none')
-    send(chatId, translation('vp.vpsBoughtSuccess', lang, info, vpsDetails, vpsData), translation('o', lang))
+    send(chatId, translation('vp.vpsBoughtSuccess', lang, vpsDetails, vpsData), translation('o', lang))
     try {
       await sendVPSCredentialsEmail(info, vpsData, vpsDetails)
     } catch (error) {
@@ -3515,6 +3565,8 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
     return true
   } catch (error) {
     const errorMessage = `err buyVPSPlanFullProcess ${error?.message} ${JSON.stringify(error?.response?.data, null, 2)}`
+    const m = translation('vp.errorPurchasingVPS', lang, vpsDetails.plan)
+    sendMessage(chatId, m)
     sendMessage(TELEGRAM_DEV_CHAT_ID, errorMessage)
     console.error(errorMessage)
     return false
@@ -3662,7 +3714,7 @@ const bankApis = {
     const name = await get(nameOf, chatId)
     set(payments, ref, `Bank, VPSPlan, ${vpsDetails?.plan}, $${usdIn}, ${chatId}, ${name}, ${new Date()}, ₦${ngnIn}`)
 
-    const totalPrice = vpsDetails?.couponApplied ? vpsDetails?.newPrice : vpsDetails?.totalPrice
+    const totalPrice = vpsDetails?.totalPrice
     sendMessage(chatId, translation('vp.paymentRecieved', lang))
     // Update Wallet
     const ngnPrice = await usdToNgn(price)
@@ -3914,7 +3966,6 @@ app.get('/crypto-pay-hosting', auth, async (req, res) => {
   res.send(html())
 })
 
-// VPS plan @TODO
 app.get('/crypto-pay-vps', auth, async (req, res) => {
   // Validate
   const { ref, chatId, price, vpsDetails } = req.pay
@@ -3923,7 +3974,7 @@ app.get('/crypto-pay-vps', auth, async (req, res) => {
   if (!ref || !chatId || !price || !coin || !value) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
   const info = await state.findOne({ _id: parseFloat(chatId) })
   const lang = info?.userLanguage ?? 'en'
-  const totalPrice = vpsDetails?.couponApplied ? vpsDetails?.newPrice : vpsDetails?.totalPrice
+  const totalPrice = vpsDetails?.totalPrice
 
   sendMessage(chatId, translation('vp.paymentRecieved', lang))
   // Logs
@@ -4091,7 +4142,7 @@ app.post('/dynopay/crypto-pay-vps', authDyno, async (req, res) => {
 
   const info = await state.findOne({ _id: parseFloat(chatId) })
   const lang = info?.userLanguage ?? 'en'
-  const totalPrice = vpsDetails?.couponApplied ? vpsDetails?.newPrice : vpsDetails?.totalPrice
+  const totalPrice = vpsDetails?.totalPrice
 
   sendMessage(chatId, translation('vp.paymentRecieved', lang))
   // Logs
@@ -4117,7 +4168,6 @@ app.post('/dynopay/crypto-pay-vps', authDyno, async (req, res) => {
     sendMessage(chatId, translation('vp.extraMoney', lang))
   }
 
-  //@TODO
   const isSuccess = await buyVPSPlanFullProcess(chatId, lang, vpsDetails)
   if (!isSuccess) return res.send(html(error))
   res.send(html())

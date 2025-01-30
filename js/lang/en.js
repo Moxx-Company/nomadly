@@ -1,4 +1,5 @@
 const { areasOfCountry, carriersOf, countryCodeOf } = require('../areasOfCountry')
+const { generateBilingCost } = require('../vm-instance-setup')
 
 const format = (cc, n) => `+${cc}(${n.toString().padStart(2, '0')})`
 
@@ -73,7 +74,7 @@ const user = {
   phoneNumberLeads: '📲 HQ SMS Lead',
   wallet: '👛 My Wallet',
   urlShortenerMain: '🔗✂️ URL Shortener',
-  vpsPlans: 'VPS Plans 🔒',
+  vpsPlans: '🔧 Manage your VPS',
   buyPlan: '🔔 Subscribe Here',
   domainNames: '🌐 Domain Names',
   viewPlan: '🔔 My Plan',
@@ -100,7 +101,9 @@ const user = {
   contactSupport: '📞 Contact Support',
 
   // Sub Menu 4: VPS Plans
-  buyVpsPlan: '🔼 Buy VPS Plan',
+  buyVpsPlan: '⚙️ Create New VPS',
+  manageVpsPlan: '🖥️ View/Manage VPS',
+  manageVpsSSH: '🔑 SSH Keys',
 
   // Free Trial
   freeTrialMenuButton: '🚀 Free Trial (12 Hours)',
@@ -551,6 +554,7 @@ ${bal(usd, ngn)}`,
   noDomainRegistered: 'You have no purchased domains yet.',
   registeredDomainList: domainsText => `Here are your purchased domains:\n${domainsText}`,
   comingSoon: `Coming Soon`,
+  goBackToCoupon: '❌ Go Back & Apply Coupon',
 }
 
 const phoneNumberLeads = ['💰📲 Buy PhoneLeads', '✅📲 Validate PhoneLeads']
@@ -1041,6 +1045,23 @@ Your ${info.hostingType} credentials has been successfully sent to your email ${
   ${CHAT_BOT_NAME}`,
 }
 
+const vpsBC = ['🔙 Back', 'Cancel']
+
+const vpsOptionsOf = list => ({
+  reply_markup: {
+    // Handle if there are multiples buttons in a row
+    keyboard: [
+      ...list.map(a => (Array.isArray(a) ? a : [a])),
+      ...(list.some(
+        a => Array.isArray(a) && a.some(item => typeof item === 'string' && item.includes(t.goBackToCoupon)),
+      )
+        ? []
+        : [vpsBC]),
+    ],
+  },
+  parse_mode: 'HTML',
+})
+
 const vpsPlans = {
   hourly: 'Hourly',
   monthly: 'Monthly',
@@ -1052,11 +1073,11 @@ const vpsConfig = {
   basic: 'Basic',
   standard: 'Standard',
   premium: 'Premium',
+  enterprise: 'Enterprise',
 }
 const vpsPlanMenu = ['Hourly', 'Monthly', 'Quarterly', 'Annually']
-const vpsConfigurationMenu = ['Basic', 'Standard', 'Premium']
-const vpsOsMenu = ['Ubuntu', 'CentOS', 'Windows Server', 'Other OS']
-const vpsCpanelOptional = ['WHM (TRIAL)', 'WHM (PAID)', 'PLESK (TRIAL)', 'PLESK (PAID)', 'No Control Panel']
+const vpsConfigurationMenu = ['Basic', 'Standard', 'Premium', 'Enterprise']
+const vpsCpanelOptional = ['WHM (TRIAL)', 'WHM (PAID)', 'PLESK (TRIAL)', 'PLESK (PAID)', '❌ Skip Control Panel']
 
 const vpsPlanOf = {
   Hourly: 'hourly',
@@ -1068,123 +1089,135 @@ const vpsPlanOf = {
 const vpsConfigurationDetails = {
   Basic: {
     name: 'basic',
-    label: 'Basic',
-    vcpuCount: '1',
-    ramGb: '2',
-    diskStorageGb: '20',
-    bandwidthTB: '1',
+    vcpuCount: '2',
+    ramGb: '4',
+    diskStorageGb: '64',
+    amountMonthly: '32',
+    amountHourly: '0.045',
   },
   Standard: {
     name: 'standard',
-    vcpuCount: '2',
-    label: 'Standard',
-    ramGb: '4',
-    diskStorageGb: '40',
-    bandwidthTB: '2',
+    vcpuCount: '4',
+    ramGb: '8',
+    diskStorageGb: '80',
+    amountMonthly: '65',
+    amountHourly: '0.09',
   },
   Premium: {
     name: 'premium',
-    vcpuCount: '4',
-    label: 'Premium',
-    ramGb: '8',
-    diskStorageGb: '80',
-    bandwidthTB: '5',
+    vcpuCount: '8',
+    ramGb: '16',
+    diskStorageGb: '160',
+    amountMonthly: '129',
+    amountHourly: '0.18',
+  },
+  Enterprise: {
+    name: 'enterprise',
+    vcpuCount: '16',
+    ramGb: '32',
+    diskStorageGb: '200',
+    amountMonthly: '256',
+    amountHourly: '0.35',
   },
 }
 
 const formattedConfigurations = Object.entries(vpsConfigurationDetails)
   .map(
-    ([key, { vcpuCount, ramGb, diskStorageGb, bandwidthTB }]) =>
-      `<strong>- ${key} </strong> (${vcpuCount} vCPU, ${ramGb}GB RAM, ${diskStorageGb}GB Disk, ${bandwidthTB}TB Bandwidth)`,
+    ([key, { vcpuCount, ramGb, diskStorageGb, amountMonthly, amountHourly }]) =>
+      `<strong>• ${key} -</strong>  $${amountMonthly}/month ($${amountHourly}/hour) – ${vcpuCount} vCPU, ${ramGb}GB RAM, ${diskStorageGb}GB Disk`,
   )
   .join('\n')
 
 const vp = {
+  of: vpsOptionsOf,
+  back: '🔙 Back',
+  skip: '❌ Skip',
+
+  //region selection
   askCountryForUser: '🌍 Select the country where you’d like to host your VPS.',
   chooseValidCountry: 'Please choose country from the list:',
-  askRegionForUser:
-    '🌍 Next, Select the region where you’d like to host your VPS to ensure optimal performance and connectivity',
+  askRegionForUser: '🌍 Next, Choose the best region for optimal performance and low latency.',
   chooseValidRegion: 'Please choose valid region from the list:',
-  askZoneForUser: '📍 Choose the data center location within the selected region',
+  askZoneForUser: region => `📍 Choose the data center location within ${region}. Prices may vary by location.`,
   chooseValidZone: 'Please choose valid zone from the list:',
   confirmZone: (region, zone) => `✅  You’ve selected the ${region} (${zone}) Do you want to proceed with this choice?`,
+  failedFetchingData: 'Error fetching, Please try again after some time.',
   confirmBtn: `✅ Confirm Selection`,
-  askPlanType: `💳 Choose a billing plan based on your needs:
 
-<strong>- Hourly:</strong> Flexible for temporary or short-term projects.
-<strong>- Monthly/Quarterly/Annually:</strong> Best for long-term use with discounts for longer .
+  // disk type
+  askVpsDiskType: list => `💾 Choose your storage type based on performance and budget:
+
+${list.map(item => `• ${item.description}`).join('\n')}`,
+
+  chooseValidDiskType: 'Please choose a valid disk type',
+
+  // plans
+  askPlanType: vpsDetails => `💳 Choose a billing cycle:
+
+<strong>• Hourly –</strong> $${generateBilingCost(vpsDetails, 'hourly')} (No discount)
+<strong>• Monthly –</strong> $${generateBilingCost(vpsDetails, 'monthly')} → Save 10%
+<strong>• Quarterly –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} → Save 15%
+<strong>• Annually –</strong> $${generateBilingCost(vpsDetails, 'annually')} → Save 20%
 `,
-  planTypeMenu: kOf(vpsPlanMenu),
+  planTypeMenu: vpsOptionsOf(vpsPlanMenu),
+
+  // configs
   askVpsConfig: `⚙️ Choose the VPS configuration that suits your needs. We offer basic, standard, and premium plans for different workloads.
   
 ${formattedConfigurations}`,
   validVpsConfig: 'Please select a valid vps configuration:',
-  configMenu: kOf(vpsConfigurationMenu),
-  generateSelectedConfig: type => {
-    const config = vpsConfigurationDetails[type]
-    return `
-  🚀 <strong>${type} configuration</strong>
-  
-<strong>- vCPU:</strong> ${config.vcpuCount} vCPU
-<strong>- RAM:</strong> ${config.ramGb} GB RAM
-<strong>- Disk Storage:</strong> ${config.diskStorageGb} GB DISK
-<strong>- BandWidth:</strong> ${config.bandwidthTB} TB`
-  },
-  askVpsOS:
-    '💻 Choose the operating system for your VPS. Popular options include Ubuntu and CentOS, with other available OS choices.',
-  osMenu: kOf(vpsOsMenu),
-  otherOs: 'Other OS',
-  specifyOtherOs: '🔤 Please specify the operating system you would like to use.',
+  configMenu: vpsOptionsOf(vpsConfigurationMenu),
+
+  //discount
+  askForCoupon: `🎟️ Enter a coupon code for a discount, or skip this step.`,
+  couponInvalid: `❌ Invalid: Code invalid. Try again.`,
+  couponValid: amt => `✅ Valid: Discount applied: -$${amt}.`,
+  skipCouponwarning: `⚠️ Skipping means you cannot apply a discount later.`,
+  confirmSkip: '✅ Confirm Skip',
+  goBackToCoupon: '❌ Go Back & Apply Coupon',
+
+  // os
+  askVpsOS: '💻 Select an OS (Windows Server adds $15/month).',
+  chooseValidOS: `Please select a valid OS from available list:`,
+  skipOSBtn: '❌ Skip OS Selection',
+  skipOSwarning: '⚠️ Your VPS will launch without an OS. You’ll need to install one manually via SSH or recovery mode.',
+
+  // cpanel
   askVpsCpanel:
     '🛠️ Would you like to add a control panel for easy server management? Choose from WHM, Plesk, or no control panel.',
-  cpanelMenu: kOf(vpsCpanelOptional),
+  cpanelMenu: vpsOptionsOf(vpsCpanelOptional),
   trialWHM: vpsCpanelOptional[0],
   paidWHM: vpsCpanelOptional[1],
   trialPlesk: vpsCpanelOptional[2],
   paidPlesk: vpsCpanelOptional[3],
   noControlPanel: vpsCpanelOptional[4],
   validCpanel: 'Please choose a valid control panel or skip it.',
-  askVpsDiskType: '💿 Please specify the disk type you would like to use.',
-  chooseValidDiskType: 'Please choose a valid disk type',
-  failedFetchingAddress: 'Error fetching, Please try again after some time.',
-  vpsDiskTypeMenu: ['pd-standard', 'pd-balanced', 'pd-ssd'],
-  askVpsMachineType: '💻 Please specify the machine type you would like to use.',
-  chooseValidMachineType: 'Please choose a valid machine type',
-  vpsMachineTypeMenu: ['e2-micro', 'f1-micro'],
+  trialPanelWarning: panel => `ℹ️ ${panel} trial auto-renews for $20/month unless canceled.`,
+
   vpsWaitingTime: '⚙️ Retrieving cost information... This will only take a moment.',
   failedCostRetrieval: 'Failied in retrieving cost information... Please try again after some time.',
 
-  errorPurchasingVPS: plan => `Something went wrong while setting up your ${plan} VPS Plan|${statusCode}. 
-                                                Please contact support ${SUPPORT_USERNAME}.
-                                                Discover more ${TG_HANDLE}.`,
+  errorPurchasingVPS: plan => `Something went wrong while setting up your ${plan} VPS Plan.
 
-  generateBillSummary: vpsDetails => `<strong>📋 Here’s a summary of your selections:</strong>
+  Please contact support ${SUPPORT_USERNAME}.
+  Discover more ${TG_HANDLE}.`,
 
-    <strong>•	Billing Plan:</strong> ${vpsPlans[vpsDetails.plan]}
-    <strong>•	Auto-Renewal:</strong> No
-    <strong>•	VPS Configuration: </strong> ${vpsConfig[vpsDetails.config.name]} ( ${vpsDetails.config.vcpuCount}vCPU, ${
-    vpsDetails.config.ramGb
-  }GB RAM, ${vpsDetails.config.diskStorageGb}GB DISK, ${vpsDetails.config.bandwidthTB}TB bandwidth)
-    <strong>•	Operating System:</strong> ${vpsDetails.os}
-	  <strong>•	Control Panel:</strong>  ${
-      vpsDetails.panel
-        ? `${vpsDetails.panel} ${vpsDetails.panelMode === 'paid' ? `(PAID)` : '(TRIAL)'}`
-        : 'No Panel Selected'
-    }
-	  <strong>•	SSH Key:</strong> None Linked
-    <strong>•	Disk Type:</strong> ${vpsDetails.diskType}
-    <strong>•	Machine Type:</strong> ${vpsDetails.machineType}
-    <strong>•	Zone:</strong> ${vpsDetails.regionName} ( ${vpsDetails.zone})
+  generateBillSummary: vpsDetails => `<strong>📋 Final Cost Breakdown:</strong>
 
-💰 Cost Breakdown:
-	  <strong>•	VPS Cost ([Billing Cycle]): </strong> $${vpsDetails.totalPrice}
-	  <strong>•	License Cost (if applicable): </strong> $0
-	  <strong>•	Coupon Discount: </strong> -$${vpsDetails.couponDiscount}
-	  <strong>•	Total Cost: </strong> $${vpsDetails.couponApplied ? vpsDetails.newPrice : vpsDetails.totalPrice}
+<strong>• VPS (${vpsPlans[vpsDetails.plan]} Plan) –</strong> $${vpsDetails.plantotalPrice}
+<strong>• OS License (${vpsDetails.os ? vpsDetails.os.name : 'Not Selected'}) –</strong> $${vpsDetails.selectedOSPrice}
+<strong>• Control Panel (${vpsDetails.panel ? `${vpsDetails.panel.name} ${vpsDetails.panel.mode === 'paid' ? 'PAID' : 'TRIAL'}` : 'Not Selected'}) –</strong> $${
+    vpsDetails.selectedCpanelPrice
+  }
+<strong>• Coupon Discount –</strong> -$${vpsDetails.couponDiscount}
+<strong>💰 Total:</strong> $${vpsDetails.totalPrice}
 
-🎉 You Save: $${vpsDetails.couponDiscount}`,
+<strong>Proceed?</strong>`,
+
   no: '❌ Cancel Order',
   yes: '✅ Confirm Order',
+
+  askPaymentMethod: 'Choose a payment method:',
 
   showDepositCryptoInfoVps: (priceCrypto, tickerView, address, vpsDetails) =>
     `Please remit ${priceCrypto} ${tickerView} to\n\n<code>${address}</code>
@@ -1194,6 +1227,7 @@ ${
     ? `Please note, for hourly plan you need to pay atleast ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$. The remaining amount will go into you wallet.`
     : ''
 }
+
 Please note, crypto transactions can take up to 30 minutes to complete. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan will be seamlessly activated.
 
 Best regards,
@@ -1209,19 +1243,14 @@ Your VPS Plan for instance ${vpsName} has been stopped due to low balance.
 Please top up your wallet to continue using your VPS Plan.
 `,
 
-  vpsBoughtSuccess: (info, vpsDetails, response) =>
-    `🎉 Your VPS is ready! Below are the details of your server:
-  
-<strong>🚀 Name:</strong> ${response.name}
-<strong>💳 Billing Plan:</strong> ${vpsPlans[vpsDetails.plan]}
-<strong>🛠️ Control Panel:</strong> ${vpsDetails.panel} ${vpsDetails.panelMode === 'paid' ? `(PAID)` : '(TRIAL)'}
-<strong>🌐 Server IP: </strong> ${response.networkInterfaces[0].networkIP}
-<strong>💻 Operating System:</strong> ${vpsDetails.os}
-<strong>⚙️ Configurations:</strong> ${vpsConfig[vpsDetails.config.name]} ( ${vpsDetails.config.vcpuCount}vCPU, ${
-      vpsDetails.config.ramGb
-    }GB RAM, ${vpsDetails.config.diskStorageGb}GB DISK, ${vpsDetails.config.bandwidthTB}TB bandwidth)
-<strong>🌍 Zone:</strong> ${vpsDetails.zone}
-<strong>💿 Disk Type:</strong> ${response.disks[0].deviceName}
+  vpsBoughtSuccess: (vpsDetails, response) =>
+    `<strong>🎉 VPS [ID] is active!
+
+<strong>🔑 Login Credentials:
+  <strong>• IP: ${response.networkInterfaces[0].networkIP }
+  <strong>• OS: ${vpsDetails.os ? vpsDetails.os.name : 'Not Selected'}
+  <strong>• Username: [User]
+  <strong>• Password: Sent via email (change immediately).
     
 📧 These details have also been sent to your registered email. Please keep them secure.
 Thank you for choosing our service

@@ -51,8 +51,22 @@ async function fetchAvailableZones(region) {
 
     let response = await axios.get(url, { headers })
     if (response?.data?.data) {
-      const areas = response?.data?.data.map(item => item.name)
+      const areas = response?.data?.data.map(({ name, label }) => ({ name, label }))
       return areas
+    }
+    return false
+  } catch (err) {
+    console.log('Error in fetching zone list', err?.response?.data)
+    return false
+  }
+}
+
+async function fetchAvailableDiskTpes(zone) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/disk-type-list?projectId=${VM_PROJECT_ID}&zone=${zone}`
+    let response = await axios.get(url, { headers })
+    if (response?.data?.data) {
+      return response?.data?.data
     }
     return false
   } catch (err) {
@@ -67,7 +81,7 @@ async function calculateVpsInstanceCost(payload) {
     let response = await axios.get(url, { headers })
     if (response?.data?.data) {
       console.log(response?.data.data)
-      return generateBilingCost(response.data.data, payload.plan)
+      return response?.data.data
     }
     return false
   } catch (err) {
@@ -100,6 +114,21 @@ function generateBilingCost(data, plan) {
   return parseFloat(totalCost.toFixed(2))
 }
 
+async function fetchAvailableOS() {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/list-os`
+
+    let response = await axios.get(url, { headers })
+    if (response?.data?.data) {
+      return response?.data?.data
+    }
+    return false
+  } catch (err) {
+    console.log('Error in fetching zone list', err?.response?.data)
+    return false
+  }
+}
+
 function generateRandomVpsName() {
   const randomSuffix = Math.random().toString(36).substr(2, 12)
   return `vm-instance-${randomSuffix}`
@@ -108,17 +137,19 @@ function generateRandomVpsName() {
 async function createVPSInstance(vpsDetails) {
   try {
     const url = `${NAMEWORD_BASE_URL}/create/vm/instance`
-    const payload = {
+    let payload = {
       name: generateRandomVpsName(),
       diskSizeGB: vpsDetails.config.diskStorageGb,
-      sourceImage: 'projects/debian-cloud/global/images/family/debian-11',
       autoDelete: true,
       boot: true,
-      diskType: vpsDetails?.diskType,
-      machineType: vpsDetails.machineType,
+      diskType: vpsDetails.diskType,
+      machineType: 'e2-standard-8',
       networkName: 'global/networks/default',
       googleConsoleProjectId: VM_PROJECT_ID,
       zone: vpsDetails.zone,
+    }
+    if (vpsDetails.os) {
+      payload.sourceImage = vpsDetails.os.sourceImage
     }
     const response = await axios.post(url, payload, { headers })
     if (response?.data?.data) {
@@ -189,7 +220,7 @@ async function sendVPSCredentialsEmail(info, response, vpsDetails) {
                 Hello <strong>${info.username}</strong>,
             </p>
             <p style="font-size: 18px; line-height: 1.6;">
-                We are excited to inform you that your <strong style="text-transform: capitalize;">(${vpsDetails.plan}${plan})</strong> has been successfully activated!
+                We are excited to inform you that your <strong style="text-transform: capitalize;">${plan}</strong> has been successfully activated!
             </p>
             <p style="font-size: 18px; line-height: 1.6; color: #007bff;">
                 Here’s your order summary:
@@ -203,32 +234,22 @@ async function sendVPSCredentialsEmail(info, response, vpsDetails) {
               </tr>
               <tr>
                   <td style="font-size: 16px; padding: 15px; background-color: #eee; border: 1px solid #ddd; border-radius: 5px;">
-                      <strong>Network Name:</strong> ${response.networkInterfaces[0].name}
-                  </td>
-              </tr>
-              <tr>
-                  <td style="font-size: 16px; padding: 15px; background-color: #eee; border: 1px solid #ddd; border-radius: 5px;">
                       <strong>Network IP:</strong> ${response.networkInterfaces[0].networkIP}
                   </td>
               </tr>
               <tr>
                   <td style="font-size: 16px; padding: 15px; background-color: #eee; border: 1px solid #ddd; border-radius: 5px;">
-                      <strong>OS System:</strong> ${vpsDetails.os}
+                      <strong>OS System:</strong> ${vpsDetails.os ? vpsDetails.os.name : 'Not Selected'}
                   </td>
               </tr>
               <tr>
                   <td style="font-size: 16px; padding: 15px; background-color: #eee; border: 1px solid #ddd; border-radius: 5px;">
-                      <strong>Zone:</strong> ${vpsDetails.zone}
+                      <strong>UserName:</strong>
                   </td>
               </tr>
               <tr>
                   <td style="font-size: 16px; padding: 15px; background-color: #eee; border: 1px solid #ddd; border-radius: 5px;">
-                      <strong>Disk Type:</strong> ${response.disks[0].deviceName}
-                  </td>
-              </tr>
-              <tr>
-                  <td style="font-size: 16px; padding: 15px; background-color: #eee; border: 1px solid #ddd; border-radius: 5px;">
-                      <strong>Configurations:</strong> ${vpsDetails.config.label} ( ${vpsDetails.config.vcpuCount}vCPU, ${vpsDetails.config.ramGb}GB RAM, ${vpsDetails.config.diskStorageGb}GB DISK, ${vpsDetails.config.bandwidthTB}TB bandwidth)
+                      <strong>Password</strong>
                   </td>
               </tr>
             </table>
@@ -285,6 +306,28 @@ const getExpiryDateVps = plan => {
   return expiresAt
 }
 
+const calculatePriceForVPS = (amountPerMonth, plan) => {
+  let price
+  switch (plan) {
+    case 'hourly':
+      const totalHours = 30 * 24; // 30 days * 24 hours per day
+      price = (amountPerMonth / totalHours).toFixed(2);
+      break
+    case 'monthly':
+      price = amountPerMonth
+      break
+    case 'quaterly':
+      price = amountPerMonth * 3
+      break
+    case 'annually':
+      price = amountPerMonth * 12
+      break
+    default:
+      break
+  }
+  return price
+}
+
 module.exports = {
   fetchAvailableCountries,
   fetchAvailableRegionsOfCountry,
@@ -294,4 +337,8 @@ module.exports = {
   sendVPSCredentialsEmail,
   getExpiryDateVps,
   stopVPSInstance,
+  generateBilingCost,
+  fetchAvailableDiskTpes,
+  fetchAvailableOS,
+  calculatePriceForVPS
 }
