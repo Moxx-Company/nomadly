@@ -289,14 +289,12 @@ async function planGetNewDomain(message, chatId, send, saveInfo, hostingType, ve
     let modifiedDomain = removeProtocolFromDomain(message)
 
     const { available, originalPrice, price, chatMessage, domainType } = await getNewDomain(modifiedDomain, hostingType)
-
     if (!available) {
-      if(verbose) {
+      // if(verbose) {
         await send(chatId, chatMessage)
-      }
+      // }
       return getDefaultDomainResponse()
     }
-
     if (!originalPrice) {
       await send(TELEGRAM_DEV_CHAT_ID, 'Some issue in getting price')
       if(verbose) {
@@ -306,7 +304,6 @@ async function planGetNewDomain(message, chatId, send, saveInfo, hostingType, ve
     }
 
     saveDomainInfo(saveInfo, modifiedDomain, price, originalPrice)
-
     return { modifiedDomain, price, domainType, chatMessage }
   } catch (error) {
     return getDefaultDomainResponse()
