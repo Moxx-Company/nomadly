@@ -89,7 +89,7 @@ const getNewDomain = async (domainName, hostingType) => {
         chatMessage: error.response.data.message,
       }
     } else {
-      console.log("###error",error.response.data)
+      console.log("###error",error)
       const chatMessage = `An error occurred while checking domain availability. Maybe IP Not Whitelisted. ${error.response?.status}`
       console.error('checkDomainPriceOnline', error.response.data.errors)
       console.error('checkDomainPriceOnline error', error.response.data)
