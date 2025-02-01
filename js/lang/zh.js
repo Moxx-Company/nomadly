@@ -1059,11 +1059,14 @@ const vp = {
   back: '🔙 返回',
   skip: '❌ 跳过',
 
-  askCountryForUser: '🌍 选择您想要托管VPS的国家。',
-  chooseValidCountry: '请选择列表中的国家：',
-  askRegionForUser: '🌍 接下来，选择最佳区域以获得最佳性能和低延迟。',
-  chooseValidRegion: '请选择列表中的有效区域：',
-  askZoneForUser: region => `📍 选择${region}中的数据中心位置。价格可能因位置而异。`,
+  askCountryForUser: `🌍 选择最佳区域，以获得最佳性能和最低延迟。
+
+💡 低延迟 = 更快的响应时间。请选择最接近用户的区域，以获得最佳性能。`,
+  chooseValidCountry: '请从列表中选择一个国家：',
+  askRegionForUser: country => `📍 选择 ${country} 内的数据中心（价格可能因位置而异）。`,
+  chooseValidRegion: '请从列表中选择有效的地区：',
+  askZoneForUser: region => `📍 选择 ${region} 内的可用区。`,
+
   chooseValidZone: '请选择列表中的有效区域：',
   confirmZone: (region, zone) => `✅  您选择了${region}（${zone}）。您要继续选择此项吗？`,
   failedFetchingData: '获取数据时出错，请稍后再试。',
@@ -1077,15 +1080,19 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
 
   askPlanType: vpsDetails => `💳 选择账单周期：
 
-<strong>• 每小时 –</strong> $${generateBilingCost(vpsDetails, 'hourly')} (没有折扣)
-<strong>• 每月 –</strong> $${generateBilingCost(vpsDetails, 'monthly')} → 节省 10%
-<strong>• 每季度 –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} → 节省 15%
-<strong>• 每年 –</strong> $${generateBilingCost(vpsDetails, 'annually')} → 节省 20%
+<strong>• ⏳ 按小时 –</strong> $${generateBilingCost(vpsDetails, 'hourly')}（无折扣）
+<strong>• 📅 按月 –</strong> $${generateBilingCost(vpsDetails, 'monthly')} → 节省 10%
+<strong>• 📅 按季度 –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} → 节省 15%
+<strong>• 📅 按年 –</strong> $${generateBilingCost(vpsDetails, 'annually')} → 节省 20%
 `,
-
   planTypeMenu: vpsOptionsOf(vpsPlanMenu),
+  hourlyBillingMessage: `⚠️ 按小时计费需要支付 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} 可退款押金。（此押金确保服务不中断，未使用部分可退款。）
 
-  askVpsConfig: `⚙️ 选择适合您需求的VPS配置。我们提供基本、标准和高级计划，适用于不同的工作负载。
+✅ 账单每小时从您的钱包余额中扣除。
+🔹 月度许可证（Windows/WHM/Plesk）需提前支付。`,
+
+  // 配置
+  askVpsConfig: `⚙️ 根据您的需求选择 VPS 方案（支持按小时或按月计费）：
   
 ${formattedConfigurations}`,
 
@@ -1094,18 +1101,25 @@ ${formattedConfigurations}`,
   configMenu: vpsOptionsOf(vpsConfigurationMenu),
 
   askForCoupon: `🎟️ 输入优惠券代码以获得折扣，或跳过此步骤。`,
-  couponInvalid: `❌ 无效：代码无效。请再试一次。`,
+  couponInvalid: `❌ 无效：代码已过期、不适用或输入错误。请重试。`,
   couponValid: amt => `✅ 有效：应用的折扣：-$${amt}。`,
   skipCouponwarning: `⚠️ 跳过意味着您以后无法再应用折扣。`,
   confirmSkip: '✅ 确认跳过',
   goBackToCoupon: '❌ 返回并应用优惠券',
 
-  askVpsOS: '💻 选择一个操作系统（Windows Server 每月增加 $15）。',
+  askVpsOS: `💻 选择操作系统（Windows Server 额外收费 $15/月）。  
+
+<strong>💡 推荐: </strong>  
+<strong>• Ubuntu –</strong> 适用于常规使用和开发  
+<strong>• CentOS –</strong> 适用于企业级应用，稳定可靠  
+<strong>• Windows Server –</strong> 适用于基于 Windows 的应用（+$15/月）`,
   chooseValidOS: `请选择可用列表中的有效操作系统：`,
   skipOSBtn: '❌ 跳过操作系统选择',
   skipOSwarning: '⚠️ 您的VPS将没有操作系统启动。您需要通过SSH或恢复模式手动安装一个。',
 
-  askVpsCpanel: '🛠️ 您是否希望添加一个控制面板以便于服务器管理？请选择 WHM、Plesk 或无控制面板。',
+  askVpsCpanel: `🛠️ 是否需要添加控制面板以便轻松管理服务器？可选择 WHM、Plesk 或不使用控制面板。
+
+付费控制面板额外收费 $20/月。`,
   cpanelMenu: vpsOptionsOf(vpsCpanelOptional),
   trialWHM: vpsCpanelOptional[0],
   paidWHM: vpsCpanelOptional[1],
@@ -1125,15 +1139,18 @@ ${formattedConfigurations}`,
 
   generateBillSummary: vpsDetails => `<strong>📋 最终费用明细：</strong>
 
-<strong>• VPS (${vpsPlans[vpsDetails.plan]} 计划) –</strong> $${vpsDetails.plantotalPrice}
-<strong>• 操作系统许可 (${vpsDetails.os ? vpsDetails.os.name : '未选择'}) –</strong> $${vpsDetails.selectedOSPrice}
-<strong>• 控制面板 (${
+<strong>•📅 磁盘类型 –</strong> $${vpsDetails.diskType}
+<strong>•🖥️ VPS 方案：</strong> ${vpsConfig[vpsDetails.config.name]}
+<strong>•📅 计费周期（${vpsPlans[vpsDetails.plan]} 方案） –</strong> $${vpsDetails.plantotalPrice}
+<strong>•💻 操作系统许可证 (${vpsDetails.os ? vpsDetails.os.name : '未选择'}) –</strong> $${vpsDetails.selectedOSPrice}
+<strong>•🛠️ 控制面板 (${
     vpsDetails.panel ? `${vpsDetails.panel.name} ${vpsDetails.panel.mode === 'paid' ? '付费' : '试用'}` : '未选择'
   }) –</strong> $${vpsDetails.selectedCpanelPrice}
-<strong>• 优惠券折扣 –</strong> -$${vpsDetails.couponDiscount}
+<strong>•🎟️ 优惠券折扣 –</strong> -$${vpsDetails.couponDiscount}
+
 <strong>💰 总计：</strong> $${vpsDetails.totalPrice}
 
-<strong>继续吗？</strong>`,
+<strong>✅ 是否确认下单？</strong>`,
 
   no: '❌ 取消订单',
   yes: '✅ 确认订单',
@@ -1190,6 +1207,19 @@ ${
 
 此致,
 ${CHAT_BOT_NAME}`,
+
+  askAutoRenewal: `🔄 启用自动续订，以确保服务不中断？  
+
+🛑 续订前您将收到提醒，您可以随时禁用。`,
+  enable: '✅ 启用',
+  skipAutoRenewalWarming: expiresAt =>
+    `⚠️ 您的 VPS 将于 ${new Date(expiresAt).toLocaleDateString('zh-CN').replace(/\//g, '-')} ${new Date(
+      expiresAt,
+    ).toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })} 到期，服务可能会中断。`,
 }
 
 const zh = {

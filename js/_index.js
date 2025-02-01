@@ -478,6 +478,7 @@ bot?.on('message', async msg => {
     confirmZoneForVPS: 'confirmZoneForVPS',
     askUserVpsPlan: 'askUserVpsPlan',
     askVpsConfig: 'askVpsConfig',
+    askVPSPlanAutoRenewal: 'askVPSPlanAutoRenewal',
     askVpsOS: 'askVpsOS',
     askVpsCpanel: 'askVpsCpanel',
     askCouponForVPSPlan: 'askCouponForVPSPlan',
@@ -1144,7 +1145,7 @@ bot?.on('message', async msg => {
       if (!availableRegions) return send(chatId, vp.failedFetchingData, trans('o'))
       const regionsList = availableRegions.map((item) => item.label)
       saveInfo('vpsAreaList', availableRegions)
-      return send(chatId, vp.askRegionForUser, vp.of(regionsList))    
+      return send(chatId, vp.askRegionForUser(info?.vpsDetails?.country), vp.of(regionsList))    
     },
 
     askZoneForVps: async () => {
@@ -1178,7 +1179,8 @@ bot?.on('message', async msg => {
 
     askUserVpsPlan: () => {
       set(state, chatId, 'action', a.askUserVpsPlan)
-      return send(chatId, vp.askPlanType(info?.vpsDetails), vp.planTypeMenu)  
+      send(chatId, vp.askPlanType(info?.vpsDetails), vp.planTypeMenu) 
+      return send(chatId, vp.hourlyBillingMessage)
     },
 
     askCouponForVPSPlan: () => {
@@ -1189,6 +1191,11 @@ bot?.on('message', async msg => {
     skipCouponVps: () => {
       set(state, chatId, 'action', a.skipCouponVps)
       return send(chatId, vp.skipCouponwarning, vp.of([vp.confirmSkip, t.goBackToCoupon]))  
+    },
+
+    askVPSPlanAutoRenewal: () => {
+      set(state, chatId, 'action', a.askVPSPlanAutoRenewal)
+      return send(chatId, vp.askAutoRenewal, vp.of([vp.enable, vp.skip]))  
     },
 
     askVpsOS: async () => {
@@ -2027,21 +2034,36 @@ bot?.on('message', async msg => {
     await saveInfo('vpsDetails', vpsDetails)
     if (message === vp.skip) return goto.skipCouponVps()
     send(chatId, vp.couponValid(couponDiscount))
-    return goto.askVpsOS() // @TODO change this for auto renewal later
+    return vpsDetails.plan != 'hourly' ? goto.askVPSPlanAutoRenewal() : goto.askVpsOS()
   }
 
   if (action === a.skipCouponVps) {
+    let vpsDetails = info?.vpsDetails
     if (message === t.goBackToCoupon || message === vp.back) return goto.askCouponForVPSPlan()
-    return goto.askVpsOS() // @TODO change this for auto renewal later
+    return vpsDetails.plan != 'hourly' ? goto.askVPSPlanAutoRenewal() : goto.askVpsOS()
+  }
+
+  if (action === a.askVPSPlanAutoRenewal) {
+    if (message === vp.back) return goto.askCouponForVPSPlan()
+    if (message !== vp.skip && message !== vp.enable) return send(chatId, t.selectValidOption, vp.of([vp.enable, t.skip])) 
+    let vpsDetails = info.vpsDetails
+    vpsDetails.autoRenewalPlan = message === vp.enable ? true : false
+    info.vpsDetails = vpsDetails
+    await saveInfo('vpsDetails', vpsDetails)
+    const expiresAt = getExpiryDateVps(vpsDetails.plan)
+    if (message === vp.skip) {
+      send(chatId, vp.skipAutoRenewalWarming(expiresAt))
+    }
+    return goto.askVpsOS()
   }
 
   if (action === a.askVpsOS) {
-    if (message === vp.back) return goto.askCouponForVPSPlan()
+    let vpsDetails = info?.vpsDetails
+    if (message === vp.back) return vpsDetails.plan != 'hourly' ? goto.askVPSPlanAutoRenewal() : goto.askCouponForVPSPlan()
     const osData = info?.vpsOSList
     const osList = osData.map((item) => item.name)     
     if (!osList.includes(message) && message != vp.skipOSBtn) return send(chatId, vp.chooseValidOS, vp.of([...osList, vp.skipOSBtn]))
     const osDetails = osData.find((ar) => ar.name === message)
-    let vpsDetails = info?.vpsDetails
     vpsDetails.os = message === vp.skipOSBtn ? null : {
       name: osDetails.name,
       sourceImage: osDetails.sourceImage,
@@ -2049,7 +2071,7 @@ bot?.on('message', async msg => {
       pricePerMonth:  osDetails.paid ? 15 : 0
     }
     if (message != vp.skipOSBtn && osDetails.paid) {
-      vpsDetails.selectedOSPrice = calculatePriceForVPS(15, vpsDetails.plan)
+      vpsDetails.selectedOSPrice = 15
     } else {
       vpsDetails.selectedOSPrice = 0
     }
@@ -2067,7 +2089,7 @@ bot?.on('message', async msg => {
     if (!cpanels.includes(message)) return send (chatId, vp.validCpanel, vp.cpanelMenu)
     let vpsDetails = info?.vpsDetails
     const cpanel = message === vp.trialWHM || message === vp.paidWHM ? 'WHM' : 'PLESK'  
-    const selectedCpanelPrice = message === vp.paidWHM || message === vp.paidPlesk ? calculatePriceForVPS(20, vpsDetails.plan) : 0
+    const selectedCpanelPrice = message === vp.paidWHM || message === vp.paidPlesk ? 20 : 0
     vpsDetails.panel = message === vp.noControlPanel ? null : {
       name: cpanel,
       mode: message === vp.paidWHM || message === vp.paidPlesk ? 'paid' : 'trial',
@@ -2077,7 +2099,7 @@ bot?.on('message', async msg => {
     const OSprice = vpsDetails.selectedOSPrice
     const totalPrice = Number(selectedCpanelPrice) + Number(planPrice) + Number(OSprice)
     vpsDetails.selectedCpanelPrice = selectedCpanelPrice
-    vpsDetails.totalPrice = totalPrice
+    vpsDetails.totalPrice = totalPrice.toFixed(2)
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)
     if (vpsDetails.panel && vpsDetails.panel.mode === 'trial') {
@@ -3537,18 +3559,27 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
     const expiresAt = getExpiryDateVps(vpsDetails.plan)
     let info = await get(state, chatId)
 
+    let osDetails = vpsDetails.os ? vpsDetails.os : null
+    if (osDetails && osDetails.paid) {
+      osDetails.expiryDate = getExpiryDateVps('monthly')
+    }
+
+    let cpanelDetails = vpsDetails.panel ? vpsDetails.panel : null
+    if (cpanelDetails) {
+      cpanelDetails.expiryDate = getExpiryDateVps('monthly')
+    }
+
     insert(vpsPlansOf, chatId, 'val', { 
       name:vpsData.name, 
       start_time: now, 
       end_time: expiresAt, 
       zone: vpsDetails.zone, 
       plan: vpsDetails.plan,
-      config: vpsDetails.config.name,
-      price: vpsDetails.totalPrice, 
-      cpanel: vpsDetails.panel ? vpsDetails.panel.name : null,
-      cpanelMode: vpsDetails.panel ? vpsDetails.panel.mode : null,
-      cpanelTrialExpiryDate: getExpiryDateVps('monthly'),
-      os: vpsDetails.os ? vpsDetails.os : null,
+      config: vpsDetails.config,
+      autoRenewal: vpsDetails.plan === 'hourly' ? true : vpsDetails.autoRenewalPlan,
+      planPrice: vpsDetails.couponApplied ? vpsDetails.planNewPrice : vpsDetails.plantotalPrice, 
+      cpanel: cpanelDetails,
+      os: osDetails,
       vmsDetails: vpsData,
       status: vpsData.status,
       serverIP: vpsData.networkInterfaces[0].networkIP 

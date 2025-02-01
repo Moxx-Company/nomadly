@@ -1095,12 +1095,15 @@ const vp = {
   back: '🔙 Retour',
   skip: '❌ Passer',
 
-  askCountryForUser: '🌍 Sélectionnez le pays où vous souhaitez héberger votre VPS.',
+  askCountryForUser: `🌍 Choisissez la meilleure région pour des performances optimales et une faible latence.
+
+💡 Moins de latence = Temps de réponse plus rapides. Choisissez une région proche de vos utilisateurs pour de meilleures performances.`,
   chooseValidCountry: 'Veuillez choisir un pays dans la liste :',
-  askRegionForUser: '🌍 Ensuite, choisissez la meilleure région pour des performances optimales et une faible latence.',
+  askRegionForUser: country =>
+    `📍 Sélectionnez un centre de données dans ${country} (Les prix peuvent varier selon l’emplacement.)`,
   chooseValidRegion: 'Veuillez choisir une région valide dans la liste :',
-  askZoneForUser: region =>
-    `📍 Choisissez l’emplacement du centre de données dans ${region}. Les prix peuvent varier en fonction de l'emplacement.`,
+  askZoneForUser: region => `📍 Choisissez la zone dans ${region}.`,
+
   chooseValidZone: 'Veuillez choisir une zone valide dans la liste :',
   confirmZone: (region, zone) => `✅  Vous avez sélectionné ${region} (${zone}). Voulez-vous continuer avec ce choix ?`,
   failedFetchingData: 'Erreur lors de la récupération, veuillez réessayer dans quelques instants.',
@@ -1114,15 +1117,17 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
 
   askPlanType: vpsDetails => `💳 Choisissez un cycle de facturation :
 
-<strong>• Horaire –</strong> $${generateBilingCost(vpsDetails, 'hourly')} (Pas de réduction)
-<strong>• Mensuel –</strong> $${generateBilingCost(vpsDetails, 'monthly')} → Économisez 10%
-<strong>• Trimestriel –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} → Économisez 15%
-<strong>• Annuel –</strong> $${generateBilingCost(vpsDetails, 'annually')} → Économisez 20%
-`,
-
+<strong>• ⏳ Horaire –</strong> $${generateBilingCost(vpsDetails, 'hourly')} (Aucune réduction)
+<strong>• 📅 Mensuel –</strong> $${generateBilingCost(vpsDetails, 'monthly')} → Économisez 10%
+<strong>• 📅 Trimestriel –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} → Économisez 15%
+<strong>• 📅 Annuel –</strong> $${generateBilingCost(vpsDetails, 'annually')} → Économisez 20% `,
   planTypeMenu: vpsOptionsOf(vpsPlanMenu),
+  hourlyBillingMessage: `⚠️ Un dépôt remboursable de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} est requis pour la facturation horaire. (Cela garantit un service ininterrompu et est remboursé s'il n'est pas utilisé.)
+  
+✅ La facturation est déduite du solde de votre portefeuille chaque heure.
+🔹 Les licences mensuelles (Windows/WHM/Plesk) sont facturées à l'avance.`,
 
-  askVpsConfig: `⚙️ Choisissez la configuration VPS qui correspond à vos besoins. Nous proposons des plans de base, standard et premium pour différents types de charges de travail.
+  askVpsConfig: `⚙️ Choisissez un plan VPS en fonction de vos besoins (Facturation horaire ou mensuelle disponible) :,
   
 ${formattedConfigurations}`,
 
@@ -1131,20 +1136,27 @@ ${formattedConfigurations}`,
   configMenu: vpsOptionsOf(vpsConfigurationMenu),
 
   askForCoupon: `🎟️ Entrez un code de coupon pour bénéficier d'une réduction, ou sautez cette étape.`,
-  couponInvalid: `❌ Invalide : code invalide. Essayez à nouveau.`,
+  couponInvalid: `❌ Invalide : Code expiré, non applicable ou incorrect. Veuillez réessayer.`,
   couponValid: amt => `✅ Valide : réduction appliquée : -$${amt}.`,
   skipCouponwarning: `⚠️ Passer cette étape signifie que vous ne pourrez pas appliquer de réduction plus tard.`,
   confirmSkip: "✅ Confirmer l'ignorance",
   goBackToCoupon: '❌ Retourner et appliquer le coupon',
 
-  askVpsOS: '💻 Sélectionnez un OS (Windows Server ajoute $15/mois).',
+  askVpsOS: `💻 Sélectionnez un système d'exploitation (Windows Server ajoute 15 $/mois).
+
+<strong>💡 Recommandé : </strong>
+<strong>• Ubuntu –</strong> Idéal pour un usage général et le développement
+<strong>• CentOS –</strong> Stable pour les applications d'entreprise
+<strong>• Windows Server –</strong> Pour les applications basées sur Windows (+15 $/mois)`,
   chooseValidOS: `Veuillez sélectionner un OS valide dans la liste disponible :`,
   skipOSBtn: "❌ Passer la sélection de l'OS",
   skipOSwarning:
     '⚠️ Votre VPS sera lancé sans OS. Vous devrez en installer un manuellement via SSH ou en mode de récupération.',
 
-  askVpsCpanel:
-    '🛠️ Souhaitez-vous ajouter un panneau de contrôle pour une gestion facile du serveur ? Choisissez entre WHM, Plesk ou aucun panneau de contrôle.',
+  askVpsCpanel: `🛠️ Voulez-vous ajouter un panneau de contrôle pour une gestion simplifiée du serveur ? Choisissez entre WHM, Plesk ou aucun panneau de contrôle.
+
+Un panneau de contrôle payant ajoute 20 $/mois.`,
+
   cpanelMenu: vpsOptionsOf(vpsCpanelOptional),
   trialWHM: vpsCpanelOptional[0],
   paidWHM: vpsCpanelOptional[1],
@@ -1162,21 +1174,24 @@ ${formattedConfigurations}`,
 Veuillez contacter le support ${SUPPORT_USERNAME}.
 Découvrez-en plus sur ${TG_HANDLE}.`,
 
-  generateBillSummary: vpsDetails => `<strong>📋 Détail du coût final :</strong>
+  generateBillSummary: vpsDetails => `<strong>📋 Détail final des coûts :</strong>
 
-<strong>• VPS (${vpsPlans[vpsDetails.plan]} Plan) –</strong> $${vpsDetails.plantotalPrice}
-<strong>• Licence OS (${vpsDetails.os ? vpsDetails.os.name : 'Non sélectionné'}) –</strong> $${
+<strong>•📅 Type de disque –</strong> $${vpsDetails.diskType}
+<strong>•🖥️ Plan VPS :</strong> ${vpsConfig[vpsDetails.config.name]}
+<strong>•📅 Cycle de facturation (${vpsPlans[vpsDetails.plan]} Plan) –</strong> $${vpsDetails.plantotalPrice}
+<strong>•💻 Licence OS (${vpsDetails.os ? vpsDetails.os.name : 'Non sélectionné'}) –</strong> $${
     vpsDetails.selectedOSPrice
   }
-<strong>• Panneau de contrôle (${
+<strong>•🛠️ Panneau de contrôle (${
     vpsDetails.panel
       ? `${vpsDetails.panel.name} ${vpsDetails.panel.mode === 'paid' ? 'PAYANT' : 'ESSAI'}`
       : 'Non sélectionné'
   }) –</strong> $${vpsDetails.selectedCpanelPrice}
-<strong>• Remise coupon –</strong> -$${vpsDetails.couponDiscount}
+<strong>•🎟️ Réduction coupon –</strong> -$${vpsDetails.couponDiscount}
+
 <strong>💰 Total :</strong> $${vpsDetails.totalPrice}
 
-<strong>Voulez-vous continuer ?</strong>`,
+<strong>✅ Confirmez-vous la commande ?</strong>`,
 
   no: '❌ Annuler la commande',
   yes: '✅ Confirmer la commande',
@@ -1237,6 +1252,19 @@ ${
 
 Cordialement,
 ${CHAT_BOT_NAME}`,
+
+  askAutoRenewal: `🔄 Activer le renouvellement automatique pour un service ininterrompu ?  
+
+🛑 Vous recevrez un rappel avant le renouvellement. Vous pouvez le désactiver à tout moment.`,
+  enable: '✅ Activer',
+  skipAutoRenewalWarming: expiresAt =>
+    `⚠️ Votre VPS expirera le ${new Date(expiresAt).toLocaleDateString('fr-FR').replace(/\//g, '-')} à ${new Date(
+      expiresAt,
+    ).toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })}, et le service pourrait être interrompu.`,
 }
 
 const fr = {
