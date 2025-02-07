@@ -1303,7 +1303,6 @@ const hi = {
   selectFormatOf,
   vp,
   vpsPlanOf,
-  vpsConfigurationDetails,
   vpsCpanelOptional,
 }
 

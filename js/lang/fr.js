@@ -1321,7 +1321,6 @@ const fr = {
   selectFormatOf,
   vp,
   vpsPlanOf,
-  vpsConfigurationDetails,
   vpsCpanelOptional,
 }
 

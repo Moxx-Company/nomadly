@@ -1279,7 +1279,6 @@ const zh = {
   selectFormatOf,
   vp,
   vpsPlanOf,
-  vpsConfigurationDetails,
   vpsCpanelOptional,
 }
 
