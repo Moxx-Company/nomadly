@@ -32,7 +32,9 @@ const MONTHLY_PLAN_FREE_DOMAINS = Number(process.env.MONTHLY_PLAN_FREE_DOMAINS)
 const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
-const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) || 20
+const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) || 50
+const VPS_WINDOWS_SERVER_OS_PRICE = parseFloat(process.env.VPS_WINDOWS_SERVER_OS_PRICE)
+const VPS_CPANEL_PRICE = parseFloat(process.env.VPS_CPANEL_PRICE)
 
 const npl = {
   // New Zealand
@@ -1069,15 +1071,9 @@ const vpsPlans = {
   annually: 'Annually',
 }
 
-const vpsConfig = {
-  basic: 'Basic',
-  standard: 'Standard',
-  premium: 'Premium',
-  enterprise: 'Enterprise',
-}
 const vpsPlanMenu = ['Hourly', 'Monthly', 'Quarterly', 'Annually']
 const vpsConfigurationMenu = ['Basic', 'Standard', 'Premium', 'Enterprise']
-const vpsCpanelOptional = ['WHM (TRIAL)', 'WHM (PAID)', 'PLESK (TRIAL)', 'PLESK (PAID)', '❌ Skip Control Panel']
+const vpsCpanelOptional = ['WHM', 'Plesk', '❌ Skip Control Panel']
 
 const vpsPlanOf = {
   Hourly: 'hourly',
@@ -1086,52 +1082,11 @@ const vpsPlanOf = {
   Annually: 'annually',
 }
 
-const vpsConfigurationDetails = {
-  Basic: {
-    name: 'basic',
-    vcpuCount: '2',
-    ramGb: '4',
-    diskStorageGb: '64',
-    amountMonthly: '32',
-    amountHourly: '0.045',
-  },
-  Standard: {
-    name: 'standard',
-    vcpuCount: '4',
-    ramGb: '8',
-    diskStorageGb: '80',
-    amountMonthly: '65',
-    amountHourly: '0.09',
-  },
-  Premium: {
-    name: 'premium',
-    vcpuCount: '8',
-    ramGb: '16',
-    diskStorageGb: '160',
-    amountMonthly: '129',
-    amountHourly: '0.18',
-  },
-  Enterprise: {
-    name: 'enterprise',
-    vcpuCount: '16',
-    ramGb: '32',
-    diskStorageGb: '200',
-    amountMonthly: '256',
-    amountHourly: '0.35',
-  },
-}
-
-const formattedConfigurations = Object.entries(vpsConfigurationDetails)
-  .map(
-    ([key, { vcpuCount, ramGb, diskStorageGb, amountMonthly, amountHourly }]) =>
-      `<strong>• ${key} -</strong>  $${amountMonthly}/month ($${amountHourly}/hour) – ${vcpuCount} vCPU, ${ramGb}GB RAM, ${diskStorageGb}GB Disk`,
-  )
-  .join('\n')
-
 const vp = {
   of: vpsOptionsOf,
   back: '🔙 Back',
   skip: '❌ Skip',
+  cancel: '❌ Cancel',
 
   //region selection
   askCountryForUser: `🌍 Choose the best region for optimal performance and low latency.
@@ -1168,9 +1123,14 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
 🔹 Monthly licenses (Windows/WHM/Plesk) are billed upfront.`,
 
   // configs
-  askVpsConfig: `⚙️ Pick a VPS plan based on your needs (Hourly or Monthly billing available):
+  askVpsConfig: list => `⚙️ Pick a VPS plan based on your needs (Hourly or Monthly billing available):
   
-${formattedConfigurations}`,
+${list
+  .map(
+    config =>
+      `<strong>• ${config.name} -</strong>  $${config.monthlyPrice}/month ($${config.hourlyPrice}/hour) – ${config.specs.vCPU} vCPU, ${config.specs.RAM}GB RAM, ${config.specs.disk}GB Disk`,
+  )
+  .join('\n')}`,
   validVpsConfig: 'Please select a valid vps configuration:',
   configMenu: vpsOptionsOf(vpsConfigurationMenu),
 
@@ -1183,29 +1143,40 @@ ${formattedConfigurations}`,
   goBackToCoupon: '❌ Go Back & Apply Coupon',
 
   // os
-  askVpsOS: `💻 Select an OS (Windows Server adds $15/month).
+  askVpsOS: `💡 Default OS: Ubuntu (Linux) (if no selection is made).
+💻 Select an OS (Windows Server adds $${VPS_WINDOWS_SERVER_OS_PRICE}/month).
 
 <strong>💡 Recommended: </strong>
 <strong>• Ubuntu –</strong> Best for general use and development
 <strong>• CentOS –</strong> Stable for enterprise applications
-<strong>• Windows Server –</strong> For Windows-based applications (+$15/month)`,
+<strong>• Windows Server –</strong> For Windows-based applications (+$${VPS_WINDOWS_SERVER_OS_PRICE}/month)`,
   chooseValidOS: `Please select a valid OS from available list:`,
   skipOSBtn: '❌ Skip OS Selection',
   skipOSwarning: '⚠️ Your VPS will launch without an OS. You’ll need to install one manually via SSH or recovery mode.',
 
   // cpanel
-  askVpsCpanel: `🛠️ Would you like to add a control panel for easy server management? Choose from WHM, Plesk, or no control panel.
+  askVpsCpanel: `🛠️ Select a control panel for easier server management (optional).
 
-  Paid control panel adds $20/month.
-  `,
+<strong>• ⚙️ WHM –</strong> Recommended for hosting multiple websites
+<strong>• ⚙️ Plesk –</strong> Ideal for managing individual websites and applications
+<strong>• ❌ Skip –</strong> No control panel
+`,
   cpanelMenu: vpsOptionsOf(vpsCpanelOptional),
-  trialWHM: vpsCpanelOptional[0],
-  paidWHM: vpsCpanelOptional[1],
-  trialPlesk: vpsCpanelOptional[2],
-  paidPlesk: vpsCpanelOptional[3],
-  noControlPanel: vpsCpanelOptional[4],
+  noControlPanel: vpsCpanelOptional[2],
+  skipPanelMessage: '⚠️ No control panel will be installed. You can install one manually later.',
   validCpanel: 'Please choose a valid control panel or skip it.',
-  trialPanelWarning: panel => `ℹ️ ${panel} trial auto-renews for $20/month unless canceled.`,
+  askCpanelOtions: (name, list) => `⚙️ Choose a ${
+    name == 'whm' ? 'WHM' : 'Plesk Web Host Edition'
+  } license or select a free trial (valid for ${name == 'whm' ? '15' : '7'} days).
+
+💰 ${name == 'whm' ? 'WHM' : 'Plesk'} License Pricing:
+
+${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : ''}${item.label}`).join('\n')}`,
+  trialCpanelMessage: panel =>
+    `✅ ${panel == 'whm' ? 'WHM' : 'Plesk'} Free Trial (${
+      panel == 'whm' ? '15' : '7'
+    } days) activated. You can upgrade anytime by reaching out to support.`,
+  trialPanelWarning: panel => `ℹ️ ${panel} trial auto-renews for $${VPS_CPANEL_PRICE}/month unless canceled.`,
 
   vpsWaitingTime: '⚙️ Retrieving cost information... This will only take a moment.',
   failedCostRetrieval: 'Failied in retrieving cost information... Please try again after some time.',
@@ -1218,17 +1189,20 @@ ${formattedConfigurations}`,
   generateBillSummary: vpsDetails => `<strong>📋 Final Cost Breakdown:</strong>
 
 <strong>•📅 Disk Type –</strong> $${vpsDetails.diskType}
-<strong>•🖥️ VPS Plan:</strong> ${vpsConfig[vpsDetails.config.name]}
+<strong>•🖥️ VPS Plan:</strong> ${vpsDetails.config.name}
 <strong>•📅 Billing Cycle (${vpsPlans[vpsDetails.plan]} Plan) –</strong> $${vpsDetails.plantotalPrice}
 <strong>•💻 OS License (${vpsDetails.os ? vpsDetails.os.name : 'Not Selected'}) –</strong> $${
     vpsDetails.selectedOSPrice
   }
 <strong>•🛠️ Control Panel (${
     vpsDetails.panel
-      ? `${vpsDetails.panel.name} ${vpsDetails.panel.mode === 'paid' ? 'PAID' : 'TRIAL'}`
+      ? `${vpsDetails.panel.name == 'whm' ? 'WHM' : 'Plesk'} ${vpsDetails.panel.licenseName}`
       : 'Not Selected'
   }) –</strong> $${vpsDetails.selectedCpanelPrice}
 <strong>•🎟️ Coupon Discount –</strong> -$${vpsDetails.couponDiscount}
+<strong>•🔄 Auto-Renewal –</strong>  ${
+    vpsDetails.plan === 'hourly' || vpsDetails.autoRenewalPlan ? '✅ Enabled' : '❌ Disabled'
+  }
 
 <strong>💰 Total:</strong> $${vpsDetails.totalPrice}
 
@@ -1307,6 +1281,28 @@ ${CHAT_BOT_NAME}`,
       minute: '2-digit',
       hour12: false,
     })}, and service may be interrupted.`,
+
+  generateSSHKeyBtn: '✅ Generate New Key',
+  linkSSHKeyBtn: '🗂️ Link Existing Key',
+  skipSSHKeyBtn: '❌ Skip (Use Password Login)',
+  noExistingSSHMessage:
+    '🔑 No SSH keys detected. Would you like to generate a new SSH key for secure access, or use password login (less secure)?',
+  existingSSHMessage: '🔑 You have existing SSH keys. Choose an option:',
+  confirmSkipSSHMsg: `⚠️ Warning: Password logins are less secure and vulnerable to attacks.
+🔹 We strongly recommend using SSH keys. Are you sure you want to proceed?`,
+  confirmSkipSSHBtn: '✅ Proceed Anyway',
+  setUpSSHBtn: '🔄 Set Up SSH Key',
+  sshLinkingSkipped: '❌ SSH key linking skipped. No changes were made.',
+  newSSHKeyGeneratedMsg: name => `✅ SSH key (${name}) created.
+⚠️ Save this key securely – it can be retrieved later also.`,
+  selectSSHKey: '🗂️ Select an existing SSH key to link with your VPS:',
+  uploadNewKeyBtn: '➕ Upload New Key',
+  cancelLinkingSSHKey: `❌ SSH key linking canceled. No changes were made.`,
+  selectValidSShKey: 'Please select a valid SSH key from the list.',
+  sshKeySavedForVPS: name => `✅ SSH key ( ${name} ) will be linked to New VPS.`,
+  askToUploadSSHKey: `📤 Upload your SSH public key (.pub file) or paste the key below.`,
+  failedGeneratingSSHKey: 'Failed to generate new SSH key. Please try again or different method.',
+  newSSHKeyUploadedMsg: name => `✅ SSH key (${name}) successfully uploaded and will be linked to VPS.`,
 }
 
 const en = {
@@ -1368,7 +1364,6 @@ const en = {
   selectFormatOf,
   vp,
   vpsPlanOf,
-  vpsConfigurationDetails,
   vpsCpanelOptional,
 }
 

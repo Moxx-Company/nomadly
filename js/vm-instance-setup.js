@@ -70,24 +70,47 @@ async function fetchAvailableDiskTpes(zone) {
     }
     return false
   } catch (err) {
-    console.log('Error in fetching zone list', err?.response?.data)
+    console.log('Error in fetching Disk types', err?.response?.data)
+    return false
+  }
+}
+
+async function fetchAvailableVPSConfigs() {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/list-vps-plans`
+    let response = await axios.get(url, { headers })
+    if (response?.data?.data) {
+      return response?.data?.data.plans
+    }
+    return false
+  } catch (err) {
+    console.log('Error in fetching VPS config types', err?.response?.data)
     return false
   }
 }
 
 async function calculateVpsInstanceCost(payload) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/cost/vm/instance?region=${payload.region}&vcpuCount=${payload.config.vcpuCount}&memoryGb=${payload.config.ramGb}&diskType=${payload.diskType}&diskSizeGb=${payload.config.diskStorageGb}&preemptible=false`
+    const url = `${NAMEWORD_BASE_URL}/cost/vm/instance?region=${payload.region}&vcpuCount=${payload.config.specs.vCPU}&memoryGb=${payload.config.specs.RAM}&diskType=${payload.diskType}&diskSizeGb=${payload.config.specs.disk}&preemptible=false`
     let response = await axios.get(url, { headers })
     if (response?.data?.data) {
-      console.log(response?.data.data)
       return response?.data.data
     }
     return false
   } catch (err) {
-    console.log('Error in fetching zone list', err?.response?.data)
+    console.log('Error in fetching instance cost', err?.response?.data)
     return false
   }
+}
+
+function generateRandomVpsName() {
+  const randomSuffix = Math.random().toString(36).substr(2, 12)
+  return `vm-instance-${randomSuffix}`
+}
+
+function generateRandomSSHName() {
+  const randomSuffix = Math.random().toString(36).substr(2, 12)
+  return `ssh-key-${randomSuffix}`
 }
 
 function generateBilingCost(data, plan) {
@@ -114,9 +137,9 @@ function generateBilingCost(data, plan) {
   return parseFloat(totalCost.toFixed(2))
 }
 
-async function fetchAvailableOS() {
+async function fetchSelectedCpanelOptions(cpanel) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/list-os`
+    let url = `${NAMEWORD_BASE_URL}/vm/${cpanel.name}`
 
     let response = await axios.get(url, { headers })
     if (response?.data?.data) {
@@ -124,22 +147,117 @@ async function fetchAvailableOS() {
     }
     return false
   } catch (err) {
-    console.log('Error in fetching zone list', err?.response?.data)
+    console.log('Error in fetching seleted cpanel options', err?.response?.data)
     return false
   }
 }
 
-function generateRandomVpsName() {
-  const randomSuffix = Math.random().toString(36).substr(2, 12)
-  return `vm-instance-${randomSuffix}`
+async function fetchAvailableOS(cpanel) {
+  try {
+    let url = `${NAMEWORD_BASE_URL}/list-os`
+    if (cpanel) {
+      url += `?cPanel=${cpanel.name}`
+    }
+
+    let response = await axios.get(url, { headers })
+    if (response?.data?.data) {
+      return response?.data?.data
+    }
+    return false
+  } catch (err) {
+    console.log('Error in fetching available OS', err?.response?.data)
+    return false
+  }
 }
 
-async function createVPSInstance(vpsDetails) {
+async function registerVpsTelegram(telegramId, email) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/auth/register-telegram-user`
+
+    let response = await axios.post(
+      url,
+      {
+        email,
+        telegramId,
+      },
+      { headers },
+    )
+    if (response?.data?.data) {
+      return response?.data?.data
+    }
+    return false
+  } catch (err) {
+    console.log('Error in registering user', err?.response?.data)
+    return false
+  }
+}
+
+async function fetchUserSSHkeyList(telegramId) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/ssh/retrieve-All?telegramId=${telegramId}`
+
+    let response = await axios.get(url, { headers })
+    if (response?.data?.data) {
+      return response?.data?.data
+    }
+    return false
+  } catch (err) {
+    console.log('Error in fetching user ssh key list', err?.response?.data)
+    return false
+  }
+}
+
+async function generateNewSSSkey(telegramId, sshName) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/ssh/generate`
+
+    let response = await axios.post(
+      url,
+      {
+        telegramId,
+        sshKeyName: sshName ? sshName : generateRandomSSHName(),
+      },
+      { headers },
+    )
+    if (response?.data) {
+      return response?.data
+    }
+    return false
+  } catch (err) {
+    console.log('Error in generating user ssh key', err?.response?.data)
+    return false
+  }
+}
+
+async function uploadSSHPublicKey(telegramId, key, sshName) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/ssh/generate`
+
+    let response = await axios.post(
+      url,
+      {
+        telegramId,
+        sshKeyName: sshName ? sshName : generateRandomSSHName(),
+        publicKey: key,
+      },
+      { headers },
+    )
+    if (response?.data) {
+      return response?.data
+    }
+    return false
+  } catch (err) {
+    console.log('Error in uploading SSH Public key', err?.response?.data)
+    return false
+  }
+}
+
+async function createVPSInstance(telegramId, vpsDetails) {
   try {
     const url = `${NAMEWORD_BASE_URL}/create/vm/instance`
     let payload = {
       name: generateRandomVpsName(),
-      diskSizeGB: vpsDetails.config.diskStorageGb,
+      diskSizeGB: vpsDetails.config.specs.disk,
       autoDelete: true,
       boot: true,
       diskType: vpsDetails.diskType,
@@ -147,9 +265,17 @@ async function createVPSInstance(vpsDetails) {
       networkName: 'global/networks/default',
       googleConsoleProjectId: VM_PROJECT_ID,
       zone: vpsDetails.zone,
+      telegramId: telegramId,
+      autoRenewable: vpsDetails.plan === 'hourly' ? true : vpsDetails.autoRenewalPlan,
+      plan: vpsDetails.config.name,
+      vCPUs: vpsDetails.config.specs.vCPU,
+      RAM: vpsDetails.config.specs.RAM,
+      // sourceImage: vpsDetails.os.sourceImage,
+      os: vpsDetails.os.value,
     }
-    if (vpsDetails.os) {
-      payload.sourceImage = vpsDetails.os.sourceImage
+    if (vpsDetails.panel) {
+      payload.cPanel = vpsDetails.panel.name
+      payload.license = vpsDetails.panel.license
     }
     const response = await axios.post(url, payload, { headers })
     if (response?.data?.data) {
@@ -310,8 +436,8 @@ const calculatePriceForVPS = (amountPerMonth, plan) => {
   let price
   switch (plan) {
     case 'hourly':
-      const totalHours = 30 * 24; // 30 days * 24 hours per day
-      price = (amountPerMonth / totalHours).toFixed(2);
+      const totalHours = 30 * 24 // 30 days * 24 hours per day
+      price = (amountPerMonth / totalHours).toFixed(2)
       break
     case 'monthly':
       price = amountPerMonth
@@ -340,5 +466,11 @@ module.exports = {
   generateBilingCost,
   fetchAvailableDiskTpes,
   fetchAvailableOS,
-  calculatePriceForVPS
+  calculatePriceForVPS,
+  registerVpsTelegram,
+  fetchUserSSHkeyList,
+  generateNewSSSkey,
+  uploadSSHPublicKey,
+  fetchAvailableVPSConfigs,
+  fetchSelectedCpanelOptions,
 }

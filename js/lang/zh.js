@@ -32,7 +32,9 @@ const APP_SUPPORT_LINK = process.env.APP_SUPPORT_LINK
 const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
-const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) || 20
+const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) || 50
+const VPS_WINDOWS_SERVER_OS_PRICE = parseFloat(process.env.VPS_WINDOWS_SERVER_OS_PRICE)
+const VPS_CPANEL_PRICE = parseFloat(process.env.VPS_CPANEL_PRICE)
 
 const npl = {
   // New Zealand
@@ -994,16 +996,9 @@ const vpsPlans = {
   annually: '每年',
 }
 
-const vpsConfig = {
-  basic: '基本',
-  standard: '标准',
-  premium: '高级',
-  enterprise: '企业',
-}
-
 const vpsPlanMenu = ['按小时', '每月', '季度', '每年']
 const vpsConfigurationMenu = ['基本', '标准', '高级', '企业']
-const vpsCpanelOptional = ['WHM（试用）', 'WHM（付费）', 'PLESK（试用）', 'PLESK（付费）', '❌ 跳过控制面板']
+const vpsCpanelOptional = ['WHM', 'Plesk', '❌ 跳过控制面板']
 
 const vpsPlanOf = {
   按小时: 'hourly',
@@ -1012,52 +1007,11 @@ const vpsPlanOf = {
   每年: 'annually',
 }
 
-const vpsConfigurationDetails = {
-  基本: {
-    name: 'basic',
-    vcpuCount: '2',
-    ramGb: '4',
-    diskStorageGb: '64',
-    amountMonthly: '32',
-    amountHourly: '0.045',
-  },
-  标准: {
-    name: 'standard',
-    vcpuCount: '4',
-    ramGb: '8',
-    diskStorageGb: '80',
-    amountMonthly: '65',
-    amountHourly: '0.09',
-  },
-  高级: {
-    name: 'premium',
-    vcpuCount: '8',
-    ramGb: '16',
-    diskStorageGb: '160',
-    amountMonthly: '129',
-    amountHourly: '0.18',
-  },
-  企业: {
-    name: 'enterprise',
-    vcpuCount: '16',
-    ramGb: '32',
-    diskStorageGb: '200',
-    amountMonthly: '256',
-    amountHourly: '0.35',
-  },
-}
-
-const formattedConfigurations = Object.entries(vpsConfigurationDetails)
-  .map(
-    ([key, { vcpuCount, ramGb, diskStorageGb, amountMonthly, amountHourly }]) =>
-      `<strong>• ${key} -</strong>  $${amountMonthly}/月 ($${amountHourly}/小时) – ${vcpuCount} vCPU, ${ramGb}GB 内存, ${diskStorageGb}GB 硬盘`,
-  )
-  .join('\n')
-
 const vp = {
   of: vpsOptionsOf,
   back: '🔙 返回',
   skip: '❌ 跳过',
+  cancel: '❌ 取消',
 
   askCountryForUser: `🌍 选择最佳区域，以获得最佳性能和最低延迟。
 
@@ -1092,9 +1046,14 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
 🔹 月度许可证（Windows/WHM/Plesk）需提前支付。`,
 
   // 配置
-  askVpsConfig: `⚙️ 根据您的需求选择 VPS 方案（支持按小时或按月计费）：
+  askVpsConfig: list => `⚙️ 根据您的需求选择 VPS 计划（提供按小时或按月计费）：
   
-${formattedConfigurations}`,
+${list
+  .map(
+    config =>
+      `<strong>• ${config.name} -</strong>  $${config.monthlyPrice}/月 ($${config.hourlyPrice}/小时) – ${config.specs.vCPU} vCPU, ${config.specs.RAM}GB 内存, ${config.specs.disk}GB 硬盘`,
+  )
+  .join('\n')}`,
 
   validVpsConfig: '请选择一个有效的VPS配置：',
 
@@ -1107,27 +1066,42 @@ ${formattedConfigurations}`,
   confirmSkip: '✅ 确认跳过',
   goBackToCoupon: '❌ 返回并应用优惠券',
 
-  askVpsOS: `💻 选择操作系统（Windows Server 额外收费 $15/月）。  
+  askVpsOS: `💡 默认操作系统：Ubuntu（Linux）（如果未进行选择）。
+💻 选择操作系统（Windows Server 额外收费 $${VPS_WINDOWS_SERVER_OS_PRICE}/月）。  
 
 <strong>💡 推荐: </strong>  
 <strong>• Ubuntu –</strong> 适用于常规使用和开发  
 <strong>• CentOS –</strong> 适用于企业级应用，稳定可靠  
-<strong>• Windows Server –</strong> 适用于基于 Windows 的应用（+$15/月）`,
+<strong>• Windows Server –</strong> 适用于基于 Windows 的应用（+$${VPS_WINDOWS_SERVER_OS_PRICE}/月）`,
   chooseValidOS: `请选择可用列表中的有效操作系统：`,
   skipOSBtn: '❌ 跳过操作系统选择',
   skipOSwarning: '⚠️ 您的VPS将没有操作系统启动。您需要通过SSH或恢复模式手动安装一个。',
 
-  askVpsCpanel: `🛠️ 是否需要添加控制面板以便轻松管理服务器？可选择 WHM、Plesk 或不使用控制面板。
+  askVpsCpanel: `🛠️ 选择控制面板以更轻松地管理服务器（可选.
 
-付费控制面板额外收费 $20/月。`,
+<strong>• ⚙️ WHM –</strong> 推荐用于托管多个网站
+<strong>• ⚙️ Plesk –</strong> 适用于管理个人网站和应用程序
+<strong>• ❌ 跳过 –</strong> 不安装控制面板`,
+
   cpanelMenu: vpsOptionsOf(vpsCpanelOptional),
-  trialWHM: vpsCpanelOptional[0],
-  paidWHM: vpsCpanelOptional[1],
-  trialPlesk: vpsCpanelOptional[2],
-  paidPlesk: vpsCpanelOptional[3],
-  noControlPanel: vpsCpanelOptional[4],
-  validCpanel: '请选择一个有效的控制面板或跳过此步骤。',
-  trialPanelWarning: panel => `ℹ️ ${panel} 的试用会自动续订，每月$20，除非取消。`,
+  noControlPanel: vpsCpanelOptional[2],
+  skipPanelMessage: '⚠️ 将不会安装控制面板。您可以稍后手动安装。',
+  validCpanel: '请选择一个有效的控制面板或跳过。',
+
+  askCpanelOtions: (name, list) => `⚙️ 选择 ${
+    name == 'whm' ? 'WHM' : 'Plesk Web Host Edition'
+  } 许可证，或选择免费试用（有效期 ${name == 'whm' ? '15' : '7'} 天）。
+  
+💰 ${name == 'whm' ? 'WHM' : 'Plesk'} 许可证定价：
+
+${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : ''}${item.label}`).join('\n')}`,
+
+  trialCpanelMessage: panel =>
+    `✅ ${panel == 'whm' ? 'WHM' : 'Plesk'} 免费试用（${
+      panel == 'whm' ? '15' : '7'
+    } 天）已激活。您可以随时联系支持进行升级。`,
+
+  trialPanelWarning: panel => `ℹ️ ${panel} 试用期将自动续订，每月 $${VPS_CPANEL_PRICE}，除非取消。`,
 
   vpsWaitingTime: '⚙️ 正在获取成本信息... 这将只需片刻。',
   failedCostRetrieval: '获取成本信息失败... 请稍后再试。',
@@ -1139,18 +1113,21 @@ ${formattedConfigurations}`,
 
   generateBillSummary: vpsDetails => `<strong>📋 最终费用明细：</strong>
 
-<strong>•📅 磁盘类型 –</strong> $${vpsDetails.diskType}
-<strong>•🖥️ VPS 方案：</strong> ${vpsConfig[vpsDetails.config.name]}
+<strong>•📅 硬盘类型 –</strong> $${vpsDetails.diskType}
+<strong>•🖥️ VPS 方案：</strong> ${vpsDetails.config.name}
 <strong>•📅 计费周期（${vpsPlans[vpsDetails.plan]} 方案） –</strong> $${vpsDetails.plantotalPrice}
 <strong>•💻 操作系统许可证 (${vpsDetails.os ? vpsDetails.os.name : '未选择'}) –</strong> $${vpsDetails.selectedOSPrice}
 <strong>•🛠️ 控制面板 (${
-    vpsDetails.panel ? `${vpsDetails.panel.name} ${vpsDetails.panel.mode === 'paid' ? '付费' : '试用'}` : '未选择'
+    vpsDetails.panel ? `${vpsDetails.panel.name == 'whm' ? 'WHM' : 'Plesk'} ${vpsDetails.panel.licenseName}` : '未选择'
   }) –</strong> $${vpsDetails.selectedCpanelPrice}
 <strong>•🎟️ 优惠券折扣 –</strong> -$${vpsDetails.couponDiscount}
+<strong>•🔄 自动续订 –</strong>  ${
+    vpsDetails.plan === 'hourly' || vpsDetails.autoRenewalPlan ? '✅ 已启用' : '❌ 未启用'
+  }
 
 <strong>💰 总计：</strong> $${vpsDetails.totalPrice}
 
-<strong>✅ 是否确认下单？</strong>`,
+<strong>✅ 是否继续下单？</strong>`,
 
   no: '❌ 取消订单',
   yes: '✅ 确认订单',
@@ -1220,6 +1197,27 @@ ${CHAT_BOT_NAME}`,
       minute: '2-digit',
       hour12: false,
     })} 到期，服务可能会中断。`,
+
+  generateSSHKeyBtn: '✅ 生成新密钥',
+  linkSSHKeyBtn: '🗂️ 关联现有密钥',
+  skipSSHKeyBtn: '❌ 跳过（使用密码登录）',
+  noExistingSSHMessage: '🔑 未检测到 SSH 密钥。您想生成新的 SSH 密钥以确保安全访问，还是使用密码登录（安全性较低）？',
+  existingSSHMessage: '🔑 您已有 SSH 密钥。请选择一个选项：',
+  confirmSkipSSHMsg: `⚠️ 警告：密码登录的安全性较低，容易受到攻击。
+🔹 我们强烈建议使用 SSH 密钥。您确定要继续吗？`,
+  confirmSkipSSHBtn: '✅ 仍然继续',
+  setUpSSHBtn: '🔄 设置 SSH 密钥',
+  sshLinkingSkipped: '❌ SSH 密钥关联已跳过，未进行任何更改。',
+  newSSHKeyGeneratedMsg: name => `✅ SSH 密钥（${name}）已创建。
+⚠️ 请妥善保存此密钥 – 以后可以再次检索。`,
+  selectSSHKey: '🗂️ 选择一个现有的 SSH 密钥以关联到您的 VPS：',
+  uploadNewKeyBtn: '➕ 上传新密钥',
+  cancelLinkingSSHKey: `❌ SSH 密钥关联已取消，未进行任何更改。`,
+  selectValidSShKey: '请选择列表中的有效 SSH 密钥。',
+  sshKeySavedForVPS: name => `✅ SSH 密钥（${name}）将关联到新的 VPS。`,
+  askToUploadSSHKey: `📤 请上传您的 SSH 公钥（.pub 文件）或在下方粘贴密钥。`,
+  failedGeneratingSSHKey: '无法生成新的 SSH 密钥。请重试或使用其他方法。',
+  newSSHKeyUploadedMsg: name => `✅ SSH 密钥（${name}）已成功上传并将关联到 VPS。`,
 }
 
 const zh = {

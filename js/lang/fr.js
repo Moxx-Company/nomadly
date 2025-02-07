@@ -32,7 +32,9 @@ const MONTHLY_PLAN_FREE_DOMAINS = Number(process.env.MONTHLY_PLAN_FREE_DOMAINS)
 const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
-const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) || 20
+const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) || 50
+const VPS_WINDOWS_SERVER_OS_PRICE = parseFloat(process.env.VPS_WINDOWS_SERVER_OS_PRICE)
+const VPS_CPANEL_PRICE = parseFloat(process.env.VPS_CPANEL_PRICE)
 
 const npl = {
   // New Zealand
@@ -1024,13 +1026,6 @@ const vpsPlans = {
   annually: 'Annuel',
 }
 
-const vpsConfig = {
-  basic: 'De base',
-  standard: 'Standard',
-  premium: 'Premium',
-  enterprise: 'Entreprise',
-}
-
 const vpsPlanOf = {
   "À l'heure": 'hourly',
   Mensuel: 'monthly',
@@ -1040,60 +1035,13 @@ const vpsPlanOf = {
 
 const vpsPlanMenu = ["À l'heure", 'Mensuel', 'Trimestriel', 'Annuel']
 const vpsConfigurationMenu = ['De base', 'Standard', 'Premium', 'Entreprise']
-const vpsCpanelOptional = [
-  'WHM (ESSAI)',
-  'WHM (PAYÉ)',
-  'PLESK (ESSAI)',
-  'PLESK (PAYÉ)',
-  '❌ Passer le panneau de contrôle',
-]
-
-const vpsConfigurationDetails = {
-  'De base': {
-    name: 'basic',
-    vcpuCount: '2',
-    ramGb: '4',
-    diskStorageGb: '64',
-    amountMonthly: '32',
-    amountHourly: '0.045',
-  },
-  Standard: {
-    name: 'standard',
-    vcpuCount: '4',
-    ramGb: '8',
-    diskStorageGb: '80',
-    amountMonthly: '65',
-    amountHourly: '0.09',
-  },
-  Premium: {
-    name: 'premium',
-    vcpuCount: '8',
-    ramGb: '16',
-    diskStorageGb: '160',
-    amountMonthly: '129',
-    amountHourly: '0.18',
-  },
-  Entreprise: {
-    name: 'enterprise',
-    vcpuCount: '16',
-    ramGb: '32',
-    diskStorageGb: '200',
-    amountMonthly: '256',
-    amountHourly: '0.35',
-  },
-}
-
-const formattedConfigurations = Object.entries(vpsConfigurationDetails)
-  .map(
-    ([key, { vcpuCount, ramGb, diskStorageGb, amountMonthly, amountHourly }]) =>
-      `<strong>• ${key} -</strong>  $${amountMonthly}/mois ($${amountHourly}/heure) – ${vcpuCount} vCPU, ${ramGb}Go RAM, ${diskStorageGb}Go Disque`,
-  )
-  .join('\n')
+const vpsCpanelOptional = ['WHM', 'Plesk', '❌ Passer le panneau de contrôle']
 
 const vp = {
   of: vpsOptionsOf,
   back: '🔙 Retour',
   skip: '❌ Passer',
+  cancel: '❌ Annuler',
 
   askCountryForUser: `🌍 Choisissez la meilleure région pour des performances optimales et une faible latence.
 
@@ -1127,9 +1075,15 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
 ✅ La facturation est déduite du solde de votre portefeuille chaque heure.
 🔹 Les licences mensuelles (Windows/WHM/Plesk) sont facturées à l'avance.`,
 
-  askVpsConfig: `⚙️ Choisissez un plan VPS en fonction de vos besoins (Facturation horaire ou mensuelle disponible) :,
+  askVpsConfig:
+    list => `⚙️ Choisissez un plan VPS en fonction de vos besoins (Facturation à l'heure ou au mois disponible) :
   
-${formattedConfigurations}`,
+${list
+  .map(
+    config =>
+      `<strong>• ${config.name} -</strong>  $${config.monthlyPrice}/mois ($${config.hourlyPrice}/heure) – ${config.specs.vCPU} vCPU, ${config.specs.RAM}GB RAM, ${config.specs.disk}GB Disque`,
+  )
+  .join('\n')}`,
 
   validVpsConfig: 'Veuillez sélectionner une configuration VPS valide :',
 
@@ -1142,29 +1096,44 @@ ${formattedConfigurations}`,
   confirmSkip: "✅ Confirmer l'ignorance",
   goBackToCoupon: '❌ Retourner et appliquer le coupon',
 
-  askVpsOS: `💻 Sélectionnez un système d'exploitation (Windows Server ajoute 15 $/mois).
+  askVpsOS: `💡 Système d'exploitation par défaut : Ubuntu (Linux) (si aucune sélection n'est effectuée).
+💻 Sélectionnez un système d'exploitation (Windows Server ajoute ${VPS_WINDOWS_SERVER_OS_PRICE} $/mois).
 
 <strong>💡 Recommandé : </strong>
 <strong>• Ubuntu –</strong> Idéal pour un usage général et le développement
 <strong>• CentOS –</strong> Stable pour les applications d'entreprise
-<strong>• Windows Server –</strong> Pour les applications basées sur Windows (+15 $/mois)`,
+<strong>• Windows Server –</strong> Pour les applications basées sur Windows (+${VPS_WINDOWS_SERVER_OS_PRICE} $/mois)`,
   chooseValidOS: `Veuillez sélectionner un OS valide dans la liste disponible :`,
   skipOSBtn: "❌ Passer la sélection de l'OS",
   skipOSwarning:
     '⚠️ Votre VPS sera lancé sans OS. Vous devrez en installer un manuellement via SSH ou en mode de récupération.',
 
-  askVpsCpanel: `🛠️ Voulez-vous ajouter un panneau de contrôle pour une gestion simplifiée du serveur ? Choisissez entre WHM, Plesk ou aucun panneau de contrôle.
+  askVpsCpanel: `🛠️ Sélectionnez un panneau de contrôle pour une gestion plus facile du serveur (optionnel).
 
-Un panneau de contrôle payant ajoute 20 $/mois.`,
+<strong>• ⚙️ WHM –</strong> Recommandé pour l'hébergement de plusieurs sites web
+<strong>• ⚙️ Plesk –</strong> Idéal pour gérer des sites et applications individuels
+<strong>• ❌ Ignorer –</strong> Aucun panneau de contrôle`,
 
   cpanelMenu: vpsOptionsOf(vpsCpanelOptional),
-  trialWHM: vpsCpanelOptional[0],
-  paidWHM: vpsCpanelOptional[1],
-  trialPlesk: vpsCpanelOptional[2],
-  paidPlesk: vpsCpanelOptional[3],
-  noControlPanel: vpsCpanelOptional[4],
-  validCpanel: 'Veuillez choisir un panneau de contrôle valide ou le sauter.',
-  trialPanelWarning: panel => `ℹ️ L'essai de ${panel} se renouvelle automatiquement pour $20/mois sauf si annulé.`,
+  noControlPanel: vpsCpanelOptional[2],
+  skipPanelMessage: '⚠️ Aucun panneau de contrôle ne sera installé. Vous pourrez en ajouter un manuellement plus tard.',
+  validCpanel: 'Veuillez choisir un panneau de contrôle valide ou l’ignorer.',
+
+  askCpanelOtions: (name, list) => `⚙️ Choisissez une ${
+    name == 'whm' ? 'WHM' : 'Plesk Web Host Edition'
+  } licence ou sélectionnez un essai gratuit (valable ${name == 'whm' ? '15' : '7'} jours).
+
+💰 Tarification de la licence ${name == 'whm' ? 'WHM' : 'Plesk'} :
+
+${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : ''}${item.label}`).join('\n')}`,
+
+  trialCpanelMessage: panel =>
+    `✅ ${panel == 'whm' ? 'WHM' : 'Plesk'} Essai gratuit (${
+      panel == 'whm' ? '15' : '7'
+    } jours) activé. Vous pouvez passer à une version payante à tout moment en contactant le support.`,
+
+  trialPanelWarning: panel =>
+    `ℹ️ L'essai de ${panel} se renouvelle automatiquement pour $${VPS_CPANEL_PRICE}/mois sauf annulation.`,
 
   vpsWaitingTime: "⚙️ Récupération des informations de coût... Cela ne prendra qu'un instant.",
   failedCostRetrieval: 'Échec de la récupération des informations de coût... Veuillez réessayer après un moment.',
@@ -1177,21 +1146,24 @@ Découvrez-en plus sur ${TG_HANDLE}.`,
   generateBillSummary: vpsDetails => `<strong>📋 Détail final des coûts :</strong>
 
 <strong>•📅 Type de disque –</strong> $${vpsDetails.diskType}
-<strong>•🖥️ Plan VPS :</strong> ${vpsConfig[vpsDetails.config.name]}
+<strong>•🖥️ Plan VPS :</strong> ${vpsDetails.config.name}
 <strong>•📅 Cycle de facturation (${vpsPlans[vpsDetails.plan]} Plan) –</strong> $${vpsDetails.plantotalPrice}
 <strong>•💻 Licence OS (${vpsDetails.os ? vpsDetails.os.name : 'Non sélectionné'}) –</strong> $${
     vpsDetails.selectedOSPrice
   }
 <strong>•🛠️ Panneau de contrôle (${
     vpsDetails.panel
-      ? `${vpsDetails.panel.name} ${vpsDetails.panel.mode === 'paid' ? 'PAYANT' : 'ESSAI'}`
+      ? `${vpsDetails.panel.name == 'whm' ? 'WHM' : 'Plesk'} ${vpsDetails.panel.licenseName}`
       : 'Non sélectionné'
   }) –</strong> $${vpsDetails.selectedCpanelPrice}
-<strong>•🎟️ Réduction coupon –</strong> -$${vpsDetails.couponDiscount}
+<strong>•🎟️ Remise coupon –</strong> -$${vpsDetails.couponDiscount}
+<strong>•🔄 Renouvellement automatique –</strong>  ${
+    vpsDetails.plan === 'hourly' || vpsDetails.autoRenewalPlan ? '✅ Activé' : '❌ Désactivé'
+  }
 
 <strong>💰 Total :</strong> $${vpsDetails.totalPrice}
 
-<strong>✅ Confirmez-vous la commande ?</strong>`,
+<strong>✅ Procéder à la commande ?</strong>`,
 
   no: '❌ Annuler la commande',
   yes: '✅ Confirmer la commande',
@@ -1265,6 +1237,29 @@ ${CHAT_BOT_NAME}`,
       minute: '2-digit',
       hour12: false,
     })}, et le service pourrait être interrompu.`,
+
+  generateSSHKeyBtn: '✅ Générer une nouvelle clé',
+  linkSSHKeyBtn: '🗂️ Lier une clé existante',
+  skipSSHKeyBtn: '❌ Ignorer (Utiliser la connexion par mot de passe)',
+  noExistingSSHMessage:
+    '🔑 Aucune clé SSH détectée. Souhaitez-vous générer une nouvelle clé SSH pour un accès sécurisé, ou utiliser la connexion par mot de passe (moins sécurisée) ?',
+  existingSSHMessage: '🔑 Vous avez des clés SSH existantes. Choisissez une option :',
+  confirmSkipSSHMsg: `⚠️ Avertissement : Les connexions par mot de passe sont moins sécurisées et vulnérables aux attaques.
+  🔹 Nous vous recommandons fortement d'utiliser des clés SSH. Êtes-vous sûr de vouloir continuer ?`,
+  confirmSkipSSHBtn: '✅ Continuer quand même',
+  setUpSSHBtn: '🔄 Configurer la clé SSH',
+  sshLinkingSkipped: '❌ Liaison de clé SSH ignorée. Aucun changement effectué.',
+  newSSHKeyGeneratedMsg: name => `✅ Clé SSH (${name}) créée.
+⚠️ Enregistrez cette clé en toute sécurité – elle peut être récupérée plus tard.`,
+  selectSSHKey: '🗂️ Sélectionnez une clé SSH existante à lier à votre VPS :',
+  uploadNewKeyBtn: '➕ Télécharger une nouvelle clé',
+  cancelLinkingSSHKey: `❌ Liaison de clé SSH annulée. Aucun changement effectué.`,
+  selectValidSShKey: 'Veuillez sélectionner une clé SSH valide dans la liste.',
+  sshKeySavedForVPS: name => `✅ La clé SSH (${name}) sera liée au nouveau VPS.`,
+  askToUploadSSHKey: `📤 Téléchargez votre clé publique SSH (.pub) ou collez la clé ci-dessous.`,
+  failedGeneratingSSHKey:
+    'Échec de la génération d’une nouvelle clé SSH. Veuillez réessayer ou utiliser une autre méthode.',
+  newSSHKeyUploadedMsg: name => `✅ Clé SSH (${name}) téléchargée avec succès et sera liée au VPS.`,
 }
 
 const fr = {

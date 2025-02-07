@@ -95,8 +95,15 @@ const {
   generateBilingCost,
   fetchAvailableDiskTpes,
   fetchAvailableOS,
-  calculatePriceForVPS
+  calculatePriceForVPS,
+  registerVpsTelegram,
+  fetchUserSSHkeyList,
+  generateNewSSSkey,
+  uploadSSHPublicKey,
+  fetchAvailableVPSConfigs,
+  fetchSelectedCpanelOptions
 } = require('./vm-instance-setup.js')
+const { console } = require('inspector')
 
 process.env['NTBA_FIX_350'] = 1
 const DB_NAME = process.env.DB_NAME
@@ -125,6 +132,8 @@ const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVW
 const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
+const VPS_WINDOWS_SERVER_OS_PRICE = parseFloat(process.env.VPS_WINDOWS_SERVER_OS_PRICE)
+const VPS_CPANEL_PRICE = parseFloat(process.env.VPS_CPANEL_PRICE)
 
 if (!DB_NAME || !RATE_LEAD_VALIDATOR || !HOSTED_ON || !TELEGRAM_BOT_ON || !REST_APIS_ON || !CHAT_BOT_NAME) {
   return log('Service is paused because some ENV variable is missing')
@@ -481,9 +490,14 @@ bot?.on('message', async msg => {
     askVPSPlanAutoRenewal: 'askVPSPlanAutoRenewal',
     askVpsOS: 'askVpsOS',
     askVpsCpanel: 'askVpsCpanel',
+    askVpsCpanelLicense: 'askVpsCpanelLicense',
     askCouponForVPSPlan: 'askCouponForVPSPlan',
     skipCouponVps: 'skipCouponVps',
     askVpsDiskType: 'askVpsDiskType',
+    vpsAskSSHKey: 'vpsAskSSHKey',
+    vpsLinkSSHKey: 'vpsLinkSSHKey',
+    askUploadSSHPublicKey: 'askUploadSSHPublicKey',
+    askSkipSSHkeyconfirmation: 'askSkipSSHkeyconfirmation',
     proceedWithVpsPayment: 'proceedWithVpsPayment'
   }
 
@@ -1172,9 +1186,13 @@ bot?.on('message', async msg => {
       return send(chatId, vp.askVpsDiskType(diskTypes), vp.of(diskList))
     },
    
-    askVpsConfig: () => {
+    askVpsConfig: async () => {
       set(state, chatId, 'action', a.askVpsConfig)
-      return send(chatId, vp.askVpsConfig, vp.configMenu)  
+      const configTypes = await fetchAvailableVPSConfigs()
+      if (!configTypes) return send(chatId, vp.failedFetchingData, trans('o'))
+      const configList = configTypes.map((item) => item.name)
+      saveInfo('vpsConfigTypes', configTypes)
+      return send(chatId, vp.askVpsConfig(configTypes), vp.of(configList))  
     },
 
     askUserVpsPlan: () => {
@@ -1198,18 +1216,66 @@ bot?.on('message', async msg => {
       return send(chatId, vp.askAutoRenewal, vp.of([vp.enable, vp.skip]))  
     },
 
+    askVpsCpanel: () => {
+      set(state, chatId, 'action', a.askVpsCpanel)
+      return send(chatId, vp.askVpsCpanel, vp.cpanelMenu)
+    },
+
+    askVpsCpanelLicense: async () => {
+      set(state, chatId, 'action', a.askVpsCpanelLicense)
+      const licenseData = await fetchSelectedCpanelOptions(info.vpsDetails.panel)
+      if (!licenseData) return send(chatId, vp.failedFetchingData, trans('o'))
+      saveInfo('vpsSelectedPanelOptions', licenseData)
+      const list = licenseData.map((item) => item.name)
+      return send(chatId, vp.askCpanelOtions(info.vpsDetails.panel.name, licenseData), vp.of(list))
+    },
+
     askVpsOS: async () => {
       set(state, chatId, 'action', a.askVpsOS)
-      const osData = await fetchAvailableOS()
+      const osData = await fetchAvailableOS(info.vpsDetails.panel)
       if (!osData) return send(chatId, vp.failedFetchingData, trans('o'))
       const osList = osData.map((item) => item.name)
       saveInfo('vpsOSList', osData)
       return send(chatId, vp.askVpsOS, vp.of([...osList, vp.skipOSBtn]))
     },
 
-    askVpsCpanel: () => {
-      set(state, chatId, 'action', a.askVpsCpanel)
-      return send(chatId, vp.askVpsCpanel, vp.cpanelMenu)
+    vpsAskSSHKey: async () => {
+      set(state, chatId, 'action', a.vpsAskSSHKey)
+      let list = []
+      if (!info.isRegisteredTelegramForVps) {
+        const result = await registerVpsTelegram(chatId, info?.userEmail)
+        if (result) {
+          saveInfo('isRegisteredTelegramForVps', true)
+          info.isRegisteredTelegramForVps = true
+        }
+      } else {
+        const sshKeyList = await fetchUserSSHkeyList(chatId)
+        if (sshKeyList && sshKeyList.keys.length) {
+          list = sshKeyList.keys.map((key) => key.sshKeyName)
+          let vpsDetails = info.vpsDetails
+          vpsDetails.hasSSHKey = true
+          saveInfo('vpsDetails', vpsDetails)
+          saveInfo('vpsSSHKeysList', list)
+        }
+      }
+      return list.length ? 
+        send(chatId, vp.existingSSHMessage, vp.of([vp.generateSSHKeyBtn, vp.linkSSHKeyBtn, vp.skipSSHKeyBtn]))
+        : send(chatId, vp.noExistingSSHMessage, vp.of([vp.generateSSHKeyBtn, vp.skipSSHKeyBtn]))
+    },
+
+    vpsLinkSSHKey: () => {
+      set(state, chatId, 'action', a.vpsLinkSSHKey)
+      return send(chatId, vp.selectSSHKey, vp.of([...info.vpsSSHKeysList, vp.uploadNewKeyBtn, vp.cancel]))
+    },
+
+    askSkipSSHkeyconfirmation: () => {
+      set(state, chatId, 'action', a.askSkipSSHkeyconfirmation)
+      return send(chatId, vp.confirmSkipSSHMsg, vp.of([vp.confirmSkipSSHBtn, vp.setUpSSHBtn]))
+    },
+
+    askUploadSSHPublicKey : () => {
+      set(state, chatId, 'action', a.askUploadSSHPublicKey)
+      return send(chatId, vp.askToUploadSSHKey, vp.of([]))
     },
 
     vpsAskPaymentConfirmation: () => {
@@ -1317,7 +1383,7 @@ bot?.on('message', async msg => {
     },
     'vps-plan-pay': async coin => {
       set(state, chatId, 'action', 'none')
-      const price = info?.vpsDetails.totalPrice
+      const price = Number(info?.vpsDetails.totalPrice)
       const wallet = await get(walletOf, chatId)
       const { usdBal, ngnBal } = await getBalance(walletOf, chatId)
 
@@ -1337,7 +1403,7 @@ bot?.on('message', async msg => {
       // wallet update
       if (coin === u.usd) {
         set(payments, nanoid(), `Wallet,VPSPlan,${vpsDetails?.plan},$${priceUsd},${chatId},${name},${new Date()}`)
-        const usdOut = (wallet?.usdOut || 0) + priceUsd
+        const usdOut = (Number(wallet?.usdOut) || 0) + priceUsd
         await set(walletOf, chatId, 'usdOut', usdOut)
       }
       if (coin === u.ngn) {
@@ -1986,16 +2052,18 @@ bot?.on('message', async msg => {
     // save vps configs
   if (action === a.askVpsConfig) {
     if (message === vp.back) return goto.askVpsDiskType()
-    const vpsConfigurations = trans('vpsConfigurationDetails')
-    const config = vpsConfigurations[message]
-    if (!config) return send(chatId, vp.validVpsConfig, vp.configMenu)
+    const vpsConfigurations = info?.vpsConfigTypes
+    const configTypes = vpsConfigurations.map((item) => item.name)
+    if (!configTypes.includes(message)) return send(chatId, vp.validVpsConfig, vp.of(configTypes))
     let vpsDetails = info?.vpsDetails
-    vpsDetails.config = config
+    const selectedConfigType = vpsConfigurations.find((item) => item.name === message)
+    vpsDetails.config = selectedConfigType
     const calculatedCost = await calculateVpsInstanceCost(vpsDetails)
-    if (calculatedCost) {
-      vpsDetails.totalCostInHour = calculatedCost.totalCostInHour
-      vpsDetails.totalCostInMonth = calculatedCost.totalCostInMonth
+    if (!calculatedCost) {
+      return send(chatId, vp.failedFetchingData, trans('o'))
     }
+    vpsDetails.totalCostInMonth = calculatedCost.totalCostInMonth
+    vpsDetails.totalCostInHour = calculatedCost.totalCostInHour
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)
     return goto.askUserVpsPlan()
@@ -2034,13 +2102,13 @@ bot?.on('message', async msg => {
     await saveInfo('vpsDetails', vpsDetails)
     if (message === vp.skip) return goto.skipCouponVps()
     send(chatId, vp.couponValid(couponDiscount))
-    return vpsDetails.plan != 'hourly' ? goto.askVPSPlanAutoRenewal() : goto.askVpsOS()
+    return vpsDetails.plan != 'hourly' ? goto.askVPSPlanAutoRenewal() : goto.askVpsCpanel()
   }
 
   if (action === a.skipCouponVps) {
     let vpsDetails = info?.vpsDetails
     if (message === t.goBackToCoupon || message === vp.back) return goto.askCouponForVPSPlan()
-    return vpsDetails.plan != 'hourly' ? goto.askVPSPlanAutoRenewal() : goto.askVpsOS()
+    return vpsDetails.plan != 'hourly' ? goto.askVPSPlanAutoRenewal() : goto.askVpsCpanel()
   }
 
   if (action === a.askVPSPlanAutoRenewal) {
@@ -2054,62 +2122,151 @@ bot?.on('message', async msg => {
     if (message === vp.skip) {
       send(chatId, vp.skipAutoRenewalWarming(expiresAt))
     }
+    return goto.askVpsCpanel()
+  }
+
+  if (action === a.askVpsCpanel) {
+    let vpsDetails = info?.vpsDetails
+    if (message === vp.back) return vpsDetails.plan != 'hourly' ? goto.askVPSPlanAutoRenewal() : goto.askCouponForVPSPlan()
+    const cpanels = trans('vpsCpanelOptional') 
+    if (!cpanels.includes(message)) return send (chatId, vp.validCpanel, vp.cpanelMenu)
+    vpsDetails.panel = message === vp.noControlPanel ? null : {
+      name: message === 'WHM' ? 'whm' : 'plesk'
+    }
+    info.vpsDetails = vpsDetails
+    saveInfo('vpsDetails', vpsDetails)
+    if (message === vp.noControlPanel) {
+      send (chatId, vp.skipPanelMessage)
+      return goto.askVpsOS()
+    }
+    return goto.askVpsCpanelLicense()
+  }
+
+  if (action === a.askVpsCpanelLicense) {
+    let vpsDetails = info?.vpsDetails
+    if (message === vp.back) return goto.askVpsCpanel()
+    const options = info.vpsSelectedPanelOptions
+    const list = options.map((item) => item.name)
+    if (!list.includes(message)) return send(chatId, vp.askCpanelOtions(vpsDetails.panel.name, options), vp.of(list))
+    const selectedOptionDetails = options.find((ar) => ar.name === message)
+    vpsDetails.panel.license = selectedOptionDetails.id
+    vpsDetails.panel.licenseName = selectedOptionDetails.name
+    vpsDetails.panel.pricePerMonth = 0
+    vpsDetails.selectedCpanelPrice = 0
+    info.vpsDetails = vpsDetails
+    saveInfo('vpsDetails', vpsDetails)
+    if (message.toLowerCase().includes('trial')) {
+      send(chatId, vp.trialCpanelMessage(vpsDetails.panel.name))
+    }
     return goto.askVpsOS()
   }
 
   if (action === a.askVpsOS) {
     let vpsDetails = info?.vpsDetails
-    if (message === vp.back) return vpsDetails.plan != 'hourly' ? goto.askVPSPlanAutoRenewal() : goto.askCouponForVPSPlan()
+    if (message === vp.back) return goto.askVpsCpanel()
     const osData = info?.vpsOSList
     const osList = osData.map((item) => item.name)     
     if (!osList.includes(message) && message != vp.skipOSBtn) return send(chatId, vp.chooseValidOS, vp.of([...osList, vp.skipOSBtn]))
     const osDetails = osData.find((ar) => ar.name === message)
-    vpsDetails.os = message === vp.skipOSBtn ? null : {
-      name: osDetails.name,
-      sourceImage: osDetails.sourceImage,
-      paid: osDetails.paid,
-      pricePerMonth:  osDetails.paid ? 15 : 0
+    const ubuntuDetails = osData.find((ar) => ar.name === 'Ubuntu')
+    //@TODO
+    vpsDetails.os = {
+      name: message === vp.skipOSBtn ? ubuntuDetails.name : osDetails.name,
+      value: message === vp.skipOSBtn ? ubuntuDetails.value : osDetails.value,
+      // sourceImage: message === vp.skipOSBtn ? ubuntuDetails.sourceImage : osDetails.sourceImage,
+      paid: message === vp.skipOSBtn ? ubuntuDetails.paid : osDetails.paid,
+      // pricePerMonth:  message === vp.skipOSBtn ? 0 : osDetails.paid ? VPS_WINDOWS_SERVER_OS_PRICE : 0
     }
-    if (message != vp.skipOSBtn && osDetails.paid) {
-      vpsDetails.selectedOSPrice = 15
-    } else {
+    // if (message != vp.skipOSBtn && osDetails.paid) {
+    //   vpsDetails.selectedOSPrice = VPS_WINDOWS_SERVER_OS_PRICE
+    // } else {
       vpsDetails.selectedOSPrice = 0
-    }
-    info.vpsDetails = vpsDetails
-    saveInfo('vpsDetails', vpsDetails)
-    if (message === vp.skipOSBtn) {
-      send(chatId, vp.skipOSwarning)
-    }
-    return goto.askVpsCpanel()
-  }
-
-  if (action === a.askVpsCpanel) {
-    if (message === vp.back) return goto.askVpsOS()
-    const cpanels = trans('vpsCpanelOptional') 
-    if (!cpanels.includes(message)) return send (chatId, vp.validCpanel, vp.cpanelMenu)
-    let vpsDetails = info?.vpsDetails
-    const cpanel = message === vp.trialWHM || message === vp.paidWHM ? 'WHM' : 'PLESK'  
-    const selectedCpanelPrice = message === vp.paidWHM || message === vp.paidPlesk ? 20 : 0
-    vpsDetails.panel = message === vp.noControlPanel ? null : {
-      name: cpanel,
-      mode: message === vp.paidWHM || message === vp.paidPlesk ? 'paid' : 'trial',
-      pricePerMonth: 20
-    }
+    // }
     const planPrice = vpsDetails.couponApplied ? vpsDetails.planNewPrice : vpsDetails.plantotalPrice
     const OSprice = vpsDetails.selectedOSPrice
+    const selectedCpanelPrice = vpsDetails.selectedCpanelPrice
     const totalPrice = Number(selectedCpanelPrice) + Number(planPrice) + Number(OSprice)
-    vpsDetails.selectedCpanelPrice = selectedCpanelPrice
     vpsDetails.totalPrice = totalPrice.toFixed(2)
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)
-    if (vpsDetails.panel && vpsDetails.panel.mode === 'trial') {
-      send(chatId, vp.trialPanelWarning(vpsDetails.panel.name))
-    }
-    return goto.vpsAskPaymentConfirmation() // @TODO change this for SSH Flow
+    return goto.vpsAskSSHKey()
   }
 
+  if (action === a.vpsAskSSHKey) {
+    if (message === vp.back) return goto.askVpsOS()
+    const vpsDetails = info.vpsDetails
+    if (message === vp.skipSSHKeyBtn) return goto.askSkipSSHkeyconfirmation()
+    if (message === vp.generateSSHKeyBtn) {
+      const newSShKey = await generateNewSSSkey(chatId)
+      if (!newSShKey) {
+        send(chatId, vp.failedGeneratingSSHKey)
+        return goto.vpsAskSSHKey()
+      }
+      vpsDetails.sshKeyName = newSShKey.sshKeyName
+      info.vpsDetails = vpsDetails
+      saveInfo('vpsDetails', vpsDetails)
+      send(chatId, vp.newSSHKeyGeneratedMsg(newSShKey.sshKeyName))
+      return goto.vpsAskPaymentConfirmation()
+    }
+    if (message === vp.linkSSHKeyBtn) return goto.vpsLinkSSHKey()
+    return send(chatId, t.selectValidOption, vpsDetails?.hasSSHKey 
+      ? vp.of([vp.generateSSHKeyBtn, vp.linkSSHKeyBtn , vp.skipSSHKeyBtn]) : vp.of([vp.generateSSHKeyBtn , vp.skipSSHKeyBtn]))
+  }
+
+  if (action === a.askSkipSSHkeyconfirmation) {
+    if (message === vp.back || message === vp.setUpSSHBtn) return goto.vpsAskSSHKey()
+    let vpsDetails = info.vpsDetails
+    if (message === vp.confirmSkipSSHBtn) {
+      vpsDetails.sshKeyName = null
+      info.vpsDetails = vpsDetails
+      saveInfo('vpsDetails', vpsDetails)
+      send(chatId, vp.sshLinkingSkipped)
+      return goto.vpsAskPaymentConfirmation()
+    }
+    return send(chatId, t.selectValidOption, vp.of([vp.confirmSkipSSHBtn, vp.setUpSSHBtn]))
+  }
+
+  if (action === a.vpsLinkSSHKey) {
+    if (message === vp.back) return goto.vpsAskSSHKey()
+    let vpsDetails = info.vpsDetails
+    if (message === vp.cancel) {
+      vpsDetails.sshKeyName = null
+      info.vpsDetails = vpsDetails
+      saveInfo('vpsDetails', vpsDetails)
+      send(chatId, vp.cancelLinkingSSHKey)
+      return goto.vpsAskPaymentConfirmation()
+    }
+    if (message === vp.uploadNewKeyBtn) {
+      return goto.askUploadSSHPublicKey()
+    }
+    const sshKeyList = info.vpsSSHKeysList
+    if (!sshKeyList.includes(message)) return send(chatId, vp.selectValidSShKey, vp.of([...sshKeyList, vp.uploadNewKeyBtn, vp.cancel]))
+    vpsDetails.sshKeyName = message
+    info.vpsDetails = vpsDetails
+    saveInfo('vpsDetails', vpsDetails)
+    send(chatId, vp.sshKeySavedForVPS(message))
+    return goto.vpsAskPaymentConfirmation()
+  }
+
+  if (action === a.askUploadSSHPublicKey) {
+    if (message === vp.back) return goto.vpsLinkSSHKey()
+    let vpsDetails = info.vpsDetails
+    if (message.length) {
+      const newSShKey = await uploadSSHPublicKey(chatId, message)
+      if (!newSShKey) {
+        send(chatId, vp.failedGeneratingSSHKey)
+        return goto.vpsAskSSHKey()
+      }
+      vpsDetails.sshKeyName = newSShKey.sshKeyName
+      info.vpsDetails = vpsDetails
+      saveInfo('vpsDetails', vpsDetails)
+      send(chatId, vp.newSSHKeyUploadedMsg(newSShKey.sshKeyName))
+    }
+    return goto.vpsAskPaymentConfirmation()
+  }
+  
   if (action === a.proceedWithVpsPayment) {
-    if (message === vp.back) return goto.askVpsCpanel() // @TODO change this for SSH flow
+    if (message === vp.back) return goto.vpsAskSSHKey()
     if (message === vp.no) {
       saveInfo('vpsDetails', null)
       set(state, chatId, 'action', 'none')
@@ -2596,7 +2753,7 @@ bot?.on('message', async msg => {
     if (message === t.back) return goto['vps-plan-pay']()
     const email = message
     const vpsDetails = info?.vpsDetails
-    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE || 20 : vpsDetails?.totalPrice
+    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE || 50 : vpsDetails?.totalPrice
     if (!isValidEmail(email)) return send(chatId, t.askValidEmail)
 
     const ref = nanoid()
@@ -2618,7 +2775,7 @@ bot?.on('message', async msg => {
     const ticker = supportedCryptoView[tickerView]
     if (!ticker) return send(chatId, t.askValidCrypto)
     const vpsDetails = info.vpsDetails
-    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE || 20 : vpsDetails?.totalPrice
+    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE || 50 : vpsDetails?.totalPrice
     const ref = nanoid()
     if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
       const coin = tickerOf[ticker]
@@ -3546,7 +3703,7 @@ async function checkVPSPlansExpiryandPayment() {
 
 const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
   try {
-    const vmInstance = await createVPSInstance(vpsDetails)
+    const vmInstance = await createVPSInstance(chatId, vpsDetails)
     if (!vmInstance.success) {
       const m = translation('vp.errorPurchasingVPS', lang, vpsDetails.plan)
       log(m)
@@ -3745,7 +3902,7 @@ const bankApis = {
     const name = await get(nameOf, chatId)
     set(payments, ref, `Bank, VPSPlan, ${vpsDetails?.plan}, $${usdIn}, ${chatId}, ${name}, ${new Date()}, ₦${ngnIn}`)
 
-    const totalPrice = vpsDetails?.totalPrice
+    const totalPrice = Number(vpsDetails?.totalPrice)
     sendMessage(chatId, translation('vp.paymentRecieved', lang))
     // Update Wallet
     const ngnPrice = await usdToNgn(price)
@@ -4017,11 +4174,11 @@ app.get('/crypto-pay-vps', auth, async (req, res) => {
   const usdIn = await convert(value, coin, 'usd')
   if (usdIn * 1.06 < price) {
     sendMessage(chatId, translation('t.sentLessMoney', lang, `$${price}`, `$${usdIn}`))
-    addFundsTo(walletOf, chatId, 'usd', usdIn, lang)
+    addFundsTo(walletOf, chatId, 'usd', Number(usdIn), lang)
     return res.send(html(translation('t.lowPrice')))
   }
   if (usdIn > price) {
-    addFundsTo(walletOf, chatId, 'usd', usdIn - price, lang)
+    addFundsTo(walletOf, chatId, 'usd', Number(usdIn) - Number(price), lang)
     sendMessage(chatId, translation('t.sentMoreMoney', lang, `$${price}`, `$${usdIn}`))
   }
 
@@ -4186,16 +4343,16 @@ app.post('/dynopay/crypto-pay-vps', authDyno, async (req, res) => {
   const usdIn = await convert(value, ticker , 'usd')
   if (usdIn * 1.06 < price) {
     sendMessage(chatId, translation('t.sentLessMoney', lang, `$${price}`, `$${usdIn}`))
-    addFundsTo(walletOf, chatId, 'usd', usdIn, lang)
+    addFundsTo(walletOf, chatId, 'usd', Number(usdIn), lang)
     return res.send(html(translation('t.lowPrice')))
   }
   if (usdIn > price) {
-    addFundsTo(walletOf, chatId, 'usd', usdIn - price, lang)
+    addFundsTo(walletOf, chatId, 'usd', Number(usdIn) - Number(price), lang)
     sendMessage(chatId, translation('t.sentMoreMoney', lang, `$${price}`, `$${usdIn}`))
   }
 
   if (vpsDetails.plan === 'hourly') {
-    addFundsTo(walletOf, chatId, 'usd', usdIn - totalPrice, lang)
+    addFundsTo(walletOf, chatId, 'usd', Number(usdIn) - Number(totalPrice), lang)
     sendMessage(chatId, translation('vp.extraMoney', lang))
   }
 
