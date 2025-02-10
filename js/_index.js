@@ -111,6 +111,7 @@ const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVW
 const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
+const HOSTING_TRIAL_PLAN_ON = process.env.HOSTING_TRIAL_PLAN_ON
 
 if (!DB_NAME || !RATE_LEAD_VALIDATOR || !HOSTED_ON || !TELEGRAM_BOT_ON || !REST_APIS_ON || !CHAT_BOT_NAME) {
   return log('Service is paused because some ENV variable is missing')
@@ -852,7 +853,11 @@ bot?.on('message', async msg => {
     submenu3: () => {
       saveInfo('username', username)
       set(state, chatId, 'action', a.submenu3)
-      send(chatId, t.selectPlan, trans('k.of', [[user.freeTrial, user.starterPlan], [user.proPlan, user.businessPlan], user.contactSupport]))
+      send( chatId, t.selectPlan, k.of(
+        HOSTING_TRIAL_PLAN_ON && HOSTING_TRIAL_PLAN_ON === 'true'
+          ? [[user.freeTrial, user.starterPlan], [user.proPlan, user.businessPlan], user.contactSupport]
+          : [[user.starterPlan], [user.proPlan, user.businessPlan], user.contactSupport]
+      ));
     },
 
     displayEmailValidationError: () => {
