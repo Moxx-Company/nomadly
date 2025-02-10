@@ -1260,6 +1260,7 @@ ${CHAT_BOT_NAME}`,
   failedGeneratingSSHKey:
     'Échec de la génération d’une nouvelle clé SSH. Veuillez réessayer ou utiliser une autre méthode.',
   newSSHKeyUploadedMsg: name => `✅ Clé SSH (${name}) téléchargée avec succès et sera liée au VPS.`,
+  fileTypePub: 'Le type de fichier doit être .pub'
 }
 
 const fr = {

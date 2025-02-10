@@ -1218,6 +1218,7 @@ ${CHAT_BOT_NAME}`,
   askToUploadSSHKey: `📤 请上传您的 SSH 公钥（.pub 文件）或在下方粘贴密钥。`,
   failedGeneratingSSHKey: '无法生成新的 SSH 密钥。请重试或使用其他方法。',
   newSSHKeyUploadedMsg: name => `✅ SSH 密钥（${name}）已成功上传并将关联到 VPS。`,
+  fileTypePub: '文件类型应为 .pub'
 }
 
 const zh = {

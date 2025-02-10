@@ -270,13 +270,13 @@ async function createVPSInstance(telegramId, vpsDetails) {
       plan: vpsDetails.config.name,
       vCPUs: vpsDetails.config.specs.vCPU,
       RAM: vpsDetails.config.specs.RAM,
-      // sourceImage: vpsDetails.os.sourceImage,
       os: vpsDetails.os.value,
     }
     if (vpsDetails.panel) {
       payload.cPanel = vpsDetails.panel.name
       payload.license = vpsDetails.panel.license
     }
+    console.log(payload)
     const response = await axios.post(url, payload, { headers })
     if (response?.data?.data) {
       console.log(response?.data.data)
@@ -288,6 +288,34 @@ async function createVPSInstance(telegramId, vpsDetails) {
     }
   } catch (error) {
     const errorMessage = `Error in creating VMS instancw ${error.message} ${JSON.stringify(
+      error?.response?.data,
+      null,
+      2,
+    )}`
+    console.error(errorMessage)
+    return { error: errorMessage }
+  }
+}
+
+async function attachSSHKeysToVM(payload) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/attach/sshkeys`
+    let newPayload = {
+      project: VM_PROJECT_ID,
+      ...payload
+    }
+    console.log(newPayload)
+    const response = await axios.post(url, newPayload, { headers })
+    if (response?.data?.data) {
+      console.log(response?.data.data)
+      return { success: true, data: response?.data?.data }
+    } else {
+      let errorMessage = `Issue in attaching SSH key to VMS instance ${response?.data?.responseMsg?.message}`
+      console.error(errorMessage)
+      return { error: errorMessage }
+    }
+  } catch (error) {
+    const errorMessage = `Error in attaching SSH key to VMS instance ${error.message} ${JSON.stringify(
       error?.response?.data,
       null,
       2,
@@ -473,4 +501,5 @@ module.exports = {
   uploadSSHPublicKey,
   fetchAvailableVPSConfigs,
   fetchSelectedCpanelOptions,
+  attachSSHKeysToVM
 }

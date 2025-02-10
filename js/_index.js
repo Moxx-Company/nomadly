@@ -101,7 +101,8 @@ const {
   generateNewSSSkey,
   uploadSSHPublicKey,
   fetchAvailableVPSConfigs,
-  fetchSelectedCpanelOptions
+  fetchSelectedCpanelOptions,
+  attachSSHKeysToVM
 } = require('./vm-instance-setup.js')
 const { console } = require('inspector')
 
@@ -2133,6 +2134,7 @@ bot?.on('message', async msg => {
     vpsDetails.panel = message === vp.noControlPanel ? null : {
       name: message === 'WHM' ? 'whm' : 'plesk'
     }
+    vpsDetails.selectedCpanelPrice = 0
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)
     if (message === vp.noControlPanel) {
@@ -2151,8 +2153,8 @@ bot?.on('message', async msg => {
     const selectedOptionDetails = options.find((ar) => ar.name === message)
     vpsDetails.panel.license = selectedOptionDetails.id
     vpsDetails.panel.licenseName = selectedOptionDetails.name
-    vpsDetails.panel.pricePerMonth = 0
-    vpsDetails.selectedCpanelPrice = 0
+    vpsDetails.panel.pricePerMonth = selectedOptionDetails.price
+    vpsDetails.selectedCpanelPrice = selectedOptionDetails.price
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)
     if (message.toLowerCase().includes('trial')) {
@@ -2169,19 +2171,17 @@ bot?.on('message', async msg => {
     if (!osList.includes(message) && message != vp.skipOSBtn) return send(chatId, vp.chooseValidOS, vp.of([...osList, vp.skipOSBtn]))
     const osDetails = osData.find((ar) => ar.name === message)
     const ubuntuDetails = osData.find((ar) => ar.name === 'Ubuntu')
-    //@TODO
+
     vpsDetails.os = {
       name: message === vp.skipOSBtn ? ubuntuDetails.name : osDetails.name,
       value: message === vp.skipOSBtn ? ubuntuDetails.value : osDetails.value,
-      // sourceImage: message === vp.skipOSBtn ? ubuntuDetails.sourceImage : osDetails.sourceImage,
-      paid: message === vp.skipOSBtn ? ubuntuDetails.paid : osDetails.paid,
-      // pricePerMonth:  message === vp.skipOSBtn ? 0 : osDetails.paid ? VPS_WINDOWS_SERVER_OS_PRICE : 0
+      pricePerMonth:  message === vp.skipOSBtn ? 0 : osDetails.value === 'win' ? VPS_WINDOWS_SERVER_OS_PRICE : 0
     }
-    // if (message != vp.skipOSBtn && osDetails.paid) {
-    //   vpsDetails.selectedOSPrice = VPS_WINDOWS_SERVER_OS_PRICE
-    // } else {
+    if (message != vp.skipOSBtn && osDetails.value === 'win') {
+      vpsDetails.selectedOSPrice = VPS_WINDOWS_SERVER_OS_PRICE
+    } else {
       vpsDetails.selectedOSPrice = 0
-    // }
+    }
     const planPrice = vpsDetails.couponApplied ? vpsDetails.planNewPrice : vpsDetails.plantotalPrice
     const OSprice = vpsDetails.selectedOSPrice
     const selectedCpanelPrice = vpsDetails.selectedCpanelPrice
@@ -2251,17 +2251,28 @@ bot?.on('message', async msg => {
   if (action === a.askUploadSSHPublicKey) {
     if (message === vp.back) return goto.vpsLinkSSHKey()
     let vpsDetails = info.vpsDetails
-    if (message.length) {
-      const newSShKey = await uploadSSHPublicKey(chatId, message)
-      if (!newSShKey) {
-        send(chatId, vp.failedGeneratingSSHKey)
-        return goto.vpsAskSSHKey()
+    let newSShKey;
+    if (msg.document) {
+      try {
+        if (!msg.document?.file_name.includes('.pub')) return send(chatId, vp.fileTypePub)
+        const fileLink = await bot?.getFileLink(msg.document.file_id)
+        const content = (await axios.get(fileLink, { responseType: 'text' }))?.data
+        newSShKey = await uploadSSHPublicKey(chatId, content)
+      } catch (error) {
+        console.error('Error:', error.message)
+        return send(chatId, t.fileError)
       }
-      vpsDetails.sshKeyName = newSShKey.sshKeyName
-      info.vpsDetails = vpsDetails
-      saveInfo('vpsDetails', vpsDetails)
-      send(chatId, vp.newSSHKeyUploadedMsg(newSShKey.sshKeyName))
+    } else if (message.length) {
+      newSShKey = await uploadSSHPublicKey(chatId, message)
     }
+    if (!newSShKey) {
+      send(chatId, vp.failedGeneratingSSHKey)
+      return goto.vpsAskSSHKey()
+    }
+    vpsDetails.sshKeyName = newSShKey.sshKeyName
+    info.vpsDetails = vpsDetails
+    saveInfo('vpsDetails', vpsDetails)
+    send(chatId, vp.newSSHKeyUploadedMsg(newSShKey.sshKeyName))
     return goto.vpsAskPaymentConfirmation()
   }
   
@@ -3717,7 +3728,7 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
     let info = await get(state, chatId)
 
     let osDetails = vpsDetails.os ? vpsDetails.os : null
-    if (osDetails && osDetails.paid) {
+    if (osDetails && osDetails.pricePerMonth != 0) {
       osDetails.expiryDate = getExpiryDateVps('monthly')
     }
 
@@ -3741,6 +3752,16 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
       status: vpsData.status,
       serverIP: vpsData.networkInterfaces[0].networkIP 
     })
+    await sleep(10000)
+    if (vpsDetails.sshKeyName) {
+      const data = {
+        zone: vpsDetails.zone,
+        instanceName: vpsData.name,
+        sshKeys: [ vpsDetails.sshKeyName],
+        telegramId: chatId,
+      }
+      await attachSSHKeysToVM(data)
+    }
 
     set(state, info._id, 'action', 'none')
     send(chatId, translation('vp.vpsBoughtSuccess', lang, vpsDetails, vpsData), translation('o', lang))

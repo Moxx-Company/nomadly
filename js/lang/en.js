@@ -1303,6 +1303,7 @@ ${CHAT_BOT_NAME}`,
   askToUploadSSHKey: `📤 Upload your SSH public key (.pub file) or paste the key below.`,
   failedGeneratingSSHKey: 'Failed to generate new SSH key. Please try again or different method.',
   newSSHKeyUploadedMsg: name => `✅ SSH key (${name}) successfully uploaded and will be linked to VPS.`,
+  fileTypePub: 'File type should be .pub'
 }
 
 const en = {
