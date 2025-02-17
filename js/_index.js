@@ -1252,7 +1252,7 @@ bot?.on('message', async msg => {
       } else {
         const sshKeyList = await fetchUserSSHkeyList(chatId)
         if (sshKeyList && sshKeyList.keys.length) {
-          list = sshKeyList.keys.map((key) => key.sshKeyName)
+          list = sshKeyList.keys.map((key) => key.name)
           let vpsDetails = info.vpsDetails
           vpsDetails.hasSSHKey = true
           saveInfo('vpsDetails', vpsDetails)
@@ -3750,7 +3750,7 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
       os: osDetails,
       vmsDetails: vpsData,
       status: vpsData.status,
-      serverIP: vpsData.networkInterfaces[0].networkIP 
+      serverIP: vpsData.host
     })
     await sleep(10000)
     if (vpsDetails.sshKeyName) {

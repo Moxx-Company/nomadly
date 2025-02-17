@@ -274,7 +274,7 @@ async function createVPSInstance(telegramId, vpsDetails) {
     }
     if (vpsDetails.panel) {
       payload.cPanel = vpsDetails.panel.name
-      payload.license = vpsDetails.panel.license
+      payload.license = vpsDetails.panel.name === 'plesk' ? 'byol' : vpsDetails.panel.license
     }
     console.log(payload)
     const response = await axios.post(url, payload, { headers })
@@ -388,7 +388,7 @@ async function sendVPSCredentialsEmail(info, response, vpsDetails) {
               </tr>
               <tr>
                   <td style="font-size: 16px; padding: 15px; background-color: #eee; border: 1px solid #ddd; border-radius: 5px;">
-                      <strong>Network IP:</strong> ${response.networkInterfaces[0].networkIP}
+                      <strong>Network IP:</strong> ${response.host}
                   </td>
               </tr>
               <tr>

@@ -1241,12 +1241,16 @@ Please top up your wallet to continue using your VPS Plan.
     `<strong>🎉 VPS [${response.name}] is active!</strong>
 
 <strong>🔑 Login Credentials:</strong>
-  <strong>• IP:</strong> ${response.networkInterfaces[0].networkIP}
+  <strong>• IP:</strong> ${response.host}
   <strong>• OS:</strong> ${vpsDetails.os ? vpsDetails.os.name : 'Not Selected'}
   <strong>• Username:</strong> [User]
   <strong>• Password:</strong> Sent via email (change immediately).
-    
+
 📧 These details have also been sent to your registered email. Please keep them secure.
+
+⚙️ Control Panel Installation (WHM/Plesk)
+If you ordered WHM or Plesk, installation is in progress. Your control panel login details will be sent separately once setup is complete.
+
 Thank you for choosing our service
 ${CHAT_BOT_NAME}
 `,

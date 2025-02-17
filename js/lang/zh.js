@@ -1160,12 +1160,16 @@ ${CHAT_BOT_NAME}`,
     `<strong>🎉 VPS [${response.name}] 已激活！</strong>
 
 <strong>🔑 登录凭据:</strong>
-  <strong>• IP:</strong> ${response.networkInterfaces[0].networkIP}
+  <strong>• IP:</strong> ${response.host}
   <strong>• 操作系统:</strong> ${vpsDetails.os ? vpsDetails.os.name : '未选择'}
   <strong>• 用户名:</strong> [User]
   <strong>• 密码:</strong> 通过电子邮件发送（立即更改）。
     
 📧 这些详细信息也已发送到您的注册电子邮件。请保管好它们。
+
+⚙️ 控制面板安装（WHM/Plesk）
+如果您订购了WHM或Plesk，安装正在进行中。控制面板登录详情将在设置完成后单独发送给您。
+
 感谢您选择我们的服务
 ${CHAT_BOT_NAME}
 `,
