@@ -1237,13 +1237,13 @@ Your VPS Plan for instance ${vpsName} has been stopped due to low balance.
 Please top up your wallet to continue using your VPS Plan.
 `,
 
-  vpsBoughtSuccess: (vpsDetails, response) =>
+  vpsBoughtSuccess: (vpsDetails, response, credentials) =>
     `<strong>🎉 VPS [${response.name}] is active!</strong>
 
 <strong>🔑 Login Credentials:</strong>
   <strong>• IP:</strong> ${response.host}
   <strong>• OS:</strong> ${vpsDetails.os ? vpsDetails.os.name : 'Not Selected'}
-  <strong>• Username:</strong> [User]
+  <strong>• Username:</strong> ${credentials.username}
   <strong>• Password:</strong> Sent via email (change immediately).
 
 📧 These details have also been sent to your registered email. Please keep them secure.

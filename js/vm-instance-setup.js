@@ -3,10 +3,8 @@ const axios = require('axios')
 const nodemailer = require('nodemailer')
 require('dotenv').config()
 
-// const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL
-const NAMEWORD_BASE_URL = 'http://localhost:8000/api/v1'
-// const X_API_KEY = process.env.NAMEWORD_API_KEY
-const X_API_KEY = '6788aac20eb2b804e020868b|a12f40977e7947e093d4a7483ff83dbb'
+const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL
+const X_API_KEY = process.env.NAMEWORD_API_KEY
 const VM_PROJECT_ID = process.env.GOOGLE_CONSOLE_PROJECTID
 const PERCENT_INCREASE_VPS = Number(process.env.VPS_PLAN_PRICE_INCREASE_PERC)
 
@@ -179,6 +177,20 @@ function generateRandomVpsName() {
 function generateRandomSSHName() {
   const randomSuffix = Math.random().toString(36).substr(2, 12)
   return `ssh-key-${randomSuffix}`
+}
+
+function generateRandomUsername() {
+  const randomSuffix = Math.random().toString(36).substr(2, 8);
+  return `user-${randomSuffix}`;
+}
+
+function generateRandomPassword(length = 16) {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return password;
 }
 
 function generateBilingCost(data, plan) {
@@ -395,6 +407,35 @@ async function attachSSHKeysToVM(payload) {
   }
 }
 
+async function setVpsSshCredentials(host) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/ssh/set-password`
+    let newPayload = {
+      host: host,
+      targetUsername: generateRandomUsername(),
+      targetPassword: generateRandomPassword()
+    }
+    console.log(newPayload)
+    const response = await axios.post(url, newPayload, { headers })
+    if (response?.data) {
+      console.log(response?.data)
+      return { success: true, data: response?.data }
+    } else {
+      let errorMessage = `Issue in generating password for VMS instance ${response?.data}`
+      console.error(errorMessage)
+      return { error: errorMessage }
+    }
+  } catch (error) {
+    const errorMessage = `Error in generating password for VMS instance ${error.message} ${JSON.stringify(
+      error?.response?.data,
+      null,
+      2,
+    )}`
+    console.error(errorMessage)
+    return { error: errorMessage }
+  }
+}
+
 async function fetchUserVPSList(telegramId) {
   try {
     const url = `${NAMEWORD_BASE_URL}/list/vm/instances?telegramId=${telegramId}&project=${VM_PROJECT_ID}`
@@ -464,12 +505,12 @@ async function deleteVPSinstance(chatId, name) {
     if (response?.data) {
       return { success: true, data: response?.data?.data ? response?.data?.data : response?.data }
     } else {
-      let errorMessage = `Issue in changing VPS Plan status ${response?.data?.responseMsg?.message}`
+      let errorMessage = `Issue in deleting VPS Plan ${response?.data?.responseMsg?.message}`
       console.error(errorMessage)
       return { error: errorMessage }
     }
   } catch (error) {
-    const errorMessage = `Error in changing VMS instance status to ${changeStatus} :  ${error.message} ${JSON.stringify(
+    const errorMessage = `Error in deleting VPS instance :  ${error.message} ${JSON.stringify(
       error?.response?.data,
       null,
       2,
@@ -488,7 +529,7 @@ const transporter = nodemailer.createTransport({
   },
 })
 
-async function sendVPSCredentialsEmail(info, response, vpsDetails) {
+async function sendVPSCredentialsEmail(info, response, vpsDetails, credentials) {
   const plan = 'VPS Plan'
   const emailHtml = `
     <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
@@ -524,12 +565,12 @@ async function sendVPSCredentialsEmail(info, response, vpsDetails) {
               </tr>
               <tr>
                   <td style="font-size: 16px; padding: 15px; background-color: #eee; border: 1px solid #ddd; border-radius: 5px;">
-                      <strong>UserName:</strong>
+                      <strong>UserName:</strong> ${credentials.username}
                   </td>
               </tr>
               <tr>
                   <td style="font-size: 16px; padding: 15px; background-color: #eee; border: 1px solid #ddd; border-radius: 5px;">
-                      <strong>Password</strong>
+                      <strong>Password</strong> ${credentials.password}
                   </td>
               </tr>
             </table>
@@ -631,6 +672,7 @@ module.exports = {
   fetchUserVPSList,
   fetchVPSDetails,
   deleteVPSinstance,
+  setVpsSshCredentials,
   upgradeDiskOptions,
   vpsToUpgradePlan
 }

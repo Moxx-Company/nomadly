@@ -1199,7 +1199,7 @@ Veuillez recharger votre portefeuille pour continuer à utiliser votre plan VPS.
 <strong>🔑 Informations de connexion:</strong>
   <strong>• IP:</strong> ${response.host}
   <strong>• OS:</strong> ${vpsDetails.os ? vpsDetails.os.name : 'Non sélectionné'}
-  <strong>• Nom d'utilisateur:</strong> [User]
+  <strong>• Nom d'utilisateur:</strong> ${credentials.username}
   <strong>• Mot de passe:</strong> Envoyé par email (changez immédiatement).
     
 📧 Ces détails ont également été envoyés à votre email enregistré. Veuillez les garder en sécurité.

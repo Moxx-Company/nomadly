@@ -1162,7 +1162,7 @@ ${CHAT_BOT_NAME}`,
 <strong>🔑 登录凭据:</strong>
   <strong>• IP:</strong> ${response.host}
   <strong>• 操作系统:</strong> ${vpsDetails.os ? vpsDetails.os.name : '未选择'}
-  <strong>• 用户名:</strong> [User]
+  <strong>• 用户名:</strong> ${credentials.username}
   <strong>• 密码:</strong> 通过电子邮件发送（立即更改）。
     
 📧 这些详细信息也已发送到您的注册电子邮件。请保管好它们。

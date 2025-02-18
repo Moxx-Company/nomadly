@@ -106,7 +106,8 @@ const {
   fetchVPSDetails,
   deleteVPSinstance,
   upgradeDiskOptions,
-  vpsToUpgradePlan
+  vpsToUpgradePlan,
+  setVpsSshCredentials
 } = require('./vm-instance-setup.js')
 const { console } = require('inspector')
 
@@ -4084,9 +4085,9 @@ const buyDomainFullProcess = async (chatId, lang, domain) => {
   }
 }
 
-// schedule.scheduleJob('* * * * *', function() {
-//   checkVPSPlansExpiryandPayment()
-// })
+schedule.scheduleJob('* * * * *', function() {
+  checkVPSPlansExpiryandPayment()
+})
 
 async function checkVPSPlansExpiryandPayment() {
   const now = new Date()
@@ -4155,14 +4156,8 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
     let info = await get(state, chatId)
 
     let osDetails = vpsDetails.os ? vpsDetails.os : null
-    if (osDetails && osDetails.pricePerMonth != 0) {
-      osDetails.expiryDate = getExpiryDateVps('monthly')
-    }
 
     let cpanelDetails = vpsDetails.panel ? vpsDetails.panel : null
-    if (cpanelDetails) {
-      cpanelDetails.expiryDate = getExpiryDateVps('monthly')
-    }
 
     await vpsPlansOf.insertOne({
       chatId: chatId,
@@ -4182,7 +4177,8 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
       serverIP: vpsData.networkInterfaces[0].networkIP,
       timestamp: new Date()
     });
-    await sleep(30000)
+    await sleep(10000)
+
     if (vpsDetails.sshKeyName) {
       const data = {
         zone: vpsDetails.zone,
@@ -4193,10 +4189,14 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
       await attachSSHKeysToVM(data)
     }
 
+    await sleep(10000)
+
+    const credentials = await setVpsSshCredentials(vpsData.host)
+
     set(state, info._id, 'action', 'none')
-    send(chatId, translation('vp.vpsBoughtSuccess', lang, vpsDetails, vpsData), translation('o', lang))
+    send(chatId, translation('vp.vpsBoughtSuccess', lang, vpsDetails, vpsData, credentials?.data), translation('o', lang))
     try {
-      await sendVPSCredentialsEmail(info, vpsData, vpsDetails)
+      await sendVPSCredentialsEmail(info, vpsData, vpsDetails, credentials?.data)
     } catch (error) {
       log('Error sending email:', error)
       send(TELEGRAM_DEV_CHAT_ID, 'Error sending email', translation('o'))
