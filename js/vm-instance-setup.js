@@ -274,7 +274,7 @@ async function createVPSInstance(telegramId, vpsDetails) {
     }
     if (vpsDetails.panel) {
       payload.cPanel = vpsDetails.panel.name
-      payload.license = vpsDetails.panel.name === 'plesk' ? 'byol' : vpsDetails.panel.license
+      payload.license = vpsDetails.panel.license
     }
     console.log(payload)
     const response = await axios.post(url, payload, { headers })
@@ -306,11 +306,11 @@ async function attachSSHKeysToVM(payload) {
     }
     console.log(newPayload)
     const response = await axios.post(url, newPayload, { headers })
-    if (response?.data?.data) {
-      console.log(response?.data.data)
-      return { success: true, data: response?.data?.data }
+    if (response?.data) {
+      console.log(response?.data)
+      return { success: true, data: response?.data }
     } else {
-      let errorMessage = `Issue in attaching SSH key to VMS instance ${response?.data?.responseMsg?.message}`
+      let errorMessage = `Issue in attaching SSH key to VMS instance ${response?.data}`
       console.error(errorMessage)
       return { error: errorMessage }
     }
