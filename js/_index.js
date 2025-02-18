@@ -2189,6 +2189,7 @@ bot?.on('message', async msg => {
     vpsDetails.zoneName = zoneDetails.label
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)
+    saveInfo('vpsAreaList', null)
     return goto.confirmZoneForVPS()
   }
 
@@ -2226,6 +2227,7 @@ bot?.on('message', async msg => {
     vpsDetails.totalCostInHour = calculatedCost.totalCostInHour
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)
+    saveInfo('vpsConfigTypes', null)
     return goto.askUserVpsPlan()
   }
 
@@ -2544,7 +2546,7 @@ bot?.on('message', async msg => {
     if (message !== vp.upgradeVpsDiskBtn && message !== vp.upgradeVpsPlanBtn) {
       return send(chatId, vp.selectCorrectOption, vp.of([ vp.upgradeVpsPlanBtn, vp.upgradeVpsDiskBtn ]))
     }
-    const vpsDetails = info.vpsDetails
+    let vpsDetails = info.vpsDetails
     if (message === vp.upgradeVpsPlanBtn) {
       vpsDetails.upgradeType = 'plan'
     } else if (message === vp.upgradeVpsDiskBtn) {
@@ -4215,7 +4217,7 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
 // @TODO
 const upgradeVPSDetails = async (chatId, lang, vpsDetails) => {
   try {
-    log(vpsDetails, '111111111111111111111111')
+    log(vpsDetails)
     const vmInstanceDetails = await fetchVPSDetails(chatId, vpsDetails.name)
     // if (!vmInstance.success) {
     //   const m = translation('vp.errorPurchasingVPS', lang, vpsDetails.plan)

@@ -185,11 +185,25 @@ function generateRandomUsername() {
 }
 
 function generateRandomPassword(length = 16) {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
-  let password = '';
-  for (let i = 0; i < length; i++) {
-    password += characters.charAt(Math.floor(Math.random() * characters.length));
+  const upperCase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lowerCase = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
+  const symbols = '!@#$%^&*()';
+  const allCharacters = upperCase + lowerCase + numbers + symbols;
+
+  let password = [
+    upperCase[Math.floor(Math.random() * upperCase.length)],
+    lowerCase[Math.floor(Math.random() * lowerCase.length)],
+    numbers[Math.floor(Math.random() * numbers.length)],
+    symbols[Math.floor(Math.random() * symbols.length)]
+  ];
+
+  for (let i = password.length; i < length; i++) {
+    password.push(allCharacters[Math.floor(Math.random() * allCharacters.length)]);
   }
+
+  password = password.sort(() => Math.random() - 0.5).join('');
+
   return password;
 }
 
