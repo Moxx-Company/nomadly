@@ -1197,12 +1197,16 @@ Veuillez recharger votre portefeuille pour continuer à utiliser votre plan VPS.
     `<strong>🎉 VPS [${response.name}] est actif !</strong>
 
 <strong>🔑 Informations de connexion:</strong>
-  <strong>• IP:</strong> ${response.networkInterfaces[0].networkIP}
+  <strong>• IP:</strong> ${response.host}
   <strong>• OS:</strong> ${vpsDetails.os ? vpsDetails.os.name : 'Non sélectionné'}
   <strong>• Nom d'utilisateur:</strong> [User]
   <strong>• Mot de passe:</strong> Envoyé par email (changez immédiatement).
     
 📧 Ces détails ont également été envoyés à votre email enregistré. Veuillez les garder en sécurité.
+
+⚙️ Installation du panneau de contrôle (WHM/Plesk)
+Si vous avez commandé WHM ou Plesk, l'installation est en cours. Vos identifiants de connexion au panneau de contrôle vous seront envoyés séparément une fois l'installation terminée.
+
 Merci d'avoir choisi notre service
 ${CHAT_BOT_NAME}
 `,

@@ -380,7 +380,7 @@ async function attachSSHKeysToVM(payload) {
       console.log(response?.data)
       return { success: true, data: response?.data }
     } else {
-      let errorMessage = `Issue in attaching SSH key to VMS instance ${response?.data?.responseMsg?.message}`
+      let errorMessage = `Issue in attaching SSH key to VMS instance ${response?.data}`
       console.error(errorMessage)
       return { error: errorMessage }
     }
@@ -514,7 +514,7 @@ async function sendVPSCredentialsEmail(info, response, vpsDetails) {
               </tr>
               <tr>
                   <td style="font-size: 16px; padding: 15px; background-color: #eee; border: 1px solid #ddd; border-radius: 5px;">
-                      <strong>Network IP:</strong> ${response.networkInterfaces[0].networkIP}
+                      <strong>Network IP:</strong> ${response.host}
                   </td>
               </tr>
               <tr>
