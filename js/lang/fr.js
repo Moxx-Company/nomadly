@@ -1,5 +1,5 @@
 const { areasOfCountry, carriersOf, countryCodeOf } = require('../areasOfCountry')
-const { generateBilingCost } = require('../vm-instance-setup')
+const { generateBilingCost, vpsToUpgradePlan } = require('../vm-instance-setup')
 
 const format = (cc, n) => `+${cc}(${n.toString().padStart(2, '0')})`
 
@@ -1260,7 +1260,164 @@ ${CHAT_BOT_NAME}`,
   failedGeneratingSSHKey:
     'Échec de la génération d’une nouvelle clé SSH. Veuillez réessayer ou utiliser une autre méthode.',
   newSSHKeyUploadedMsg: name => `✅ Clé SSH (${name}) téléchargée avec succès et sera liée au VPS.`,
-  fileTypePub: 'Le type de fichier doit être .pub'
+  fileTypePub: 'Le type de fichier doit être .pub',
+
+  vpsList: list => `<strong>🖥️ Instances VPS actives :</strong>
+
+${list
+  .map(vps => `<strong>• ${vps.name} :</strong> ${vps.status === 'RUNNING' ? '🟢' : '🔴'} ${vps.status}`)
+  .join('\n')}
+`,
+  noVPSfound: "Aucune instance VPS active n'existe. Créez-en une nouvelle.",
+  selectCorrectOption: 'Veuillez sélectionner une option dans la liste',
+  selectedVpsData: data => `<strong>🖥️ ID du VPS :</strong> ${data.name}
+
+<strong>• Plan :</strong> ${data.plan}
+<strong>• vCPUs :</strong> ${data.vCPUs} | RAM : ${data.RAM} Go | Disque : ${data.disk} Go (${data.diskType})
+<strong>• OS :</strong> ${data.os}
+<strong>• Panneau de contrôle :</strong> ${data.cPanel ? data.cPanel : 'Aucun'}
+<strong>• Statut :</strong> ${data.status === 'RUNNING' ? '🟢' : '🔴'} ${data.status}
+<strong>• Renouvellement automatique :</strong> ${data.autoRenewable ? 'Activé' : 'Désactivé'}
+<strong>• Adresse IP :</strong> ${data.host}`,
+  stopVpsBtn: '⏹️ Arrêter',
+  startVpsBtn: '▶️ Démarrer',
+  restartVpsBtn: '🔄 Redémarrer',
+  deleteVpsBtn: '🗑️ Supprimer',
+  subscriptionBtn: '🔄 Abonnements',
+  VpsLinkedKeysBtn: '🔑 Clés SSH',
+  confirmChangeBtn: '✅ Confirmer',
+
+  confirmStopVpstext: name => `⚠️ Êtes-vous sûr de vouloir arrêter le VPS <strong>${name}</strong> ?`,
+  vpsBeingStopped: name => `⚙️ Veuillez patienter pendant que votre VPS (${name}) est en cours d\'arrêt`,
+  vpsStopped: name => `✅ Le VPS (${name}) a été arrêté.`,
+  failedStoppingVPS: name => `❌ Échec de l\'arrêt du VPS (${name}).
+
+Veuillez réessayer après un certain temps.`,
+  vpsBeingStarted: name => `⚙️ Veuillez patienter pendant que votre VPS (${name}) est en cours de démarrage`,
+  vpsStarted: name => `✅ Le VPS (${name}) est maintenant en cours d\'exécution.`,
+  failedStartedVPS: name => `❌ Échec du démarrage du VPS (${name}).
+
+Veuillez réessayer après un certain temps.`,
+  vpsBeingRestarted: name => `⚙️ Veuillez patienter pendant que votre VPS (${name}) est en cours de redémarrage`,
+  vpsRestarted: name => `✅ Le VPS (${name}) a été redémarré avec succès.`,
+  failedRestartingVPS: name => `❌ Échec du redémarrage du VPS (${name}).
+
+Veuillez réessayer après un certain temps.`,
+  confirmDeleteVpstext: name =>
+    `⚠️ Avertissement : Supprimer ce VPS (${name}) est permanent et toutes les données seront perdues. Voulez-vous continuer ?`,
+  vpsBeingDeleted: name => `⚙️ Veuillez patienter pendant que votre VPS (${name}) est en cours de suppression`,
+  vpsDeleted: name => `✅ Le VPS (${name}) a été supprimé de manière permanente.`,
+  failedDeletingVPS: name => `❌ Échec de la suppression du VPS (${name}).
+
+Veuillez réessayer après un certain temps.`,
+
+  upgradeVpsBtn: '⬆️ Mettre à niveau',
+  upgradeVpsPlanBtn: '⬆️ Plan VPS',
+  upgradeVpsDiskBtn: '📀 Type de disque',
+  upgradeVpsDiskTypeBtn: '💾 Mettre à niveau le type de disque',
+  upgradeVPS: 'Choisissez le type de mise à niveau',
+  newVpsPlanBtn: plan => {
+    const newPlan = vpsToUpgradePlan[plan]
+    return `🔼 Mettre à niveau vers ${newPlan.newplan}`
+  },
+  upgradeVpsPlanMsg: `⚙️ Choisissez un nouveau plan pour augmenter les ressources de votre VPS.
+💡 La mise à niveau augmente les vCPUs, la RAM et le stockage, mais elle ne peut pas être annulée.
+
+📌 Mises à niveau disponibles :
+${Object.values(vpsToUpgradePlan)
+  .map(
+    planDetails =>
+      `<strong>• ${planDetails.current} ➡ ${planDetails.newplan} –</strong> $${planDetails.pricePerMonth}/mois ($${planDetails.pricePerHour}/heure)`,
+  )
+  .join('\n')}
+
+💰 Avis de facturation : Votre plan actuel sera crédité pour les jours inutilisés, et le nouveau tarif s'appliquera pour le reste du cycle de facturation (ajustement au prorata).`,
+
+  alreadyEnterprisePlan:
+    "⚠️ Vous êtes déjà sur le plan le plus élevé (Entreprise). Aucune autre mise à niveau n'est possible.",
+
+  alreadyHighestDisk: `⚠️ Vous êtes déjà sur le disque le plus élevé disponible (Disque persistant extrême). Aucune autre mise à niveau n\'est possible.`,
+  newVpsDiskBtn: type => `Mettre à niveau vers ${type}`,
+  upgradeVpsDiskMsg: upgrades => `💾 Mettez à niveau votre type de stockage pour de meilleures performances.
+⚠️ Les mises à niveau de disque sont permanentes et ne peuvent pas être rétrogradées.
+
+📌 Options disponibles :
+${upgrades
+  .map(
+    val =>
+      `<strong>• ${val.currentName} (${val.currentType}) ➡ ${val.upgradeName} (${val.upgradeType}) –</strong> +$${val.pricePerMonth}/mois`,
+  )
+  .join('\n')}
+
+💰 Avis de facturation : Si la mise à niveau est appliquée en cours de cycle, un ajustement au prorata sera appliqué pour la portion inutilisée de votre période de facturation actuelle.`,
+  upgradePlanSummary: (newData, vpsDetails) => `<strong>📜 Récapitulatif de la commande :</strong>
+
+<strong>• VPS ID : </strong> ${vpsDetails.name}
+<strong>• Ancien plan : </strong> ${vpsDetails.plan}
+<strong>• Nouveau plan : </strong> ${newData.newConfig.name}
+<strong>• Nouveau tarif de facturation : </strong> $${newData.upgradePrice}/${
+    newData.billingCycle === 'hourly' ? 'heure' : 'mois'
+  }  (ajustement au prorata appliqué)
+
+<strong>✅ Poursuivre la commande ?</strong>`,
+  upgradeDiskSummary: (newData, vpsDetails) => `<strong>📜 Récapitulatif de la commande :</strong>
+
+<strong>• VPS ID : </strong> ${vpsDetails.name}
+<strong>• Ancien type de disque : </strong> ${vpsDetails.diskType}
+<strong>• Nouveau type de disque : </strong> ${newData.newDisk}
+<strong>• Nouveau tarif de facturation : </strong> $${newData.upgradePrice}/mois  (ajustement au prorata appliqué)
+
+<strong>✅ Poursuivre la commande ?</strong>`,
+
+  vpsSubscriptionData: vpsData => `<strong>🗂️ Vos abonnements actifs :</strong>
+
+<strong>• VPS ${vpsData.name} </strong>– Expire (Renouvellement automatique : ${
+    vpsData.autoRenewable ? 'Activé' : 'Désactivé'
+  })
+<strong>• Panneau de contrôle ${vpsData?.cPanel ? vpsData.cPanel + ' - ' : ': Non sélectionné'} </strong> ${
+    vpsData?.cPanel ? 'Renouvelé' : ''
+  } `,
+
+  manageVpsSubBtn: "🖥️ Gérer l'abonnement VPS",
+  manageVpsPanelBtn: "🛠️ Gérer l'abonnement au panneau de contrôle",
+
+  vpsSubDetails: data => `<strong>📅 Détails de l\'abonnement VPS :</strong>
+
+<strong>• VPS ID :</strong> ${data.name}
+<strong>• Plan :</strong> ${data.plan}
+<strong>• Date d\'expiration actuelle :</strong> [Date]
+<strong>• Renouvellement automatique :</strong> ${data.autoRenewable ? 'Activé' : 'Désactivé'}`,
+
+  vpsEnableRenewalBtn: '🔄 Activer le renouvellement automatique',
+  vpsDisableRenewalBtn: '❌ Désactiver le renouvellement automatique',
+  vpsRenewBtn: '📅 Renouveler maintenant',
+  bankPayVPSUpgradePlan: (priceNGN, vpsDetails) =>
+    `Veuillez verser ${priceNGN} NGN en cliquant sur “Effectuer le paiement” ci-dessous. Une fois la transaction confirmée, vous serez rapidement informé, et votre plan VPS avec la configuration ${vpsDetails.newConfig.name} sera activé sans problème.`,
+
+  bankPayVPSUpgradeDisk: (priceNGN, vpsDetails) =>
+    `Veuillez verser ${priceNGN} NGN en cliquant sur “Effectuer le paiement” ci-dessous. Une fois la transaction confirmée, vous serez rapidement informé, et votre plan VPS avec le nouveau type de disque ${vpsDetails.newDisk} sera activé sans problème.`,
+
+  showDepositCryptoInfoVpsUpgrade: (priceCrypto, tickerView, address) =>
+    `Veuillez verser ${priceCrypto} ${tickerView} à\n\n<code>${address}</code>
+
+Veuillez noter que les transactions en crypto-monnaie peuvent prendre jusqu'à 30 minutes pour être complétées. Une fois la transaction confirmée, vous serez rapidement informé, et votre nouveau plan VPS sera activé sans problème.
+
+Cordialement,
+${CHAT_BOT_NAME}`,
+
+  linkSSHKeyBtn: '➕ Lier une nouvelle clé',
+  unlinkSSHKeyBtn: '❌ Dissocier la clé',
+  downloadSSHKeyBtn: '⬇️ Télécharger la clé',
+
+  noLinkedKey: name => `⚠️ Il n\'y a actuellement aucune clé SSH associée à ce VPS [${name}]. 
+
+Veuillez lier une clé SSH à votre compte pour permettre un accès sécurisé.`,
+
+  linkedKeyList: (list, name) => `🗂️ Clés SSH liées au VPS ${name} :
+
+${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
+
+  unlinkSSHKeyList: name => `🗂️ Sélectionnez une clé SSH à supprimer du VPS [${name}] :`,
 }
 
 const fr = {

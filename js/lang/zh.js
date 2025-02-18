@@ -1,5 +1,5 @@
 const { areasOfCountry, carriersOf, countryCodeOf } = require('../areasOfCountry')
-const { generateBilingCost } = require('../vm-instance-setup')
+const { generateBilingCost, vpsToUpgradePlan } = require('../vm-instance-setup')
 
 const format = (cc, n) => `+${cc}(${n.toString().padStart(2, '0')})`
 
@@ -1218,7 +1218,159 @@ ${CHAT_BOT_NAME}`,
   askToUploadSSHKey: `📤 请上传您的 SSH 公钥（.pub 文件）或在下方粘贴密钥。`,
   failedGeneratingSSHKey: '无法生成新的 SSH 密钥。请重试或使用其他方法。',
   newSSHKeyUploadedMsg: name => `✅ SSH 密钥（${name}）已成功上传并将关联到 VPS。`,
-  fileTypePub: '文件类型应为 .pub'
+  fileTypePub: '文件类型应为 .pub',
+
+  vpsList: list => `<strong>🖥️ 活跃的 VPS 实例：</strong>
+
+${list
+  .map(vps => `<strong>• ${vps.name} :</strong> ${vps.status === 'RUNNING' ? '🟢' : '🔴'} ${vps.status}`)
+  .join('\n')}
+`,
+  noVPSfound: '没有活跃的 VPS 实例。请创建一个新的。',
+  selectCorrectOption: '请选择列表中的一个选项',
+  selectedVpsData: data => `<strong>🖥️ VPS ID：</strong> ${data.name}
+
+<strong>• 计划：</strong> ${data.plan}
+<strong>• vCPUs：</strong> ${data.vCPUs} | RAM: ${data.RAM} GB | 硬盘：${data.disk} GB (${data.diskType})
+<strong>• 操作系统：</strong> ${data.os}
+<strong>• 控制面板：</strong> ${data.cPanel ? data.cPanel : '无'}
+<strong>• 状态：</strong> ${data.status === 'RUNNING' ? '🟢' : '🔴'} ${data.status}
+<strong>• 自动续费：</strong> ${data.autoRenewable ? '已启用' : '已禁用'}
+<strong>• IP 地址：</strong> ${data.host}`,
+  stopVpsBtn: '⏹️ 停止',
+  startVpsBtn: '▶️ 启动',
+  restartVpsBtn: '🔄 重启',
+  deleteVpsBtn: '🗑️ 删除',
+  subscriptionBtn: '🔄 订阅',
+  VpsLinkedKeysBtn: '🔑 SSH 密钥',
+  confirmChangeBtn: '✅ 确认',
+
+  confirmStopVpstext: name => `⚠️ 您确定要停止 VPS <strong>${name}</strong> 吗？`,
+  vpsBeingStopped: name => `⚙️ 请稍等，您的 VPS (${name}) 正在停止中`,
+  vpsStopped: name => `✅ VPS (${name}) 已停止。`,
+  failedStoppingVPS: name => `❌ 停止 VPS (${name}) 失败。
+
+请稍后再试。`,
+  vpsBeingStarted: name => `⚙️ 请稍等，您的 VPS (${name}) 正在启动中`,
+  vpsStarted: name => `✅ VPS (${name}) 现已运行。`,
+  failedStartedVPS: name => `❌ 启动 VPS (${name}) 失败。
+
+请稍后再试。`,
+  vpsBeingRestarted: name => `⚙️ 请稍等，您的 VPS (${name}) 正在重启中`,
+  vpsRestarted: name => `✅ VPS (${name}) 已成功重启。`,
+  failedRestartingVPS: name => `❌ 重启 VPS (${name}) 失败。
+
+请稍后再试。`,
+  confirmDeleteVpstext: name => `⚠️ 警告：删除此 VPS (${name}) 是永久性的，所有数据将丢失。您确定要继续吗？`,
+  vpsBeingDeleted: name => `⚙️ 请稍等，您的 VPS (${name}) 正在删除中`,
+  vpsDeleted: name => `✅ VPS (${name}) 已永久删除。`,
+  failedDeletingVPS: name => `❌ 删除 VPS (${name}) 失败。
+
+请稍后再试。`,
+
+  upgradeVpsBtn: '⬆️ 升级',
+  upgradeVpsPlanBtn: '⬆️ VPS 计划',
+  upgradeVpsDiskBtn: '📀 磁盘类型',
+  upgradeVpsDiskTypeBtn: '💾 升级磁盘类型',
+  upgradeVPS: '选择升级类型',
+  newVpsPlanBtn: plan => {
+    const newPlan = vpsToUpgradePlan[plan]
+    return `🔼 升级到 ${newPlan.newplan}`
+  },
+  upgradeVpsPlanMsg: `⚙️ 选择一个新计划以扩展您的 VPS 资源。
+💡 升级增加 vCPUs、RAM 和存储，但无法撤销。
+
+📌 可用的升级：
+${Object.values(vpsToUpgradePlan)
+  .map(
+    planDetails =>
+      `<strong>• ${planDetails.current} ➡ ${planDetails.newplan} –</strong> $${planDetails.pricePerMonth}/月 ($${planDetails.pricePerHour}/小时)`,
+  )
+  .join('\n')}
+
+💰 账单通知：您的当前计划将因未使用的天数而获得信用，并且新费率将在账单周期的其余部分应用（按比例调整）。`,
+
+  alreadyEnterprisePlan: '⚠️ 您已在最高可用计划（企业版）上。无法进行进一步的升级。',
+
+  alreadyHighestDisk: `⚠️ 您已在最高可用磁盘（极限持久磁盘）上。无法进行进一步的升级。`,
+  newVpsDiskBtn: type => `升级到 ${type}`,
+  upgradeVpsDiskMsg: upgrades => `💾 升级您的存储类型以获得更好的性能。
+⚠️ 磁盘升级是永久性的，不能降级。
+
+📌 可用选项：
+${upgrades
+  .map(
+    val =>
+      `<strong>• ${val.currentName} (${val.currentType}) ➡ ${val.upgradeName} (${val.upgradeType}) –</strong> +$${val.pricePerMonth}/月`,
+  )
+  .join('\n')}
+
+💰 账单通知：如果在账单周期中途应用升级，将按比例调整当前账单周期未使用的部分。`,
+  upgradePlanSummary: (newData, vpsDetails) => `<strong>📜 订单摘要：</strong>
+
+<strong>• VPS ID: </strong> ${vpsDetails.name}
+<strong>• 旧计划: </strong> ${vpsDetails.plan}
+<strong>• 新计划: </strong> ${newData.newConfig.name}
+<strong>• 新账单费率: </strong> $${newData.upgradePrice}/${
+    newData.billingCycle === 'hourly' ? '小时' : '月'
+  }  (按比例调整)
+
+<strong>✅ 是否继续订单？</strong>`,
+  upgradeDiskSummary: (newData, vpsDetails) => `<strong>📜 订单摘要：</strong>
+
+<strong>• VPS ID: </strong> ${vpsDetails.name}
+<strong>• 旧磁盘类型: </strong> ${vpsDetails.diskType}
+<strong>• 新磁盘类型: </strong> ${newData.newDisk}
+<strong>• 新账单费率: </strong> $${newData.upgradePrice}/月  (按比例调整)
+
+<strong>✅ 是否继续订单？</strong>`,
+  vpsSubscriptionData: vpsData => `<strong>🗂️ 您的活动订阅：</strong>
+
+<strong>• VPS ${vpsData.name} </strong>– 到期（自动续订：${vpsData.autoRenewable ? '启用' : '禁用'}）
+<strong>• 控制面板 ${vpsData?.cPanel ? vpsData.cPanel + ' - ' : ': 未选择'} </strong> ${
+    vpsData?.cPanel ? '已续订' : ''
+  } `,
+
+  manageVpsSubBtn: '🖥️ 管理VPS订阅',
+  manageVpsPanelBtn: '🛠️ 管理控制面板订阅',
+
+  vpsSubDetails: data => `<strong>📅 VPS订阅详情：</strong>
+
+<strong>• VPS ID：</strong> ${data.name}
+<strong>• 计划：</strong> ${data.plan}
+<strong>• 当前到期日期：</strong> [日期]
+<strong>• 自动续订：</strong> ${data.autoRenewable ? '启用' : '禁用'}`,
+
+  vpsEnableRenewalBtn: '🔄 启用自动续订',
+  vpsDisableRenewalBtn: '❌ 禁用自动续订',
+  vpsRenewBtn: '📅 立即续订',
+  bankPayVPSUpgradePlan: (priceNGN, vpsDetails) =>
+    `请通过点击“付款”来支付 ${priceNGN} NGN。交易确认后，您将立即收到通知，您的VPS计划将以配置 ${vpsDetails.newConfig.name} 无缝激活。`,
+
+  bankPayVPSUpgradeDisk: (priceNGN, vpsDetails) =>
+    `请通过点击“付款”来支付 ${priceNGN} NGN。交易确认后，您将立即收到通知，您的VPS计划将以新磁盘类型 ${vpsDetails.newDisk} 配置无缝激活。`,
+
+  showDepositCryptoInfoVpsUpgrade: (priceCrypto, tickerView, address) =>
+    `请将 ${priceCrypto} ${tickerView} 转账到\n\n<code>${address}</code>
+
+请注意，加密交易可能需要最多30分钟才能完成。交易确认后，您将立即收到通知，您的新VPS计划将无缝激活。
+
+此致敬礼，
+${CHAT_BOT_NAME}`,
+
+  linkSSHKeyBtn: '➕ 关联新密钥',
+  unlinkSSHKeyBtn: '❌ 取消关联密钥',
+  downloadSSHKeyBtn: '⬇️ 下载密钥',
+
+  noLinkedKey: name => `⚠️ 当前没有SSH密钥与该VPS [${name}] 关联。
+
+请将SSH密钥关联到您的账户，以启用安全访问。`,
+
+  linkedKeyList: (list, name) => `🗂️ 与VPS ${name} 关联的SSH密钥：
+
+${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
+
+  unlinkSSHKeyList: name => `🗂️ 选择一个SSH密钥从VPS [${name}] 中移除：`,
 }
 
 const zh = {

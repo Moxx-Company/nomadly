@@ -3,8 +3,10 @@ const axios = require('axios')
 const nodemailer = require('nodemailer')
 require('dotenv').config()
 
-const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL
-const X_API_KEY = process.env.NAMEWORD_API_KEY
+// const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL
+const NAMEWORD_BASE_URL = 'http://localhost:8000/api/v1'
+// const X_API_KEY = process.env.NAMEWORD_API_KEY
+const X_API_KEY = '6788aac20eb2b804e020868b|a12f40977e7947e093d4a7483ff83dbb'
 const VM_PROJECT_ID = process.env.GOOGLE_CONSOLE_PROJECTID
 const PERCENT_INCREASE_VPS = Number(process.env.VPS_PLAN_PRICE_INCREASE_PERC)
 
@@ -12,6 +14,72 @@ const headers = {
   accept: 'application/json',
   'content-type': 'application/json',
   'x-api-key': X_API_KEY,
+}
+
+const upgradeDiskOptions = [
+  {
+    currentName : '📀 Standard Persistent Disk',
+    currentType : 'pd-standard',
+    upgradeName : '⚖️ Balanced Persistent Disk',
+    upgradeType : 'pd-balanced',
+    pricePerMonth : 5,
+  },
+  {
+    currentName : '📀 Standard Persistent Disk',
+    currentType : 'pd-standard',
+    upgradeName : '🚀 SSD Persistent Disk',
+    upgradeType : 'pd-ssd',
+    pricePerMonth : 15
+  },
+  {
+    currentName : '📀 Standard Persistent Disk',
+    currentType : 'pd-standard',
+    upgradeName : '🔥 Extreme Persistent Disk',
+    upgradeType : 'pd-extreme',
+    pricePerMonth : 30
+  },
+  {
+    currentName : '⚖️ Balanced Persistent Disk',
+    currentType : 'pd-balanced',
+    upgradeName : '🚀 SSD Persistent Disk',
+    upgradeType : 'pd-ssd',
+    pricePerMonth : 10
+  },
+  {
+    currentName : '⚖️ Balanced Persistent Disk',
+    currentType : 'pd-balanced',
+    upgradeName : '🔥 Extreme Persistent Disk',
+    upgradeType : 'pd-extreme',
+    pricePerMonth : 25
+  },
+  {
+    currentName : '🚀 SSD Persistent Disk',
+    currentType : 'pd-ssd',
+    upgradeName : '🔥 Extreme Persistent Disk',
+    upgradeType : 'pd-extreme',
+    pricePerMonth : 15
+  }
+]
+
+const vpsToUpgradePlan = {
+  Basic: {
+    newplan: 'Standard',
+    current: 'Basic',
+    pricePerMonth: 65,
+    pricePerHour: 0.09,
+  },
+  Standard: {
+    newplan: 'Premium',
+    current: 'Standard',
+    pricePerMonth: 129,
+    pricePerHour: 0.18,
+  },
+  Premium: {
+    newplan: 'Enterprise',
+    current: 'Premium',
+    pricePerMonth: 256,
+    pricePerHour: 0.35,
+  },
 }
 
 async function fetchAvailableCountries() {
@@ -192,17 +260,19 @@ async function registerVpsTelegram(telegramId, email) {
   }
 }
 
-async function fetchUserSSHkeyList(telegramId) {
+async function fetchUserSSHkeyList(telegramId, instanceName) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/ssh/retrieve-All?telegramId=${telegramId}`
-
+    let url = `${NAMEWORD_BASE_URL}/ssh/retrieve-All?telegramId=${telegramId}`
+    if (instanceName) {
+      url += `&instanceName=${instanceName}`
+    }
     let response = await axios.get(url, { headers })
     if (response?.data?.data) {
       return response?.data?.data
     }
     return false
   } catch (err) {
-    console.log('Error in fetching user ssh key list', err?.response?.data)
+    console.log('Error in fetching user ssh key list', err)
     return false
   }
 }
@@ -302,13 +372,13 @@ async function attachSSHKeysToVM(payload) {
     const url = `${NAMEWORD_BASE_URL}/attach/sshkeys`
     let newPayload = {
       project: VM_PROJECT_ID,
-      ...payload
+      ...payload,
     }
     console.log(newPayload)
     const response = await axios.post(url, newPayload, { headers })
-    if (response?.data?.data) {
-      console.log(response?.data.data)
-      return { success: true, data: response?.data?.data }
+    if (response?.data) {
+      console.log(response?.data)
+      return { success: true, data: response?.data }
     } else {
       let errorMessage = `Issue in attaching SSH key to VMS instance ${response?.data?.responseMsg?.message}`
       console.error(errorMessage)
@@ -325,30 +395,86 @@ async function attachSSHKeysToVM(payload) {
   }
 }
 
-async function stopVPSInstance(vpsDetails) {
+async function fetchUserVPSList(telegramId) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/create/vm/instance`
+    const url = `${NAMEWORD_BASE_URL}/list/vm/instances?telegramId=${telegramId}&project=${VM_PROJECT_ID}`
+
+    let response = await axios.get(url, { headers })
+    if (response?.data?.data) {
+      return response?.data?.data
+    }
+    return false
+  } catch (err) {
+    console.log('Error in fetching user vps details', err?.response?.data)
+    return false
+  }
+}
+
+async function fetchVPSDetails(telegramId, vpsName) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/get/vm/instance?telegramId=${telegramId}&project=${VM_PROJECT_ID}&instanceName=${vpsName}`
+
+    let response = await axios.get(url, { headers })
+    if (response?.data?.data) {
+      return response?.data?.data
+    }
+    return false
+  } catch (err) {
+    console.log('Error in fetching VPS details', err?.response?.data)
+    return false
+  }
+}
+
+async function changeVpsInstanceStatus(vpsDetails, changeStatus) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/${changeStatus}/vm/instance`
     const payload = {
       instanceName: vpsDetails.name,
       project: VM_PROJECT_ID,
       zone: vpsDetails.zone,
     }
     const response = await axios.post(url, payload, { headers })
-    if (response?.data?.data) {
-      console.log(response?.data.data)
-      return { success: true, data: response?.data?.data }
+    if (response?.data) {
+      return { success: true, data: response?.data?.data ? response?.data?.data : response?.data }
     } else {
-      let errorMessage = `Issue in buying VPS Plan ${response?.data?.responseMsg?.message}`
+      let errorMessage = `Issue in changing VPS Plan status ${response?.data?.responseMsg?.message}`
       console.error(errorMessage)
       return { error: errorMessage }
     }
   } catch (error) {
-    const errorMessage = `Error in stoping VMS instancw ${error.message} ${JSON.stringify(
+    const errorMessage = `Error in changing VMS instance status to ${changeStatus} :  ${error.message} ${JSON.stringify(
       error?.response?.data,
       null,
       2,
     )}`
-    console.error(errorMessage)
+    console.error(error)
+    return { error: errorMessage }
+  }
+}
+
+async function deleteVPSinstance(chatId, name) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/delete/vm/instance`
+    const payload = {
+      instanceName: name,
+      project: VM_PROJECT_ID,
+      telegramId: chatId,
+    }
+    const response = await axios.post(url, payload, { headers })
+    if (response?.data) {
+      return { success: true, data: response?.data?.data ? response?.data?.data : response?.data }
+    } else {
+      let errorMessage = `Issue in changing VPS Plan status ${response?.data?.responseMsg?.message}`
+      console.error(errorMessage)
+      return { error: errorMessage }
+    }
+  } catch (error) {
+    const errorMessage = `Error in changing VMS instance status to ${changeStatus} :  ${error.message} ${JSON.stringify(
+      error?.response?.data,
+      null,
+      2,
+    )}`
+    console.error(error)
     return { error: errorMessage }
   }
 }
@@ -490,7 +616,7 @@ module.exports = {
   createVPSInstance,
   sendVPSCredentialsEmail,
   getExpiryDateVps,
-  stopVPSInstance,
+  changeVpsInstanceStatus,
   generateBilingCost,
   fetchAvailableDiskTpes,
   fetchAvailableOS,
@@ -501,5 +627,10 @@ module.exports = {
   uploadSSHPublicKey,
   fetchAvailableVPSConfigs,
   fetchSelectedCpanelOptions,
-  attachSSHKeysToVM
+  attachSSHKeysToVM,
+  fetchUserVPSList,
+  fetchVPSDetails,
+  deleteVPSinstance,
+  upgradeDiskOptions,
+  vpsToUpgradePlan
 }

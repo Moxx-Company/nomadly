@@ -91,18 +91,22 @@ const {
   createVPSInstance,
   sendVPSCredentialsEmail,
   getExpiryDateVps,
-  stopVPSInstance,
+  changeVpsInstanceStatus,
   generateBilingCost,
   fetchAvailableDiskTpes,
   fetchAvailableOS,
-  calculatePriceForVPS,
   registerVpsTelegram,
   fetchUserSSHkeyList,
   generateNewSSSkey,
   uploadSSHPublicKey,
   fetchAvailableVPSConfigs,
   fetchSelectedCpanelOptions,
-  attachSSHKeysToVM
+  attachSSHKeysToVM,
+  fetchUserVPSList,
+  fetchVPSDetails,
+  deleteVPSinstance,
+  upgradeDiskOptions,
+  vpsToUpgradePlan
 } = require('./vm-instance-setup.js')
 const { console } = require('inspector')
 
@@ -135,6 +139,7 @@ const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const VPS_WINDOWS_SERVER_OS_PRICE = parseFloat(process.env.VPS_WINDOWS_SERVER_OS_PRICE)
 const VPS_CPANEL_PRICE = parseFloat(process.env.VPS_CPANEL_PRICE)
+const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE)
 
 if (!DB_NAME || !RATE_LEAD_VALIDATOR || !HOSTED_ON || !TELEGRAM_BOT_ON || !REST_APIS_ON || !CHAT_BOT_NAME) {
   return log('Service is paused because some ENV variable is missing')
@@ -177,7 +182,8 @@ let state = {},
   freeSmsCountOf = {},
   clicksOfSms = {},
   freeDomainNamesAvailableFor = {},
-  hostingTransactions = {}
+  hostingTransactions = {},
+  vpsTransactions = {}
 
 
 // variables to view system information
@@ -220,6 +226,7 @@ const loadData = async () => {
   freeSmsCountOf = db.collection('freeSmsCountOf')
   clicksOfSms = db.collection('clicksOfSms')
   hostingTransactions = db.collection('hostingTransactions')
+  vpsTransactions = db.collection('vpsTransactions')
 
   freeDomainNamesAvailableFor = db.collection('freeDomainNamesAvailableFor')
 
@@ -499,7 +506,20 @@ bot?.on('message', async msg => {
     vpsLinkSSHKey: 'vpsLinkSSHKey',
     askUploadSSHPublicKey: 'askUploadSSHPublicKey',
     askSkipSSHkeyconfirmation: 'askSkipSSHkeyconfirmation',
-    proceedWithVpsPayment: 'proceedWithVpsPayment'
+    proceedWithVpsPayment: 'proceedWithVpsPayment',
+
+    //vps management
+    getUserAllVmIntances: 'getUserAllVmIntances',
+    getVPSDetails: 'getVPSDetails',
+    confirmStopVps: 'confirmStopVps',
+    confirmDeleteVps: 'confirmDeleteVps',
+    upgradeVpsInstance: 'upgradeVpsInstance',
+    upgradeVpsPlan: 'upgradeVpsPlan',
+    askVpsUpgradePayment: 'askVpsUpgradePayment',
+    vpsSubscription: 'vpsSubscription',
+    manageVpsSub: 'manageVpsSub',
+    vpsLinkedSSHkeys: 'vpsLinkedSSHkeys',
+    vpsUnlinkSSHKey: 'vpsUnlinkSSHKey'
   }
 
   const firstSteps = [
@@ -547,6 +567,10 @@ bot?.on('message', async msg => {
     },
     'vps-plan-pay' : () => {
       set(state, chatId, 'action', 'vps-plan-pay')
+      send(chatId, vp.askPaymentMethod, k.pay)
+    },
+    'vps-upgrade-plan-pay' : () => {
+      set(state, chatId, 'action', 'vps-upgrade-plan-pay')
       send(chatId, vp.askPaymentMethod, k.pay)
     },
     'choose-domain-to-buy': async () => {
@@ -1142,7 +1166,7 @@ bot?.on('message', async msg => {
 
     submenu4: () => {
       set(state, chatId, 'action', a.submenu4)
-      send(chatId, t.select, trans('k.of', [user.buyVpsPlan]))
+      send(chatId, t.select, trans('k.of', [user.manageVpsPlan, user.buyVpsPlan]))
     },
 
     // ask vps plan
@@ -1252,7 +1276,7 @@ bot?.on('message', async msg => {
       } else {
         const sshKeyList = await fetchUserSSHkeyList(chatId)
         if (sshKeyList && sshKeyList.keys.length) {
-          list = sshKeyList.keys.map((key) => key.sshKeyName)
+          list = sshKeyList.keys.map((key) => key.name)
           let vpsDetails = info.vpsDetails
           vpsDetails.hasSSHKey = true
           saveInfo('vpsDetails', vpsDetails)
@@ -1280,8 +1304,105 @@ bot?.on('message', async msg => {
     },
 
     vpsAskPaymentConfirmation: () => {
-      set(state, chatId, 'action', 'proceedWithVpsPayment')
+      set(state, chatId, 'action', a.proceedWithVpsPayment)
       return send(chatId, vp.generateBillSummary(info?.vpsDetails), vp.of([vp.yes, vp.no]))
+    },
+
+    // VPS Management
+    getUserAllVmIntances: async () => {
+      set(state, chatId, 'action', a.getUserAllVmIntances)
+      let list = []
+      let vpsList;
+      if (info.isRegisteredTelegramForVps) {
+        vpsList = await fetchUserVPSList(chatId)
+        if (!vpsList) return send(chatId, vp.failedFetchingData, trans('o'))
+        list = vpsList.map((vps) => vps.name)
+        saveInfo('userVPSDetails', list)
+      }
+      return list.length ? 
+        send(chatId, vp.vpsList(vpsList), vp.of([...list, user.buyVpsPlan]))
+        : send(chatId, vp.noVPSfound, vp.of([user.buyVpsPlan]))
+    },
+
+    getVPSDetails: async () => {
+      set(state, chatId, 'action', a.getVPSDetails)
+      const vpsData = await fetchVPSDetails(chatId, info.vpsDetails.name)
+      if (!vpsData) return send(chatId, vp.failedFetchingData, trans('o'))
+      saveInfo('userVPSDetails', vpsData)
+      let action = vpsData.status === 'RUNNING' ? [vp.stopVpsBtn, vp.restartVpsBtn] : [vp.startVpsBtn]
+      return send(chatId, vp.selectedVpsData(vpsData), vp.of([ ...action, vp.subscriptionBtn, vp.VpsLinkedKeysBtn, vp.upgradeVpsBtn,  vp.deleteVpsBtn]))
+    },
+
+    confirmStopVps : () => {
+      set(state, chatId, 'action', a.confirmStopVps)
+      return send(chatId, vp.confirmStopVpstext(info.vpsDetails.name), vp.of([ vp.confirmChangeBtn, vp.cancel])) 
+    },
+
+    confirmDeleteVps: () => {
+      set(state, chatId, 'action', a.confirmDeleteVps)
+      return send(chatId, vp.confirmDeleteVpstext(info.vpsDetails.name), vp.of([ vp.confirmChangeBtn, vp.cancel])) 
+    },
+
+    upgradeVpsInstance: () => {
+      set(state, chatId, 'action', a.upgradeVpsInstance)
+      return send(chatId, vp.upgradeVPS, vp.of([ vp.upgradeVpsPlanBtn, vp.upgradeVpsDiskBtn ])) 
+    },
+
+    upgradeVpsPlan: () => {
+      const vpsDetails = info.vpsDetails
+      if (vpsDetails.upgradeType === 'plan') {
+        const plan = info.userVPSDetails.plan
+        if (plan === 'Enterprise') return send(chatId, vp.alreadyEnterprisePlan)
+        set(state, chatId, 'action', a.upgradeVpsPlan)
+        const btn = vp.newVpsPlanBtn(info.userVPSDetails.plan)
+        return send(chatId, vp.upgradeVpsPlanMsg, vp.of([ btn, vp.cancel]))
+      } else if (vpsDetails.upgradeType === 'disk') {
+        const diskType = info.userVPSDetails.diskType
+        if (diskType === 'pd-extreme') return send(chatId, vp.alreadyHighestDisk)
+        set(state, chatId, 'action', a.upgradeVpsPlan)
+        const availableUpgrades = upgradeDiskOptions.filter((type) => type.currentType === diskType)
+        const btn = availableUpgrades.map((upgrade) => vp.newVpsDiskBtn(upgrade.upgradeType))
+        saveInfo('vpsDiskTypes', availableUpgrades)
+        return send(chatId, vp.upgradeVpsDiskMsg(upgradeDiskOptions), vp.of([ ...btn, vp.cancel]))
+      }
+    },
+
+    askVpsUpgradePayment : () => {
+      set(state, chatId, 'action', a.askVpsUpgradePayment)
+      return send(chatId, info.vpsDetails.upgradeType === 'plan' ? vp.upgradePlanSummary(info.vpsDetails, info.userVPSDetails) : vp.upgradeDiskSummary(info.vpsDetails, info.userVPSDetails), vp.of([vp.yes, vp.no]))
+    },
+
+    vpsSubscription: () => {
+      set(state, chatId, 'action', a.vpsSubscription)
+      return send(chatId, vp.vpsSubscriptionData(info.userVPSDetails), vp.of([vp.manageVpsSubBtn, vp.manageVpsPanelBtn]))
+    },
+
+    manageVpsSub: () => {
+      set(state, chatId, 'action', a.manageVpsSub)
+      const btn = info.userVPSDetails.autoRenewable ? vp.vpsDisableRenewalBtn : vp.vpsEnableRenewalBtn
+      return send(chatId, vp.vpsSubDetails(info.userVPSDetails), vp.of([btn, vp.vpsRenewBtn]))
+    },
+
+    vpsLinkedSSHkeys : async () => {
+      set(state, chatId, 'action', a.vpsLinkedSSHkeys)
+      const sshKeyList = await fetchUserSSHkeyList(chatId, info.userVPSDetails.name)
+      if (!sshKeyList) return send(chatId, vp.failedFetchingData, trans('o'))
+      let list = []
+      if (sshKeyList && sshKeyList.keys.length) {
+        list = sshKeyList.keys.map((key) => key.name)
+      }
+      let vpsDetails = info.vpsDetails
+      vpsDetails.linkedSSHKeys = list
+      saveInfo('vpsDetails', vpsDetails)
+      return list.length ? 
+        send(chatId, vp.linkedKeyList(list, info.userVPSDetails.name), vp.of([vp.linkSSHKeyBtn, vp.unlinkSSHKeyBtn, vp.downloadSSHKeyBtn])) :
+        send(chatId, vp.noLinkedKey(info.userVPSDetails.name), vp.of([vp.linkSSHKeyBtn])) 
+    },
+
+    vpsUnlinkSSHKey: () => {
+      set(state, chatId, 'action', a.vpsUnlinkSSHKey)
+      const linkedSSHKeys = info.vpsDetails.linkedSSHKeys
+      send(chatId, vp.unlinkSSHKeyList(info.userVPSDetails.name), vp.of([...linkedSSHKeys, vp.cancel]))
     }
   }
 
@@ -1396,7 +1517,7 @@ bot?.on('message', async msg => {
       const priceNgn = await usdToNgn(price)
       if (coin === u.ngn && ngnBal < priceNgn) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
 
-      // buy domain
+      // buy VPS
       const vpsDetails = info?.vpsDetails
       const lang = info?.userLanguage ?? 'en'
       const name = await get(nameOf, chatId)
@@ -1415,6 +1536,43 @@ bot?.on('message', async msg => {
       sendMessage(chatId, translation('vp.paymentRecieved', lang), rem)
       const isSuccess = await buyVPSPlanFullProcess(chatId, lang, vpsDetails)
       if (!isSuccess) return
+      const { usdBal: usd, ngnBal: ngn } = await getBalance(walletOf, chatId)
+      send(chatId, t.showWallet(usd, ngn), trans('o'))
+    },
+    'vps-upgrade-plan-pay': async coin => {
+      set(state, chatId, 'action', 'none')
+      const price = Number(info?.vpsDetails.upgradePrice)
+      const wallet = await get(walletOf, chatId)
+      const { usdBal, ngnBal } = await getBalance(walletOf, chatId)
+
+      if (![u.usd, u.ngn].includes(coin)) return send(chatId, 'Some Issue')
+
+      // price validate
+      const priceUsd = price
+      if (coin === u.usd && usdBal < priceUsd) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
+      const priceNgn = await usdToNgn(price)
+      if (coin === u.ngn && ngnBal < priceNgn) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
+
+      const vpsDetails = info?.vpsDetails
+      const lang = info?.userLanguage ?? 'en'
+      const name = await get(nameOf, chatId)
+
+      // wallet update
+      if (coin === u.usd) {
+        set(payments, nanoid(), `Wallet,VPSUpgrade,${vpsDetails?.upgradeType},$${priceUsd},${chatId},${name},${new Date()}`)
+        const usdOut = (Number(wallet?.usdOut) || 0) + priceUsd
+        await set(walletOf, chatId, 'usdOut', usdOut)
+      }
+      if (coin === u.ngn) {
+        set(payments, nanoid(), `Wallet,VPSUpgrade,${vpsDetails?.upgradeType},$${priceUsd},${chatId},${name},${new Date()},${priceNgn} NGN`)
+        const ngnOut = isNaN(wallet?.ngnOut) ? 0 : Number(wallet?.ngnOut)
+        await set(walletOf, chatId, 'ngnOut', ngnOut + priceNgn)
+      }
+      sendMessage(chatId, translation('vp.paymentRecieved', lang), rem)
+
+      const isSuccess = await upgradeVPSDetails(chatId, lang, vpsDetails)
+      if (!isSuccess) return
+
       const { usdBal: usd, ngnBal: ngn } = await getBalance(walletOf, chatId)
       send(chatId, t.showWallet(usd, ngn), trans('o'))
     },
@@ -2287,6 +2445,189 @@ bot?.on('message', async msg => {
     send(chatId, t.selectValidOption)
   }
 
+  if (message === user.manageVpsPlan) {
+    return goto.getUserAllVmIntances()
+  }
+
+  if (action === a.getUserAllVmIntances) {
+    if (message === vp.back) return goto.submenu4()
+    if (message === user.buyVpsPlan) return goto.createNewVpsFlow()
+    const list = info?.userVPSDetails || []
+    if (!list.includes(message)) return send(chatId, vp.selectCorrectOption, vp.of([...list, user.buyVpsPlan]))
+    const vpsDetails = {
+      name : message
+    }
+    info.vpsDetails = vpsDetails
+    saveInfo('vpsDetails', vpsDetails)
+    return goto.getVPSDetails()
+  }
+
+  if (action === a.getVPSDetails) {
+    if (message === vp.back) return goto.getUserAllVmIntances()
+    const userVPSDetails = info.userVPSDetails
+    if (message === vp.stopVpsBtn) return goto.confirmStopVps()
+    if (message === vp.deleteVpsBtn) return goto.confirmDeleteVps()
+    if (message === vp.upgradeVpsBtn) return goto.upgradeVpsInstance()
+    if (message === vp.subscriptionBtn) return goto.vpsSubscription()
+    if (message === vp.VpsLinkedKeysBtn) return goto.vpsLinkedSSHkeys()
+    if (message === vp.startVpsBtn) {
+      send(chatId, vp.vpsBeingStarted(userVPSDetails.name))
+      const changeVpsStatus = await changeVpsInstanceStatus(userVPSDetails, 'start')
+      if (changeVpsStatus.success) {
+        await vpsPlansOf.updateOne(
+          { name: userVPSDetails.name },
+          { $set: { 'status': 'RUNNING' } },
+        )
+        send(chatId, vp.vpsStarted(userVPSDetails.name))
+      } else {
+        send(chatId, vp.failedStartedVPS(userVPSDetails.name))
+      }
+      return goto.getUserAllVmIntances()
+    }
+    if (message === vp.restartVpsBtn) {
+      send(chatId, vp.vpsBeingRestarted(userVPSDetails.name))
+      const changeVpsStatus = await changeVpsInstanceStatus(userVPSDetails, 'restart')
+      if (changeVpsStatus.success) {
+        send(chatId, vp.vpsRestarted(userVPSDetails.name))
+      } else {
+        send(chatId, vp.failedRestartingVPS(userVPSDetails.name))
+      }
+      return goto.getUserAllVmIntances()
+    }
+    return send(chatId, vp.selectCorrectOption)
+  }
+
+  if (action === a.confirmStopVps) {
+    if (message === vp.back) return goto.getVPSDetails()
+    if (message === vp.cancel) return goto.getUserAllVmIntances()
+    if (message === vp.confirmChangeBtn) {
+      const userVPSDetails = info.userVPSDetails
+      send(chatId, vp.vpsBeingStopped(userVPSDetails.name))
+      const changeVpsStatus = await changeVpsInstanceStatus(userVPSDetails, 'stop')
+      if (changeVpsStatus.success) {
+        await vpsPlansOf.updateOne(
+          { name: userVPSDetails.name },
+          { $set: { 'status': 'TERMINATED' } },
+        )
+        send(chatId, vp.vpsStopped(userVPSDetails.name))
+      } else {
+        send(chatId, vp.failedStoppingVPS(userVPSDetails.name))
+      }
+      return goto.getUserAllVmIntances()
+    }
+    return send(chatId, vp.selectCorrectOption, vp.of([ vp.confirmChangeBtn, vp.cancel]))
+  }
+
+  if (action === a.confirmDeleteVps) {
+    if (message === vp.back) return goto.getVPSDetails()
+    if (message === vp.cancel) return goto.getUserAllVmIntances()
+    if (message === vp.confirmChangeBtn) {
+      const userVPSDetails = info.userVPSDetails
+      send(chatId, vp.vpsBeingDeleted(userVPSDetails.name))
+      const deleteVpsStatus = await deleteVPSinstance(chatId, userVPSDetails.name)
+      if (deleteVpsStatus.success) {
+        await vpsPlansOf.deleteOne(
+          { name: userVPSDetails.name }
+        )
+        send(chatId, vp.vpsDeleted(userVPSDetails.name))
+      } else {
+        send(chatId, vp.failedDeletingVPS(userVPSDetails.name))
+      }
+      return goto.getUserAllVmIntances()
+    }
+    return send(chatId, vp.selectCorrectOption, vp.of([ vp.confirmChangeBtn, vp.cancel]))
+  }
+
+  if (action === a.upgradeVpsInstance) {
+    if (message === vp.back) return goto.getVPSDetails()
+    if (message !== vp.upgradeVpsDiskBtn && message !== vp.upgradeVpsPlanBtn) {
+      return send(chatId, vp.selectCorrectOption, vp.of([ vp.upgradeVpsPlanBtn, vp.upgradeVpsDiskBtn ]))
+    }
+    const vpsDetails = info.vpsDetails
+    if (message === vp.upgradeVpsPlanBtn) {
+      vpsDetails.upgradeType = 'plan'
+    } else if (message === vp.upgradeVpsDiskBtn) {
+      vpsDetails.upgradeType = 'disk'
+    }
+    info.vpsDetails = vpsDetails
+    saveInfo('vpsDetails', vpsDetails)
+    return goto.upgradeVpsPlan()
+  }
+
+  if (action === a.upgradeVpsPlan) {
+    if (message === vp.back) return goto.upgradeVpsInstance()
+    if (message === vp.cancel) return goto.getUserAllVmIntances()
+    const vpsDetails = info.vpsDetails
+    if (vpsDetails.upgradeType === 'plan') {
+      const upgradeBtn = vp.newVpsPlanBtn(info.userVPSDetails.plan)
+      if (message != upgradeBtn) return send(chatId, vp.selectCorrectOption, vp.of([ upgradeBtn, vp.cancel]))
+      const currentConfigPlan = info.userVPSDetails.plan
+      const upgradePlan = vpsToUpgradePlan[currentConfigPlan]
+      const configTypes = await fetchAvailableVPSConfigs()
+      if (!configTypes) {
+        send(chatId, vp.failedFetchingData)
+        return goto.getVPSDetails()
+      }
+      const newConfig = configTypes.find((ar) => ar.name === upgradePlan.newplan)
+      vpsDetails.newConfig = newConfig
+      //@TODO Change this to actual price and cycle
+      vpsDetails.billingCycle = 'hourly'
+      vpsDetails.upgradePrice = newConfig.hourlyPrice 
+      info.vpsDetails = vpsDetails
+      saveInfo('vpsDetails', vpsDetails)
+      return goto.askVpsUpgradePayment()
+    } else if (vpsDetails.upgradeType === 'disk') {
+      const availableUpgrades = info.vpsDiskTypes
+      const upgradeOptions = availableUpgrades.map((upgrade) => vp.newVpsDiskBtn(upgrade.upgradeType))
+      const upgradeOption = availableUpgrades.find((upgrade) => vp.newVpsDiskBtn(upgrade.upgradeType) === message)
+      if (!upgradeOption) return send(chatId, vp.selectCorrectOption, vp.of([ ...upgradeOptions, vp.cancel]))
+      vpsDetails.currentDisk = info.userVPSDetails.diskType
+      vpsDetails.newDisk = upgradeOption.upgradeType
+      vpsDetails.pricePerMonth = upgradeOption.pricePerMonth
+      //@TODO Change this to actual price and cycle
+      vpsDetails.upgradePrice = upgradeOption.pricePerMonth 
+      info.vpsDetails = vpsDetails
+      saveInfo('vpsDetails', vpsDetails)
+      return goto.askVpsUpgradePayment()
+    }
+  }
+
+  if (action === a.askVpsUpgradePayment) {
+    if (message === vp.back) return goto.upgradeVpsInstance()
+    if (message === vp.no) {
+      saveInfo('vpsDetails', null)
+      set(state, chatId, 'action', 'none')
+      return goto.getVPSDetails()
+    }
+    if (message === vp.yes) return goto['vps-upgrade-plan-pay']()
+    send(chatId, t.selectValidOption)
+  }
+
+  if (action === a.vpsSubscription) {
+    if (message === vp.back) return goto.getVPSDetails()
+    if (message !== vp.manageVpsSubBtn && message !== vp.manageVpsPanelBtn) 
+      return send(chatId, vp.selectCorrectOption, vp.of([vp.manageVpsSubBtn, vp.manageVpsPanelBtn]))
+    if (message === vp.manageVpsSubBtn) return goto.manageVpsSub()
+  }
+
+  if (action === a.manageVpsSub) {
+    if (message === vp.back) return goto.vpsSubscription()
+    return send(chatId, vp.selectCorrectOption)
+  }
+
+  if (action === a.vpsLinkedSSHkeys) {
+    if (message === vp.back) return goto.getVPSDetails()
+    if (message === vp.unlinkSSHKeyBtn) return goto.vpsUnlinkSSHKey()
+    return goto.getVPSDetails()
+  }
+
+  if (action === a.vpsUnlinkSSHKey) {
+    if (message === vp.back) return goto.vpsLinkedSSHkeys()
+    const linkedSSHKeys = info.vpsDetails.linkedSSHKeys
+    if (message === vp.cancel) return goto.getVPSDetails()
+    return goto.vpsUnlinkSSHKey()
+  }
+
   if (action === a.redSelectUrl) {
     if (message === t.back) return goto.submenu1()
     if (!isValidUrl(message)) return send(chatId, t.redValidUrl, bc)
@@ -2764,7 +3105,7 @@ bot?.on('message', async msg => {
     if (message === t.back) return goto['vps-plan-pay']()
     const email = message
     const vpsDetails = info?.vpsDetails
-    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE || 50 : vpsDetails?.totalPrice
+    const price = vpsDetails.plan === 'hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE || 50 : vpsDetails?.totalPrice
     if (!isValidEmail(email)) return send(chatId, t.askValidEmail)
 
     const ref = nanoid()
@@ -2786,7 +3127,7 @@ bot?.on('message', async msg => {
     const ticker = supportedCryptoView[tickerView]
     if (!ticker) return send(chatId, t.askValidCrypto)
     const vpsDetails = info.vpsDetails
-    const price = vpsDetails.plan === 'hourly' ? process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE || 50 : vpsDetails?.totalPrice
+    const price = vpsDetails.plan === 'hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE  ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE || 50 : vpsDetails?.totalPrice
     const ref = nanoid()
     if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
       const coin = tickerOf[ticker]
@@ -2814,6 +3155,88 @@ bot?.on('message', async msg => {
     }
   }
   //
+
+  //upgrade Plan payments
+  if (action === 'vps-upgrade-plan-pay') {
+    if (message === t.back) return goto.askVpsUpgradePayment()
+    const payOption = message
+
+    if (payOption === payIn.crypto) {
+      set(state, chatId, 'action', 'crypto-pay-vps-upgrade')
+      return send(chatId, t.selectCryptoToDeposit, trans('k.of', trans('supportedCryptoViewOf')))
+    }
+
+    if (payOption === payIn.bank) {
+      set(state, chatId, 'action', 'bank-pay-vps-upgrade')
+      return send(chatId, t.askEmail, bc)
+    }
+
+    if (payOption === payIn.wallet) {
+      set(state, chatId, 'lastStep', 'vps-upgrade-plan-pay')
+      return goto.walletSelectCurrency(true)
+    }
+
+    return send(chatId, t.askValidPayOption)
+  }
+
+  if (action === 'bank-pay-vps-upgrade') {
+    if (message === t.back) return goto['vps-upgrade-plan-pay']()
+    const email = message
+    const vpsDetails = info?.vpsDetails
+    const price = vpsDetails.upgradePrice
+    if (!isValidEmail(email)) return send(chatId, t.askValidEmail)
+
+    const ref = nanoid()
+
+    log({ ref })
+    set(state, chatId, 'action', 'none')
+    const priceNGN = Number(await usdToNgn(price))
+    set(chatIdOfPayment, ref, { chatId, price, vpsDetails, endpoint: `/bank-pay-upgrade-vps` })
+    const { url, error } = await createCheckout(priceNGN, `/ok?a=b&ref=${ref}&`, email, username, ref)
+    if (error) return send(chatId, error, trans('o'))
+    send(chatId, `Bank ₦aira + Card 🌐︎`, trans('o'))
+    console.log('showDepositNgnInfo', url)
+    if (vpsDetails.upgradeType === 'plan') {
+      return send(chatId, vp.bankPayVPSUpgradePlan(priceNGN, vpsDetails), trans('payBank', url))
+    } else if (vpsDetails.upgradeType === 'disk') {
+      return send(chatId, vp.bankPayVPSUpgradeDisk(priceNGN, vpsDetails), trans('payBank', url))
+    }
+  }
+
+  if (action === 'crypto-pay-vps-upgrade') {
+    if (message === t.back) return goto['vps-upgrade-plan-pay']()
+    const tickerView = message
+    const supportedCryptoView = trans('supportedCryptoView')
+    const ticker = supportedCryptoView[tickerView]
+    if (!ticker) return send(chatId, t.askValidCrypto)
+    const vpsDetails = info.vpsDetails
+    const price = vpsDetails.upgradePrice
+    const ref = nanoid()
+    if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
+      const coin = tickerOf[ticker]
+      set(chatIdOfPayment, ref, { chatId, price, vpsDetails })
+      const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-upgrade-vps?a=b&ref=${ref}&`)
+      log({ ref })
+      await sendQrCode(bot, chatId, bb, info?.userLanguage ?? 'en')
+      set(state, chatId, 'action', 'none')
+      const priceCrypto = await convert(price, 'usd', coin)
+      return send(chatId, vp.showDepositCryptoInfoVpsUpgrade(priceCrypto, ticker, address), trans('o'))
+    } else {
+      const coin = tickerOfDyno[ticker]
+      const redirect_url = `${SELF_URL}/dynopay/crypto-pay-upgrade-vps`
+      const meta_data = {
+        "product_name": dynopayActions.payVps,
+        "refId" : ref
+      }
+      const { qr_code, address } = await getDynopayCryptoAddress(price, coin, redirect_url, meta_data)
+      set(chatIdOfDynopayPayment, ref, { chatId, price, vpsDetails, action: dynopayActions.payVps, address })
+      log({ ref })
+      await generateQr(bot, chatId, qr_code, info?.userLanguage ?? 'en')
+      set(state, chatId, 'action', 'none')
+      const priceCrypto = await convert(price, 'usd', tickerOf[ticker])
+      return send(chatId, vp.showDepositCryptoInfoVpsUpgrade(priceCrypto, ticker, address), trans('o'))
+    }
+  }
   //
   if (message === user.buyPlan) {
     if (await isSubscribed(chatId)) {
@@ -3661,9 +4084,9 @@ const buyDomainFullProcess = async (chatId, lang, domain) => {
   }
 }
 
-schedule.scheduleJob('* * * * *', function() {
-  checkVPSPlansExpiryandPayment()
-})
+// schedule.scheduleJob('* * * * *', function() {
+//   checkVPSPlansExpiryandPayment()
+// })
 
 async function checkVPSPlansExpiryandPayment() {
   const now = new Date()
@@ -3671,25 +4094,29 @@ async function checkVPSPlansExpiryandPayment() {
 
   try {
     const expiredHourlyVpsPlans = await vpsPlansOf.find({
-      'val.plan': 'hourly',
-      'val.end_time': { $lte: now },
-      'val.status' : 'RUNNING'
+      'plan': 'hourly',
+      'end_time': { $lte: now },
+      'status' : 'RUNNING'
     }).toArray()
 
-    for ( const plan of expiredHourlyVpsPlans) {
-      const { chatId, val, _id } = plan
+    for ( const vpsPlan of expiredHourlyVpsPlans) {
+      const { chatId, _id, planPrice, plan, name, zone } = vpsPlan
       const info = await state.findOne({ _id: parseFloat(chatId) })
       const wallet = await get(walletOf, chatId)
       const { usdBal } = await getBalance(walletOf, chatId)
-      if (usdBal < val.price) {
+      if (usdBal < planPrice) {
         try {
-          const stopVPS = await stopVPSInstance(val)
+          let payload = {
+            name: name,
+            zone: zone
+          }
+          const stopVPS = await changeVpsInstanceStatus(payload, 'stop')
           if (stopVPS.success) {
             await vpsPlansOf.updateOne(
               { _id: _id },
-              { $set: { 'val.status': stopVPS.data.status } },
+              { $set: { 'status': 'TERMINATED' } },
             )
-            return send(chatId, translation('vp.lowWalletBalance', info?.userLanguage, val.name))
+            return send(chatId, translation('vp.lowWalletBalance', info?.userLanguage, name))
           }
         } catch (error) {
           console.log(error)
@@ -3697,11 +4124,11 @@ async function checkVPSPlansExpiryandPayment() {
       } else {
         await vpsPlansOf.updateOne(
           { _id: _id },
-          { $set: { 'val.end_time': oneHourFromNow } },
+          { $set: { 'end_time': oneHourFromNow } },
         )
-        set(payments, nanoid(), `Wallet,VPSPlan,${val?.plan},$${val.price},${chatId},${new Date()}`)
-        const usdOut = (wallet?.usdOut || 0) + val.price
-        send(chatId, translation('vp.vpsHourlyPlanRenewed', info?.userLanguage, val.name, val.price))
+        set(payments, nanoid(), `Wallet,VPSPlan,${plan},$${planPrice},${chatId},${new Date()}`)
+        const usdOut = (wallet?.usdOut || 0) + Number(planPrice)
+        send(chatId, translation('vp.vpsHourlyPlanRenewed', info?.userLanguage, name, planPrice))
         await set(walletOf, chatId, 'usdOut', usdOut)
         const { usdBal: usd, ngnBal: ngn } = await getBalance(walletOf, chatId)
         send(chatId, translation('t.showWallet', info?.userLanguage, usd, ngn))
@@ -3737,8 +4164,9 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
       cpanelDetails.expiryDate = getExpiryDateVps('monthly')
     }
 
-    insert(vpsPlansOf, chatId, 'val', { 
-      name:vpsData.name, 
+    await vpsPlansOf.insertOne({
+      chatId: chatId,
+      name: vpsData.name,
       start_time: now, 
       end_time: expiresAt, 
       zone: vpsDetails.zone, 
@@ -3748,11 +4176,13 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
       planPrice: vpsDetails.couponApplied ? vpsDetails.planNewPrice : vpsDetails.plantotalPrice, 
       cpanel: cpanelDetails,
       os: osDetails,
-      vmsDetails: vpsData,
+      diskType: vpsDetails.diskType,
+      host: vpsData.host,
       status: vpsData.status,
-      serverIP: vpsData.networkInterfaces[0].networkIP 
-    })
-    await sleep(10000)
+      serverIP: vpsData.networkInterfaces[0].networkIP,
+      timestamp: new Date()
+    });
+    await sleep(30000)
     if (vpsDetails.sshKeyName) {
       const data = {
         zone: vpsDetails.zone,
@@ -3775,6 +4205,32 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
   } catch (error) {
     const errorMessage = `err buyVPSPlanFullProcess ${error?.message} ${JSON.stringify(error?.response?.data, null, 2)}`
     const m = translation('vp.errorPurchasingVPS', lang, vpsDetails.plan)
+    sendMessage(chatId, m)
+    sendMessage(TELEGRAM_DEV_CHAT_ID, errorMessage)
+    console.error(errorMessage)
+    return false
+  }
+}
+
+// @TODO
+const upgradeVPSDetails = async (chatId, lang, vpsDetails) => {
+  try {
+    log(vpsDetails, '111111111111111111111111')
+    const vmInstanceDetails = await fetchVPSDetails(chatId, vpsDetails.name)
+    // if (!vmInstance.success) {
+    //   const m = translation('vp.errorPurchasingVPS', lang, vpsDetails.plan)
+    //   log(m)
+    //   sendMessage(TELEGRAM_DEV_CHAT_ID, m)
+    //   sendMessage(chatId, m)
+    //   return false
+    // }
+
+    set(state, chatId, 'action', 'none')
+    send(chatId, translation('vp.vpsBoughtSuccess', lang, vpsDetails), translation('o', lang))
+    return true
+  } catch (error) {
+    const errorMessage = `err buyUPgradingVPSProcess ${error?.message} ${JSON.stringify(error?.response?.data, null, 2)}`
+    const m = translation('vp.errorUpgradingVPS', lang, vpsDetails) // @TODO add text here too
     sendMessage(chatId, m)
     sendMessage(TELEGRAM_DEV_CHAT_ID, errorMessage)
     console.error(errorMessage)
@@ -3913,6 +4369,7 @@ const bankApis = {
   '/bank-pay-vps': async (req, res, ngnIn) => {
     // Validate
     const { ref, chatId, price, vpsDetails } = req.pay
+    const response = req?.query
     if (!ref || !chatId || !price ) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
     const info = await state.findOne({ _id: parseFloat(chatId) })
     const lang = info?.userLanguage ?? 'en'
@@ -3920,8 +4377,12 @@ const bankApis = {
     // Logs
     del(chatIdOfPayment, ref)
     const usdIn = await ngnToUsd(ngnIn)
-    const name = await get(nameOf, chatId)
-    set(payments, ref, `Bank, VPSPlan, ${vpsDetails?.plan}, $${usdIn}, ${chatId}, ${name}, ${new Date()}, ₦${ngnIn}`)
+    let transaction = {
+      plan: vpsDetails.plan,
+      type: 'new-plan',
+      response: response
+    }
+    await insert(vpsTransactions, chatId, "bank", transaction)
 
     const totalPrice = Number(vpsDetails?.totalPrice)
     sendMessage(chatId, translation('vp.paymentRecieved', lang))
@@ -3942,7 +4403,48 @@ const bankApis = {
       sendMessage(chatId, translation('vp.extraMoney', lang))
     }
 
+    // Buy VPS
     const isSuccess = await buyVPSPlanFullProcess(chatId, lang, vpsDetails)
+    if (!isSuccess) return res.send(html(error))
+
+    res.send(html())
+  },
+  '/bank-pay-upgrade-vps': async (req, res, ngnIn) => {
+    // Validate
+    const { ref, chatId, price, vpsDetails } = req.pay
+    const response = req?.query
+    if (!ref || !chatId || !price ) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+    const info = await state.findOne({ _id: parseFloat(chatId) })
+    const lang = info?.userLanguage ?? 'en'
+
+    // Logs
+    del(chatIdOfPayment, ref)
+    const usdIn = await ngnToUsd(ngnIn)
+    let transaction = {
+      type: vpsDetails.upgradeType === 'plan' ? 'upgarde-plan' : 'upgrade-disk',
+      response : response
+    }
+    await insert(vpsTransactions, chatId, "bank", transaction)
+
+    sendMessage(chatId, translation('vp.paymentRecieved', lang))
+    // Update Wallet
+    const ngnPrice = await usdToNgn(price)
+    if (usdIn * 1.06 < price) {
+      sendMessage(chatId, translation('t.sentLessMoney', lang, `${ngnPrice} NGN`, `${ngnIn} NGN`))
+      addFundsTo(walletOf, chatId, 'ngn', ngnIn, lang)
+      return res.send(html(translation('t.lowPrice')))
+    }
+    if (ngnIn > ngnPrice) {
+      addFundsTo(walletOf, chatId, 'ngn', ngnIn - ngnPrice, lang)
+      sendMessage(chatId, translation('t.sentMoreMoney', lang, `${ngnPrice} NGN`, `${ngnIn} NGN`))
+    }
+
+    // if (vpsDetails.plan === 'hourly') {
+    //   addFundsTo(walletOf, chatId, 'usd', usdIn - totalPrice, lang)
+    //   sendMessage(chatId, translation('vp.extraMoney', lang))
+    // }
+    // Upgrade VPS plan or disk
+    const isSuccess = await upgradeVPSDetails(chatId, lang, vpsDetails)
     if (!isSuccess) return res.send(html(error))
 
     res.send(html())
@@ -4180,6 +4682,7 @@ app.get('/crypto-pay-vps', auth, async (req, res) => {
   const { ref, chatId, price, vpsDetails } = req.pay
   const coin = req?.query?.coin
   const value = req?.query?.value_coin
+  const response = req?.query
   if (!ref || !chatId || !price || !coin || !value) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
   const info = await state.findOne({ _id: parseFloat(chatId) })
   const lang = info?.userLanguage ?? 'en'
@@ -4188,8 +4691,11 @@ app.get('/crypto-pay-vps', auth, async (req, res) => {
   sendMessage(chatId, translation('vp.paymentRecieved', lang))
   // Logs
   del(chatIdOfPayment, ref)
-  const name = await get(nameOf, chatId)
-  set(payments, ref, `Crypto,VPSPlan,${vpsDetails?.plan},$${price},${chatId},${name},${new Date()},${value} ${coin}`)
+  let transaction = {
+    type: 'new-plan',
+    response : response
+  }
+  await insert(vpsTransactions, chatId, "blockbee", transaction)
 
   // Update Wallet
   const usdIn = await convert(value, coin, 'usd')
@@ -4212,6 +4718,50 @@ app.get('/crypto-pay-vps', auth, async (req, res) => {
   if (!isSuccess) return res.send(html(error))
   res.send(html())
 })
+
+app.get('/crypto-pay-upgrade-vps', auth, async (req, res) => {
+  // Validate
+  const { ref, chatId, price, vpsDetails } = req.pay
+  const coin = req?.query?.coin
+  const value = req?.query?.value_coin
+  const response = req?.query
+  if (!ref || !chatId || !price || !coin || !value) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+  const info = await state.findOne({ _id: parseFloat(chatId) })
+  const lang = info?.userLanguage ?? 'en'
+  // const totalPrice = vpsDetails?.totalPrice
+
+  sendMessage(chatId, translation('vp.paymentRecieved', lang))
+  // Logs
+  del(chatIdOfPayment, ref)
+  let transaction = {
+    type: vpsDetails.upgradeType === 'plan' ? 'upgarde-plan' : 'upgrade-disk',
+    response: response
+  }
+  await insert(vpsTransactions, chatId, "blockbee", transaction)
+
+  // Update Wallet
+  const usdIn = await convert(value, coin, 'usd')
+  if (usdIn * 1.06 < price) {
+    sendMessage(chatId, translation('t.sentLessMoney', lang, `$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', Number(usdIn), lang)
+    return res.send(html(translation('t.lowPrice')))
+  }
+  if (usdIn > price) {
+    addFundsTo(walletOf, chatId, 'usd', Number(usdIn) - Number(price), lang)
+    sendMessage(chatId, translation('t.sentMoreMoney', lang, `$${price}`, `$${usdIn}`))
+  }
+
+  // if (vpsDetails.plan === 'hourly') {
+  //   addFundsTo(walletOf, chatId, 'usd', usdIn - totalPrice, lang)
+  //   sendMessage(chatId, translation('vp.extraMoney', lang))
+  // }
+
+  // Upgrade VPS plan or disk
+  const isSuccess = await upgradeVPSDetails(chatId, lang, vpsDetails)
+  if (!isSuccess) return res.send(html(error))
+  res.send(html())
+})
+
 app.get('/crypto-wallet', auth, async (req, res) => {
   // Validate
   const { ref, chatId } = req.pay
@@ -4343,7 +4893,7 @@ app.post('/dynopay/crypto-pay-hosting', authDyno, async (req, res) => {
 app.post('/dynopay/crypto-pay-vps', authDyno, async (req, res) => {
   // Validate
   const { ref, chatId, price, vpsDetails } = req.pay
-  const { paid_amount:value , paid_currency:coin, id } = req.body
+  const { paid_amount:value , paid_currency:coin } = req.body
 
   log({ method: 'dynopay/crypto-pay-vps', ref, chatId, price, coin, value })
 
@@ -4357,7 +4907,11 @@ app.post('/dynopay/crypto-pay-vps', authDyno, async (req, res) => {
   // Logs
   del(chatIdOfDynopayPayment, ref)
   const name = await get(nameOf, chatId)
-  set(payments, ref, `Crypto,VPSPlan,${vpsDetails?.plan},$${price},${chatId},${name},${new Date()},${value} ${coin},transaction,${id}`)
+  let transaction = {
+    type: 'new-plan',
+    response: req.body
+  }
+  await insert(vpsTransactions, chatId, "dynopay", transaction)
 
   // Update Wallet
   const ticker = tickerViewOfDyno[coin]
@@ -4378,6 +4932,52 @@ app.post('/dynopay/crypto-pay-vps', authDyno, async (req, res) => {
   }
 
   const isSuccess = await buyVPSPlanFullProcess(chatId, lang, vpsDetails)
+  if (!isSuccess) return res.send(html(error))
+  res.send(html())
+})
+
+// Dynopay Upgrade VPS
+app.post('/dynopay/crypto-pay-upgrade-vps', authDyno, async (req, res) => {
+  // Validate
+  const { ref, chatId, price, vpsDetails } = req.pay
+  const { paid_amount:value , paid_currency:coin } = req.body
+
+  log({ method: 'dynopay/crypto-pay-upgrade-vps', ref, chatId, price, coin, value })
+
+  if (!ref || !chatId || !price || !coin || !value) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
+
+  const info = await state.findOne({ _id: parseFloat(chatId) })
+  const lang = info?.userLanguage ?? 'en'
+  // const totalPrice = vpsDetails?.totalPrice
+
+  sendMessage(chatId, translation('vp.paymentRecieved', lang))
+  // Logs
+  del(chatIdOfDynopayPayment, ref)
+  let transaction = {
+    type: vpsDetails.upgradeType === 'plan' ? 'upgarde-plan' : 'upgrade-disk',
+    response: req.body
+  }
+  await insert(vpsTransactions, chatId, "dynopay", transaction)
+
+  // Update Wallet
+  const ticker = tickerViewOfDyno[coin]
+  const usdIn = await convert(value, ticker , 'usd')
+  if (usdIn * 1.06 < price) {
+    sendMessage(chatId, translation('t.sentLessMoney', lang, `$${price}`, `$${usdIn}`))
+    addFundsTo(walletOf, chatId, 'usd', Number(usdIn), lang)
+    return res.send(html(translation('t.lowPrice')))
+  }
+  if (usdIn > price) {
+    addFundsTo(walletOf, chatId, 'usd', Number(usdIn) - Number(price), lang)
+    sendMessage(chatId, translation('t.sentMoreMoney', lang, `$${price}`, `$${usdIn}`))
+  }
+
+  // if (vpsDetails.plan === 'hourly') {
+  //   addFundsTo(walletOf, chatId, 'usd', Number(usdIn) - Number(totalPrice), lang)
+  //   sendMessage(chatId, translation('vp.extraMoney', lang))
+  // }
+
+  const isSuccess = await upgradeVPSDetails(chatId, lang, vpsDetails)
   if (!isSuccess) return res.send(html(error))
   res.send(html())
 })
