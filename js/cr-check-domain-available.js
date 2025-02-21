@@ -26,7 +26,7 @@ const checkExistingDomain = async (websiteName, hostingType) => {
       message: response.data.message,
     }
   } catch (error) {
-    if (error?.response.status === 409) {
+    if (error?.response?.status === 409) {
       return {
         available: false,
         message: error.response.data.message,
@@ -80,8 +80,8 @@ const getNewDomain = async (domainName, hostingType) => {
       domainType
     }
   } catch (error) {
-    console.log("###error",error.response.data.message)
-    if (error.response.status === 409) {
+    console.log("###error",error?.response?.data?.message)
+    if (error?.response?.status === 409) {
       return {
         available: false,
         originalPrice: 0,

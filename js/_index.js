@@ -10,7 +10,6 @@ const {
   buyLeadsSelectArea,
   buyLeadsSelectAreaCode,
   buyLeadsSelectCarrier,
-  buyLeadsSelectCnam,
   buyLeadsSelectFormat,
   _buyLeadsSelectAreaCode,
   buyLeadsSelectAmount,
@@ -363,6 +362,7 @@ bot?.on('message', async msg => {
   const admin = trans('admin')
   const payIn = trans('payIn')
   const hP = trans('hP')
+  const buyLeadsSelectCnam = trans('buyLeadsSelectCnam')
 
   // actions
   const a = {
