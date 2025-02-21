@@ -2572,7 +2572,7 @@ bot?.on('message', async msg => {
     return goto.buyLeadsSelectAreaCode()
   }
   if (action === a.buyLeadsSelectAreaCode) {
-    if (message === t.back) return goto?.[info?.cameFrom]()
+    if (message === t.back) return ['USA', 'Canada'].includes(info?.country) ? goto.buyLeadsSelectArea() : goto.buyLeadsSelectSmsVoice()
     const areaCodes = buyLeadsSelectAreaCode(
       info?.country,
       ['USA', 'Canada'].includes(info?.country) ? info?.area : 'Area Codes',
@@ -2585,7 +2585,7 @@ bot?.on('message', async msg => {
     return goto.buyLeadsSelectCarrier()
   }
   if (action === a.buyLeadsSelectCarrier) {
-    if (message === t.back) return goto?.[info?.cameFrom]()
+    if (message === t.back) return  ['Australia'].includes(info?.country) ? goto.buyLeadsSelectSmsVoice() : goto.buyLeadsSelectAreaCode()
     if (!buyLeadsSelectCarrier(info?.country).includes(message)) return send(chatId, t.what)
     saveInfo('carrier', message)
     saveInfo('cameFrom', a.buyLeadsSelectCarrier)
