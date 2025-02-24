@@ -546,6 +546,7 @@ ${bal(usd, ngn)}`,
   noDomainRegistered: 'You have no purchased domains yet.',
   registeredDomainList: domainsText => `Here are your purchased domains:\n${domainsText}`,
   comingSoon: `Coming Soon`,
+  errorFetchingCryptoAddress: `Error fetching cryptocurrency address. Please try again later.`
 }
 
 const phoneNumberLeads = ['💰📲 Buy PhoneLeads', '✅📲 Validate PhoneLeads']

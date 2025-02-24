@@ -667,7 +667,7 @@ bot?.on('message', async msg => {
       const ticker = tickerOf[tickerView]
       if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
         const { address, bb } = await getCryptoDepositAddress(ticker, chatId, SELF_URL, `/crypto-wallet?a=b&ref=${ref}&`)
-
+        if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
         log({ ref })
         sendQrCode(bot, chatId, bb, userLanguage ?? 'en')
         set(chatIdOfPayment, ref, { chatId })
@@ -682,6 +682,7 @@ bot?.on('message', async msg => {
           "refId" : ref
         }
         const { qr_code, address } = await getDynopayCryptoAddress(amount, tickerDyno, redirect_url, meta_data)
+        if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
         await generateQr(bot, chatId, qr_code, userLanguage ?? 'en')
         set(chatIdOfDynopayPayment, ref, { chatId, action: dynopayActions.walletFund, address })
         set(state, chatId, 'action', 'none')
@@ -1265,7 +1266,7 @@ bot?.on('message', async msg => {
       // wallet update
       if (coin === u.usd) {
         set(payments, nanoid(), `Wallet,Phone Leads,${leadsAmount} leads,$${priceUsd},${chatId},${name},${new Date()}`)
-        const usdOut = (wallet?.usdOut || 0) + priceUsd
+        const usdOut = (wallet?.usdOut || 0) + Number(priceUsd)
         await set(walletOf, chatId, 'usdOut', usdOut)
       } else if (coin === u.ngn) {
         set(payments, nanoid(), `Wallet,Phone Leads,${leadsAmount} leads,$${priceUsd},${chatId},${name},${new Date()},${priceNgn} NGN`)
@@ -2087,8 +2088,9 @@ bot?.on('message', async msg => {
       const ref = nanoid()
       if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
         const coin = tickerOf[ticker]
-        set(chatIdOfPayment, ref, { chatId, price, domain })
         const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-domain?a=b&ref=${ref}&`)
+        if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
+        set(chatIdOfPayment, ref, { chatId, price, domain })
         saveInfo('ref', ref)
         log({ ref })
         await sendQrCode(bot, chatId, bb, info?.userLanguage ?? 'en')
@@ -2103,6 +2105,7 @@ bot?.on('message', async msg => {
           "refId" : ref
         }
         const { qr_code, address } = await getDynopayCryptoAddress(price, coin, redirect_url, meta_data)
+        if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
         set(chatIdOfDynopayPayment, ref, { chatId, price, domain, action: dynopayActions.payDomain, address })
         saveInfo('ref', ref)
         log({ ref })
@@ -2166,8 +2169,9 @@ bot?.on('message', async msg => {
     const ref = nanoid()
     if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
       const coin = tickerOf[ticker]
-      set(chatIdOfPayment, ref, { chatId, price, domain })
       const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-hosting?a=b&ref=${ref}&`)
+      if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
+      set(chatIdOfPayment, ref, { chatId, price, domain })
       log({ ref })
       await sendQrCode(bot, chatId, bb, info?.userLanguage ?? 'en')
       set(state, chatId, 'action', a.proceedWithPaymentProcess)
@@ -2182,6 +2186,7 @@ bot?.on('message', async msg => {
         "refId" : ref
       }
       const { qr_code, address } = await getDynopayCryptoAddress(price, coin, redirect_url, meta_data)
+      if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
       set(chatIdOfDynopayPayment, ref, { chatId, price, domain, action: dynopayActions.payHosting, address })
       log({ ref })
       await generateQr(bot, chatId, qr_code, info?.userLanguage ?? 'en')
@@ -2289,6 +2294,7 @@ bot?.on('message', async msg => {
     if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
       const coin = tickerOf[ticker]
       const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-plan?a=b&ref=${ref}&`)
+      if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
       set(chatIdOfPayment, ref, { chatId, price, plan })
       log({ ref })
       await sendQrCode(bot, chatId, bb, info?.userLanguage ?? 'en')
@@ -2304,6 +2310,7 @@ bot?.on('message', async msg => {
         "refId" : ref
       }
       const { qr_code, address } = await getDynopayCryptoAddress(price, coin, redirect_url, meta_data)
+      if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
       set(chatIdOfDynopayPayment, ref, { chatId, price, plan, action: dynopayActions.payPlan, address })
       log({ ref })
       await generateQr(bot, chatId, qr_code, info?.userLanguage ?? 'en')

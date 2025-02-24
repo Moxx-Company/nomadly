@@ -475,6 +475,7 @@ ${CHAT_BOT_NAME}`,
   noDomainRegistered: '您还没有购买任何域名。',
   registeredDomainList: domainsText => `以下是您购买的域名：\n${domainsText}`,
   comingSoon: `即将推出`,
+  errorFetchingCryptoAddress: "获取加密货币地址时出错。请稍后再试。"
 }
 
 const phoneNumberLeads = ['💰📲 购买电话线索', '✅📲 验证电话线索']

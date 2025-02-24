@@ -495,6 +495,7 @@ ${CHAT_BOT_NAME}`,
   noDomainRegistered: `Vous n'avez pas encore acheté de domaines.`,
   registeredDomainList: domainsText => `Voici vos domaines achetés :\n${domainsText}`,
   comingSoon: `Bientôt disponible`,
+  errorFetchingCryptoAddress: "Erreur lors de la récupération de l'adresse de la cryptomonnaie. Veuillez réessayer plus tard."
 }
 
 const phoneNumberLeads = ['💰📲 Acheter des leads téléphoniques', '✅📲 Valider les leads téléphoniques']
