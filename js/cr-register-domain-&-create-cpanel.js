@@ -4,6 +4,7 @@ const { log } = require('console')
 const sendEmail = require('./send-email')
 const { assignPackageToUser, set, removeKeysFromDocumentById } = require('./db')
 const { translation } = require('./translation')
+const { rem } = require('./config')
 
 
 const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL
