@@ -17,6 +17,7 @@ async function registerDomainAndCreateCpanel(send, info, keyboardButtons, state)
   let endpoint = `${NAMEWORD_BASE_URL}/${hostingType}/accounts/telegram`
   
   const lang = info?.userLanguage ?? 'en'
+  send(info._id, translation('t.paymentSuccessFul', lang), rem)
   try {
     headers = {
       accept: 'application/json',

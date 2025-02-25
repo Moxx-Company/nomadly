@@ -1058,7 +1058,7 @@ bot?.on('message', async msg => {
 
     // Step 5.1: Skip Coupon
     skipCoupon: (action) => {
-      set(state, chatId, 'action', a.skipCoupon)
+      // set(state, chatId, 'action', a.skipCoupon)
       saveInfo('couponApplied', false)
       saveInfo('couponDiscount', 0)
       goto[action]()
@@ -3011,6 +3011,7 @@ const formatLinks = links => {
 
 const buyDomainFullProcess = async (chatId, lang, domain) => {
   try {
+    sendMessage(chatId, translation('t.paymentSuccessFul', lang), rem)
     const { error: buyDomainError } = await buyDomain(chatId, domain)
     if (buyDomainError) {
       const m = translation('t.domainPurchasedFailed', lang, domain, buyDomainError)
