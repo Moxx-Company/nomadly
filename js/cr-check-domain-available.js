@@ -26,7 +26,7 @@ const checkExistingDomain = async (websiteName, hostingType) => {
       message: response.data.message,
     }
   } catch (error) {
-    if (error?.response.status === 409) {
+    if (error?.response?.status === 409) {
       return {
         available: false,
         message: error.response.data.message,
@@ -44,7 +44,7 @@ const getNewDomain = async (domainName, hostingType) => {
   hostingType = hostingType.toLowerCase()
 
   const apiUrl = `${NAMEWORD_BASE_URL}/${hostingType}/accounts/telegram/domain/new?domain=${domainName}`
-
+  console.log("###API URL:",apiUrl)
   const headers = {
     accept: 'application/json',
     'content-type': 'application/json',
@@ -55,8 +55,9 @@ const getNewDomain = async (domainName, hostingType) => {
   let domainPrice = 0;
   try {
     let response = await axios.get(apiUrl, { headers })
+    console.log("###Response FROM API:",response)
     response = response.data.data
-    console.log('Response:', response);
+    console.log('Response Formatted:', response);
 
     let { registrationFee, registrationFees, domainType } = response.responseData;
 
@@ -79,7 +80,8 @@ const getNewDomain = async (domainName, hostingType) => {
       domainType
     }
   } catch (error) {
-    if (error.response.status === 409) {
+    console.log("###error",error?.response?.data?.message)
+    if (error?.response?.status === 409) {
       return {
         available: false,
         originalPrice: 0,
@@ -87,8 +89,10 @@ const getNewDomain = async (domainName, hostingType) => {
         chatMessage: error.response.data.message,
       }
     } else {
+      console.log("###error",error)
       const chatMessage = `An error occurred while checking domain availability. Maybe IP Not Whitelisted. ${error.response?.status}`
       console.error('checkDomainPriceOnline', error.response.data.errors)
+      console.error('checkDomainPriceOnline error', error.response.data)
 
       return {
         available: false,

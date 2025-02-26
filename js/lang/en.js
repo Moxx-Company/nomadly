@@ -557,6 +557,8 @@ ${bal(usd, ngn)}`,
   registeredDomainList: domainsText => `Here are your purchased domains:\n${domainsText}`,
   comingSoon: `Coming Soon`,
   goBackToCoupon: '❌ Go Back & Apply Coupon',
+  errorFetchingCryptoAddress: `Error fetching cryptocurrency address. Please try again later.`,
+  paymentSuccessFul: '✅ Payment successful! Your order is being processed. Details will be available shortly.'
 }
 
 const phoneNumberLeads = ['💰📲 Buy PhoneLeads', '✅📲 Validate PhoneLeads']

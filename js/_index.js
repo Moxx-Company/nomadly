@@ -10,7 +10,6 @@ const {
   buyLeadsSelectArea,
   buyLeadsSelectAreaCode,
   buyLeadsSelectCarrier,
-  buyLeadsSelectCnam,
   buyLeadsSelectFormat,
   _buyLeadsSelectAreaCode,
   buyLeadsSelectAmount,
@@ -144,6 +143,7 @@ const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const VPS_WINDOWS_SERVER_OS_PRICE = parseFloat(process.env.VPS_WINDOWS_SERVER_OS_PRICE)
 const VPS_CPANEL_PRICE = parseFloat(process.env.VPS_CPANEL_PRICE)
 const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE)
+const HOSTING_TRIAL_PLAN_ON = process.env.HOSTING_TRIAL_PLAN_ON
 
 if (!DB_NAME || !RATE_LEAD_VALIDATOR || !HOSTED_ON || !TELEGRAM_BOT_ON || !REST_APIS_ON || !CHAT_BOT_NAME) {
   return log('Service is paused because some ENV variable is missing')
@@ -365,7 +365,7 @@ bot?.on('message', async msg => {
   const username = nameOfChatId || msg?.from?.username || nanoid()
 
   const blocked = await get(chatIdBlocked, chatId)
-  if (blocked) return send(chatId, t.blockedUser, rem)
+  if (blocked) return send(chatId, translation('t.blockedUser', 'en'), rem)
 
   if (!nameOfChatId) {
     set(nameOf, chatId, username)
@@ -400,6 +400,7 @@ bot?.on('message', async msg => {
   const payIn = trans('payIn')
   const hP = trans('hP')
   const vp = trans('vp')
+  const buyLeadsSelectCnam = trans('buyLeadsSelectCnam')
 
   // actions
   const a = {
@@ -756,7 +757,7 @@ bot?.on('message', async msg => {
       const ticker = tickerOf[tickerView]
       if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
         const { address, bb } = await getCryptoDepositAddress(ticker, chatId, SELF_URL, `/crypto-wallet?a=b&ref=${ref}&`)
-
+        if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
         log({ ref })
         sendQrCode(bot, chatId, bb, userLanguage ?? 'en')
         set(chatIdOfPayment, ref, { chatId })
@@ -771,6 +772,7 @@ bot?.on('message', async msg => {
           "refId" : ref
         }
         const { qr_code, address } = await getDynopayCryptoAddress(amount, tickerDyno, redirect_url, meta_data)
+        if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
         await generateQr(bot, chatId, qr_code, userLanguage ?? 'en')
         set(chatIdOfDynopayPayment, ref, { chatId, action: dynopayActions.walletFund, address })
         set(state, chatId, 'action', 'none')
@@ -942,7 +944,11 @@ bot?.on('message', async msg => {
     submenu3: () => {
       saveInfo('username', username)
       set(state, chatId, 'action', a.submenu3)
-      send(chatId, t.selectPlan, trans('k.of', [[user.freeTrial, user.starterPlan], [user.proPlan, user.businessPlan], user.contactSupport]))
+      send( chatId, t.selectPlan, k.of(
+        HOSTING_TRIAL_PLAN_ON && HOSTING_TRIAL_PLAN_ON === 'true'
+          ? [[user.freeTrial, user.starterPlan], [user.proPlan, user.businessPlan], user.contactSupport]
+          : [[user.starterPlan], [user.proPlan, user.businessPlan], user.contactSupport]
+      ));
     },
 
     displayEmailValidationError: () => {
@@ -1142,7 +1148,7 @@ bot?.on('message', async msg => {
 
     // Step 5.1: Skip Coupon
     skipCoupon: (action) => {
-      set(state, chatId, 'action', a.skipCoupon)
+      // set(state, chatId, 'action', a.skipCoupon)
       saveInfo('couponApplied', false)
       saveInfo('couponDiscount', 0)
       goto[action]()
@@ -1155,8 +1161,8 @@ bot?.on('message', async msg => {
 
     // Step 6.1: I have sent the payment
     iHaveSentThePayment: async () => {
-      set(state, chatId, 'action', a.iHaveSentThePayment)
-      send(chatId, hP.generatePlanStepText('paymentSuccess'), k.of([t.iHaveSentThePayment]))
+      set(state, chatId, 'action', 'none')
+      send(chatId, hP.generatePlanStepText('paymentSuccess'), trans('o'))
     },
     userLanguage : () => {
       set(state, chatId, 'action', a.addUserLanguage)
@@ -1712,7 +1718,7 @@ bot?.on('message', async msg => {
       // wallet update
       if (coin === u.usd) {
         set(payments, nanoid(), `Wallet,Phone Leads,${leadsAmount} leads,$${priceUsd},${chatId},${name},${new Date()}`)
-        const usdOut = (wallet?.usdOut || 0) + priceUsd
+        const usdOut = (wallet?.usdOut || 0) + Number(priceUsd)
         await set(walletOf, chatId, 'usdOut', usdOut)
       } else if (coin === u.ngn) {
         set(payments, nanoid(), `Wallet,Phone Leads,${leadsAmount} leads,$${priceUsd},${chatId},${name},${new Date()},${priceNgn} NGN`)
@@ -3190,8 +3196,9 @@ bot?.on('message', async msg => {
       const ref = nanoid()
       if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
         const coin = tickerOf[ticker]
-        set(chatIdOfPayment, ref, { chatId, price, domain })
         const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-domain?a=b&ref=${ref}&`)
+        if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
+        set(chatIdOfPayment, ref, { chatId, price, domain })
         saveInfo('ref', ref)
         log({ ref })
         await sendQrCode(bot, chatId, bb, info?.userLanguage ?? 'en')
@@ -3206,6 +3213,7 @@ bot?.on('message', async msg => {
           "refId" : ref
         }
         const { qr_code, address } = await getDynopayCryptoAddress(price, coin, redirect_url, meta_data)
+        if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
         set(chatIdOfDynopayPayment, ref, { chatId, price, domain, action: dynopayActions.payDomain, address })
         saveInfo('ref', ref)
         log({ ref })
@@ -3269,8 +3277,9 @@ bot?.on('message', async msg => {
     const ref = nanoid()
     if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
       const coin = tickerOf[ticker]
-      set(chatIdOfPayment, ref, { chatId, price, domain })
       const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-hosting?a=b&ref=${ref}&`)
+      if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
+      set(chatIdOfPayment, ref, { chatId, price, domain })
       log({ ref })
       await sendQrCode(bot, chatId, bb, info?.userLanguage ?? 'en')
       set(state, chatId, 'action', a.proceedWithPaymentProcess)
@@ -3285,6 +3294,7 @@ bot?.on('message', async msg => {
         "refId" : ref
       }
       const { qr_code, address } = await getDynopayCryptoAddress(price, coin, redirect_url, meta_data)
+      if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
       set(chatIdOfDynopayPayment, ref, { chatId, price, domain, action: dynopayActions.payHosting, address })
       log({ ref })
       await generateQr(bot, chatId, qr_code, info?.userLanguage ?? 'en')
@@ -3362,6 +3372,7 @@ bot?.on('message', async msg => {
       const coin = tickerOf[ticker]
       set(chatIdOfPayment, ref, { chatId, price, vpsDetails })
       const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-vps?a=b&ref=${ref}&`)
+      if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
       log({ ref })
       await sendQrCode(bot, chatId, bb, info?.userLanguage ?? 'en')
       set(state, chatId, 'action', 'none')
@@ -3375,6 +3386,7 @@ bot?.on('message', async msg => {
         "refId" : ref
       }
       const { qr_code, address } = await getDynopayCryptoAddress(price, coin, redirect_url, meta_data)
+      if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
       set(chatIdOfDynopayPayment, ref, { chatId, price, vpsDetails, action: dynopayActions.payVps, address })
       log({ ref })
       await generateQr(bot, chatId, qr_code, info?.userLanguage ?? 'en')
@@ -3450,6 +3462,7 @@ bot?.on('message', async msg => {
       const coin = tickerOf[ticker]
       set(chatIdOfPayment, ref, { chatId, price, vpsDetails })
       const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-upgrade-vps?a=b&ref=${ref}&`)
+      if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
       log({ ref })
       await sendQrCode(bot, chatId, bb, info?.userLanguage ?? 'en')
       set(state, chatId, 'action', 'none')
@@ -3463,6 +3476,7 @@ bot?.on('message', async msg => {
         "refId" : ref
       }
       const { qr_code, address } = await getDynopayCryptoAddress(price, coin, redirect_url, meta_data)
+      if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
       set(chatIdOfDynopayPayment, ref, { chatId, price, vpsDetails, action: dynopayActions.payVps, address })
       log({ ref })
       await generateQr(bot, chatId, qr_code, info?.userLanguage ?? 'en')
@@ -3558,6 +3572,7 @@ bot?.on('message', async msg => {
     if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
       const coin = tickerOf[ticker]
       const { address, bb } = await getCryptoDepositAddress(coin, chatId, SELF_URL, `/crypto-pay-plan?a=b&ref=${ref}&`)
+      if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
       set(chatIdOfPayment, ref, { chatId, price, plan })
       log({ ref })
       await sendQrCode(bot, chatId, bb, info?.userLanguage ?? 'en')
@@ -3573,6 +3588,7 @@ bot?.on('message', async msg => {
         "refId" : ref
       }
       const { qr_code, address } = await getDynopayCryptoAddress(price, coin, redirect_url, meta_data)
+      if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
       set(chatIdOfDynopayPayment, ref, { chatId, price, plan, action: dynopayActions.payPlan, address })
       log({ ref })
       await generateQr(bot, chatId, qr_code, info?.userLanguage ?? 'en')
@@ -3841,7 +3857,7 @@ bot?.on('message', async msg => {
     return goto.buyLeadsSelectAreaCode()
   }
   if (action === a.buyLeadsSelectAreaCode) {
-    if (message === t.back) return goto?.[info?.cameFrom]()
+    if (message === t.back) return ['USA', 'Canada'].includes(info?.country) ? goto.buyLeadsSelectArea() : goto.buyLeadsSelectSmsVoice()
     const areaCodes = buyLeadsSelectAreaCode(
       info?.country,
       ['USA', 'Canada'].includes(info?.country) ? info?.area : 'Area Codes',
@@ -3854,7 +3870,7 @@ bot?.on('message', async msg => {
     return goto.buyLeadsSelectCarrier()
   }
   if (action === a.buyLeadsSelectCarrier) {
-    if (message === t.back) return goto?.[info?.cameFrom]()
+    if (message === t.back) return  ['Australia'].includes(info?.country) ? goto.buyLeadsSelectSmsVoice() : goto.buyLeadsSelectAreaCode()
     if (!buyLeadsSelectCarrier(info?.country).includes(message)) return send(chatId, t.what)
     saveInfo('carrier', message)
     saveInfo('cameFrom', a.buyLeadsSelectCarrier)
@@ -4273,6 +4289,7 @@ const formatLinks = links => {
 
 const buyDomainFullProcess = async (chatId, lang, domain) => {
   try {
+    sendMessage(chatId, translation('t.paymentSuccessFul', lang), rem)
     const { error: buyDomainError } = await buyDomain(chatId, domain)
     if (buyDomainError) {
       const m = translation('t.domainPurchasedFailed', lang, domain, buyDomainError)
