@@ -1359,7 +1359,7 @@ ${upgrades
 <strong>• VPS ID : </strong> ${vpsDetails.name}
 <strong>• Ancien plan : </strong> ${vpsDetails.plan}
 <strong>• Nouveau plan : </strong> ${newData.newConfig.name}
-<strong>• Nouveau tarif de facturation : </strong> $${newData.upgradePrice}/${
+<strong>• Nouveau tarif de facturation : </strong> $${newData.totalPrice}/${
     newData.billingCycle === 'hourly' ? 'heure' : 'mois'
   }  (ajustement au prorata appliqué)
 
@@ -1369,7 +1369,7 @@ ${upgrades
 <strong>• VPS ID : </strong> ${vpsDetails.name}
 <strong>• Ancien type de disque : </strong> ${vpsDetails.diskType}
 <strong>• Nouveau type de disque : </strong> ${newData.newDisk}
-<strong>• Nouveau tarif de facturation : </strong> $${newData.upgradePrice}/mois  (ajustement au prorata appliqué)
+<strong>• Nouveau tarif de facturation : </strong> $${newData.totalPrice}/mois  (ajustement au prorata appliqué)
 
 <strong>✅ Poursuivre la commande ?</strong>`,
 
@@ -1394,7 +1394,8 @@ ${upgrades
 
   vpsEnableRenewalBtn: '🔄 Activer le renouvellement automatique',
   vpsDisableRenewalBtn: '❌ Désactiver le renouvellement automatique',
-  vpsRenewBtn: '📅 Renouveler maintenant',
+  vpsPlanRenewBtn: '📅 Renouveler maintenant',
+  unlinkVpsPanelBtn: '❌ Dissocier du VPS',
   bankPayVPSUpgradePlan: (priceNGN, vpsDetails) =>
     `Veuillez verser ${priceNGN} NGN en cliquant sur “Effectuer le paiement” ci-dessous. Une fois la transaction confirmée, vous serez rapidement informé, et votre plan VPS avec la configuration ${vpsDetails.newConfig.name} sera activé sans problème.`,
 
@@ -1409,7 +1410,7 @@ Veuillez noter que les transactions en crypto-monnaie peuvent prendre jusqu'à 3
 Cordialement,
 ${CHAT_BOT_NAME}`,
 
-  linkSSHKeyBtn: '➕ Lier une nouvelle clé',
+  linkVpsSSHKeyBtn: '➕ Lier une nouvelle clé',
   unlinkSSHKeyBtn: '❌ Dissocier la clé',
   downloadSSHKeyBtn: '⬇️ Télécharger la clé',
 
@@ -1422,6 +1423,63 @@ Veuillez lier une clé SSH à votre compte pour permettre un accès sécurisé.`
 ${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
 
   unlinkSSHKeyList: name => `🗂️ Sélectionnez une clé SSH à supprimer du VPS [${name}] :`,
+  confirmUnlinkKey: data => `⚠️ Êtes-vous sûr de vouloir dissocier [${data.keyForUnlink}] du VPS [${data.name}] ?`,
+  confirmUnlinkBtn: '✅ Confirmer la dissociation',
+  keyUnlinkedMsg: data => `✅ La clé SSH [${data.keyForUnlink}] a été dissociée du VPS [${data.name}].`,
+  failedUnlinkingKey: data => `❌ Échec de la dissociation de la clé SSH du VPS (${data.name}). 
+
+Veuillez réessayer plus tard.`,
+
+  userSSHKeyList: name => `🗂️ Sélectionnez une clé SSH à lier au VPS [${name}] :`,
+  noUserKeyList: `🔑 Aucune clé SSH détectée. Voulez-vous en télécharger une nouvelle ?`,
+  linkKeyToVpsSuccess: (key, name) => `✅ La clé SSH [${key}] a été liée avec succès au VPS [${name}].`,
+  failedLinkingSSHkeyToVps: (key, name) => `❌ Échec de la liaison de la clé SSH [${key}] au VPS (${name}). 
+
+Veuillez réessayer plus tard.`,
+
+  selectSSHKeyToDownload: '🗂️ Sélectionnez la clé SSH que vous souhaitez télécharger :',
+  disabledAutoRenewal:
+    data => `⚠️ Renouvellement automatique désactivé. Votre VPS expirera le [Date] à moins d'un renouvellement manuel. 
+✅ Renouvellement automatique désactivé avec succès.`,
+  enabledAutoRenewal: data =>
+    `✅ Renouvellement automatique activé. Votre VPS sera automatiquement renouvelé le [Date].`,
+
+  renewVpsPlanConfirmMsg: (data, vpsDetails) => `<strong>💳 Procéder au renouvellement du VPS ?</strong>
+
+<strong>📜 Résumé de la facture</strong>
+<strong>• ID VPS :</strong> ${vpsDetails.name}
+<strong>• Plan :</strong> ${vpsDetails.plan}
+<strong>• Période de renouvellement :</strong> 1 mois
+<strong>• Nouvelle date d'expiration :</strong> [Nouvelle Date]
+<strong>• Montant dû :</strong> ${data.totalPrice}`,
+
+  payNowBtn: '✅ Payer maintenant',
+
+  vpsChangePaymentRecieved: `✅ Paiement réussi ! Votre VPS est en cours de configuration. Les détails seront bientôt disponibles.`,
+
+  bankPayVPSRenewPlan: priceNGN =>
+    `Veuillez envoyer ${priceNGN} NGN en cliquant sur “Effectuer le paiement” ci-dessous. Une fois la transaction confirmée, vous serez rapidement notifié et votre plan VPS sera activé et renouvelé sans interruption.`,
+
+  renewVpsPanelConfirmMsg: (
+    data,
+    vpsDetails,
+  ) => `<strong>💳 Procéder au renouvellement du panneau de contrôle ?</strong>
+
+<strong>📜 Résumé de la facture</strong>
+<strong>• ID VPS lié :</strong> ${vpsDetails.name}
+<strong>• Panneau de contrôle :</strong> ${vpsDetails.cPanel}
+<strong>• Période de renouvellement :</strong> 1 mois
+<strong>• Nouvelle date d'expiration :</strong> [Nouvelle Date]
+<strong>• Montant dû :</strong> ${data.totalPrice}`,
+
+  bankPayVPSRenewCpanel: (priceNGN, vpsDetails) =>
+    `Veuillez envoyer ${priceNGN} NGN en cliquant sur “Effectuer le paiement” ci-dessous. Une fois la transaction confirmée, vous serez rapidement notifié et votre plan VPS sera activé sans interruption et le panneau de contrôle ${vpsDetails.cPanel} sera renouvelé.`,
+
+  vpsUnlinkCpanelWarning: vpsDetails =>
+    `⚠️ Avertissement : La dissociation supprimera la licence ${vpsDetails.cPanel} du VPS ${vpsDetails.name}, et vous perdrez l'accès à ses fonctionnalités. Voulez-vous continuer ?`,
+
+  unlinkCpanelConfirmed: data =>
+    `✅ Le panneau de contrôle ${data.cPanel} a été dissocié avec succès du VPS ${data.name}.`,
 }
 
 const fr = {

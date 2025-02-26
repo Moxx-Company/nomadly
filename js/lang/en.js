@@ -1402,7 +1402,7 @@ ${upgrades
 <strong>• VPS ID: </strong> ${vpsDetails.name}
 <strong>• Old Plan: </strong> ${vpsDetails.plan}
 <strong>• New Plan: </strong> ${newData.newConfig.name}
-<strong>• New Billing Rate: </strong> $${newData.upgradePrice}/${
+<strong>• New Billing Rate: </strong> $${newData.totalPrice}/${
     newData.billingCycle === 'hourly' ? 'hourly' : 'monthly'
   }  (prorated adjustment applied)
 
@@ -1412,15 +1412,15 @@ ${upgrades
 <strong>• VPS ID: </strong> ${vpsDetails.name}
 <strong>• Old Disk Type: </strong> ${vpsDetails.diskType}
 <strong>• New Disk type: </strong> ${newData.newDisk}
-<strong>• New Billing Rate: </strong> $${newData.upgradePrice}/month  (prorated adjustment applied)
+<strong>• New Billing Rate: </strong> $${newData.totalPrice}/month  (prorated adjustment applied)
 
 <strong>✅ Proceed with the order?</strong>`,
 
   vpsSubscriptionData: vpsData => `<strong>🗂️ Your Active Subscriptions:</strong>
 
 <strong>• VPS ${vpsData.name} </strong>– Expires  (Auto-Renew: ${vpsData.autoRenewable ? 'Enabled' : 'Disabled'})
-<strong>• Control Panel ${vpsData?.cPanel ? vpsData.cPanel + ' - ' : ': Not Selected'} </strong> ${
-    vpsData?.cPanel ? 'Renews' : ''
+<strong>• Control Panel (${vpsData?.cPanel ? vpsData.cPanel : ': Not Selected'}) </strong> ${
+    vpsData?.cPanel ? ' - Renews' : ''
   } `,
 
   manageVpsSubBtn: '🖥️ Manage VPS Subscription',
@@ -1435,7 +1435,8 @@ ${upgrades
 
   vpsEnableRenewalBtn: '🔄 Enable Auto-Renew',
   vpsDisableRenewalBtn: '❌ Disable Auto-Renew',
-  vpsRenewBtn: '📅 Renew Now',
+  vpsPlanRenewBtn: '📅 Renew Now',
+  unlinkVpsPanelBtn: '❌ Unlink from VPS',
   bankPayVPSUpgradePlan: (priceNGN, vpsDetails) =>
     `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan with ${vpsDetails.newConfig.name} config will be seamlessly activated.`,
 
@@ -1450,7 +1451,7 @@ Please note, crypto transactions can take up to 30 minutes to complete. Once the
 Best regards,
 ${CHAT_BOT_NAME}`,
 
-  linkSSHKeyBtn: '➕ Link New Key',
+  linkVpsSSHKeyBtn: '➕ Link New Key',
   unlinkSSHKeyBtn: '❌ Unlink Key',
   downloadSSHKeyBtn: '⬇️ Download Key',
 
@@ -1462,6 +1463,53 @@ Please link an SSH key to your account to enable secure access.`,
 ${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
 
   unlinkSSHKeyList: name => `🗂️ Select an SSH key to remove from VPS [${name}]:`,
+  confirmUnlinkKey: data => `⚠️ Are you sure you want to unlink [${data.keyForUnlink}] from VPS [${data.name}]?`,
+  confirmUnlinkBtn: '✅ Confirm Unlink',
+  keyUnlinkedMsg: data => `✅ SSH key [${data.keyForUnlink}] has been unlinked from VPS [${data.name}].`,
+  failedUnlinkingKey: data => `❌ Failed to unlink SSH key form VPS (${data.name}). 
+
+Please Try again after sometime.`,
+
+  userSSHKeyList: name => `🗂️ Select an SSH key to link to VPS [${name}]:`,
+  noUserKeyList: `🔑 No SSH keys detected. Would you like to upload a new SSH key?`,
+  linkKeyToVpsSuccess: (key, name) => `✅ SSH key [${key}] successfully linked to VPS [${name}].`,
+  failedLinkingSSHkeyToVps: (key, name) => `❌ Failed to link SSH key [${key}] to VPS (${name}). 
+
+Please Try again after sometime.`,
+  selectSSHKeyToDownload: '🗂️ Select the SSH key you want to download:',
+  disabledAutoRenewal: data => `⚠️ Auto-renewal disabled. Your VPS will expire on [Date] unless manually renewed.
+✅ Auto-renewal successfully disabled.`,
+  enabledAutoRenewal: data => `✅ Auto-renewal enabled. Your VPS will automatically renew on [Date].`,
+
+  renewVpsPlanConfirmMsg: (data, vpsDetails) => `<strong>💳 Proceed with VPS renewal?</strong>
+
+<strong>📜 Invoice Summary</strong>
+<strong>• VPS ID:</strong> ${vpsDetails.name}
+<strong>• Plan:</strong> ${vpsDetails.plan}
+<strong>• Renewal Period:</strong> 1 month
+<strong>• New Expiry Date:</strong> [New Date]
+<strong>• Amount Due:</strong> ${data.totalPrice}`,
+
+  payNowBtn: '✅ Pay now',
+
+  vpsChangePaymentRecieved: `✅ Payment successful! Your VPS is being set up. Details will be available shortly.`,
+
+  bankPayVPSRenewPlan: priceNGN =>
+    `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan be seamlessly activated and renewed.`,
+
+  renewVpsPanelConfirmMsg : (data, vpsDetails) => `<strong>💳 Proceed with Control Panel renewal?</strong>
+
+  <strong>📜 Invoice Summary</strong>
+  <strong>• Linked VPS ID:</strong> ${vpsDetails.name}
+  <strong>• Control Panel:</strong> ${vpsDetails.cPanel}
+  <strong>• Renewal Period:</strong> 1 month
+  <strong>• New Expiry Date:</strong> [New Date]
+  <strong>• Amount Due:</strong> ${data.totalPrice}`,
+
+  bankPayVPSRenewCpanel: (priceNGN, vpsDetails) =>
+    `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan be seamlessly activated and ${vpsDetails.cPanel} Control Panel will be renewed.`,
+  vpsUnlinkCpanelWarning: (vpsDetails) => `⚠️ Warning: Unlinking will remove the ${vpsDetails.cPanel} license from VPS ${vpsDetails.name}, and you will lose access to its features. Do you want to proceed?`,
+  unlinkCpanelConfirmed: (data) => `✅ Control Panel ${data.cPanel} successfully unlinked from VPS ${data.name}.`
 }
 
 const en = {

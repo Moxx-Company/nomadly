@@ -1315,7 +1315,7 @@ ${upgrades
 <strong>• VPS ID: </strong> ${vpsDetails.name}
 <strong>• 旧计划: </strong> ${vpsDetails.plan}
 <strong>• 新计划: </strong> ${newData.newConfig.name}
-<strong>• 新账单费率: </strong> $${newData.upgradePrice}/${
+<strong>• 新账单费率: </strong> $${newData.totalPrice}/${
     newData.billingCycle === 'hourly' ? '小时' : '月'
   }  (按比例调整)
 
@@ -1325,7 +1325,7 @@ ${upgrades
 <strong>• VPS ID: </strong> ${vpsDetails.name}
 <strong>• 旧磁盘类型: </strong> ${vpsDetails.diskType}
 <strong>• 新磁盘类型: </strong> ${newData.newDisk}
-<strong>• 新账单费率: </strong> $${newData.upgradePrice}/月  (按比例调整)
+<strong>• 新账单费率: </strong> $${newData.totalPrice}/月  (按比例调整)
 
 <strong>✅ 是否继续订单？</strong>`,
   vpsSubscriptionData: vpsData => `<strong>🗂️ 您的活动订阅：</strong>
@@ -1347,7 +1347,8 @@ ${upgrades
 
   vpsEnableRenewalBtn: '🔄 启用自动续订',
   vpsDisableRenewalBtn: '❌ 禁用自动续订',
-  vpsRenewBtn: '📅 立即续订',
+  vpsPlanRenewBtn: '📅 立即续订',
+  unlinkVpsPanelBtn: '❌ 取消与VPS的链接',
   bankPayVPSUpgradePlan: (priceNGN, vpsDetails) =>
     `请通过点击“付款”来支付 ${priceNGN} NGN。交易确认后，您将立即收到通知，您的VPS计划将以配置 ${vpsDetails.newConfig.name} 无缝激活。`,
 
@@ -1362,7 +1363,7 @@ ${upgrades
 此致敬礼，
 ${CHAT_BOT_NAME}`,
 
-  linkSSHKeyBtn: '➕ 关联新密钥',
+  linkVpsSSHKeyBtn: '➕ 关联新密钥',
   unlinkSSHKeyBtn: '❌ 取消关联密钥',
   downloadSSHKeyBtn: '⬇️ 下载密钥',
 
@@ -1375,6 +1376,26 @@ ${CHAT_BOT_NAME}`,
 ${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
 
   unlinkSSHKeyList: name => `🗂️ 选择一个SSH密钥从VPS [${name}] 中移除：`,
+
+  confirmUnlinkKey: data => `⚠️ 确定要将 [${data.keyForUnlink}] 从 VPS [${data.name}] 解绑吗？`,
+  confirmUnlinkBtn: '✅ 确认解绑',
+  keyUnlinkedMsg: data => `✅ SSH 密钥 [${data.keyForUnlink}] 已成功从 VPS [${data.name}] 解绑。`,
+  failedUnlinkingKey: data => `❌ SSH 密钥解绑失败（VPS: ${data.name}）。 
+
+请稍后重试。`,
+
+  userSSHKeyList: name => `🗂️ 选择一个 SSH 密钥以链接到 VPS [${name}]：`,
+  noUserKeyList: `🔑 未检测到 SSH 密钥。是否要上传新的 SSH 密钥？`,
+  linkKeyToVpsSuccess: (key, name) => `✅ SSH 密钥 [${key}] 成功链接到 VPS [${name}]。`,
+  failedLinkingSSHkeyToVps: (key, name) => `❌ SSH 密钥 [${key}] 绑定到 VPS (${name}) 失败。 
+
+请稍后重试。`,
+
+  payNowBtn: '✅ 立即支付',
+
+  vpsChangePaymentRecieved: `✅ 付款成功！您的 VPS 正在设置中，详细信息即将发布。`,
+
+  unlinkCpanelConfirmed: data => `✅ 控制面板 ${data.cPanel} 已成功从 VPS ${data.name} 解绑。`,
 }
 
 const zh = {

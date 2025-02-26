@@ -107,7 +107,10 @@ const {
   deleteVPSinstance,
   upgradeDiskOptions,
   vpsToUpgradePlan,
-  setVpsSshCredentials
+  setVpsSshCredentials,
+  unlinkSSHKeyFromVps,
+  changeVpsAutoRenewal,
+  downloadSSHKeyFile
 } = require('./vm-instance-setup.js')
 const { console } = require('inspector')
 
@@ -519,8 +522,15 @@ bot?.on('message', async msg => {
     askVpsUpgradePayment: 'askVpsUpgradePayment',
     vpsSubscription: 'vpsSubscription',
     manageVpsSub: 'manageVpsSub',
+    manageVpsPanel: 'manageVpsPanel',
     vpsLinkedSSHkeys: 'vpsLinkedSSHkeys',
-    vpsUnlinkSSHKey: 'vpsUnlinkSSHKey'
+    vpsUnlinkSSHKey: 'vpsUnlinkSSHKey',
+    confirmVpsUnlinkSSHKey: 'confirmVpsUnlinkSSHKey',
+    vpslinkNewSSHKey: 'vpslinkNewSSHKey',
+    uploadSShKeyToAttach : 'uploadSShKeyToAttach',
+    downloadSSHKey: 'downloadSSHKey',
+    confirmVPSRenewDetails: 'confirmVPSRenewDetails',
+    confirmVpsCpanelUnlink: 'confirmVpsCpanelUnlink'
   }
 
   const firstSteps = [
@@ -1165,8 +1175,15 @@ bot?.on('message', async msg => {
       return
     },
 
-    submenu4: () => {
+    submenu4: async () => {
       set(state, chatId, 'action', a.submenu4)
+      if (!info.isRegisteredTelegramForVps) {
+        const result = await registerVpsTelegram(chatId, info?.userEmail)
+        if (result) {
+          saveInfo('isRegisteredTelegramForVps', true)
+          info.isRegisteredTelegramForVps = true
+        }
+      }
       send(chatId, t.select, trans('k.of', [user.manageVpsPlan, user.buyVpsPlan]))
     },
 
@@ -1268,22 +1285,14 @@ bot?.on('message', async msg => {
     vpsAskSSHKey: async () => {
       set(state, chatId, 'action', a.vpsAskSSHKey)
       let list = []
-      if (!info.isRegisteredTelegramForVps) {
-        const result = await registerVpsTelegram(chatId, info?.userEmail)
-        if (result) {
-          saveInfo('isRegisteredTelegramForVps', true)
-          info.isRegisteredTelegramForVps = true
-        }
-      } else {
-        const sshKeyList = await fetchUserSSHkeyList(chatId)
-        if (sshKeyList && sshKeyList.keys.length) {
-          list = sshKeyList.keys.map((key) => key.name)
-          let vpsDetails = info.vpsDetails
-          vpsDetails.hasSSHKey = true
-          saveInfo('vpsDetails', vpsDetails)
-          saveInfo('vpsSSHKeysList', list)
-        }
+      let vpsDetails = info.vpsDetails
+      const sshKeyList = await fetchUserSSHkeyList(chatId)
+      if (sshKeyList && sshKeyList.keys.length) {
+        list = sshKeyList.keys.map((key) => key.name)
+        vpsDetails.hasSSHKey = true
       }
+      vpsDetails.sshKeysList = list
+      saveInfo('vpsDetails', vpsDetails)
       return list.length ? 
         send(chatId, vp.existingSSHMessage, vp.of([vp.generateSSHKeyBtn, vp.linkSSHKeyBtn, vp.skipSSHKeyBtn]))
         : send(chatId, vp.noExistingSSHMessage, vp.of([vp.generateSSHKeyBtn, vp.skipSSHKeyBtn]))
@@ -1291,7 +1300,7 @@ bot?.on('message', async msg => {
 
     vpsLinkSSHKey: () => {
       set(state, chatId, 'action', a.vpsLinkSSHKey)
-      return send(chatId, vp.selectSSHKey, vp.of([...info.vpsSSHKeysList, vp.uploadNewKeyBtn, vp.cancel]))
+      return send(chatId, vp.selectSSHKey, vp.of([...info.vpsDetails.sshKeysList, vp.uploadNewKeyBtn, vp.cancel]))
     },
 
     askSkipSSHkeyconfirmation: () => {
@@ -1313,13 +1322,10 @@ bot?.on('message', async msg => {
     getUserAllVmIntances: async () => {
       set(state, chatId, 'action', a.getUserAllVmIntances)
       let list = []
-      let vpsList;
-      if (info.isRegisteredTelegramForVps) {
-        vpsList = await fetchUserVPSList(chatId)
-        if (!vpsList) return send(chatId, vp.failedFetchingData, trans('o'))
-        list = vpsList.map((vps) => vps.name)
-        saveInfo('userVPSDetails', list)
-      }
+      const vpsList = await fetchUserVPSList(chatId)
+      if (!vpsList) return send(chatId, vp.failedFetchingData, trans('o'))
+      list = vpsList.map((vps) => vps.name)
+      saveInfo('userVPSDetails', list)
       return list.length ? 
         send(chatId, vp.vpsList(vpsList), vp.of([...list, user.buyVpsPlan]))
         : send(chatId, vp.noVPSfound, vp.of([user.buyVpsPlan]))
@@ -1375,13 +1381,26 @@ bot?.on('message', async msg => {
 
     vpsSubscription: () => {
       set(state, chatId, 'action', a.vpsSubscription)
-      return send(chatId, vp.vpsSubscriptionData(info.userVPSDetails), vp.of([vp.manageVpsSubBtn, vp.manageVpsPanelBtn]))
+      const availableOptions = info.userVPSDetails.cPanel ? [vp.manageVpsSubBtn, vp.manageVpsPanelBtn] : [vp.manageVpsSubBtn]
+      return send(chatId, vp.vpsSubscriptionData(info.userVPSDetails), vp.of(availableOptions))
     },
 
     manageVpsSub: () => {
       set(state, chatId, 'action', a.manageVpsSub)
       const btn = info.userVPSDetails.autoRenewable ? vp.vpsDisableRenewalBtn : vp.vpsEnableRenewalBtn
-      return send(chatId, vp.vpsSubDetails(info.userVPSDetails), vp.of([btn, vp.vpsRenewBtn]))
+      return send(chatId, vp.vpsSubDetails(info.userVPSDetails), vp.of([btn, vp.vpsPlanRenewBtn]))
+    },
+
+    manageVpsPanel: () => {
+      set(state, chatId, 'action', a.manageVpsPanel)
+      // @TODO change condition
+      const btn = info.userVPSDetails.autoRenewable ? vp.vpsDisableRenewalBtn : vp.vpsEnableRenewalBtn
+      return send(chatId, vp.vpsSubDetails(info.userVPSDetails), vp.of([btn, vp.vpsPlanRenewBtn, vp.unlinkVpsPanelBtn]))
+    },
+
+    confirmVpsCpanelUnlink: () => {
+      set(state, chatId, 'action', a.confirmVpsCpanelUnlink)
+      return send(chatId, vp.vpsUnlinkCpanelWarning(info.userVPSDetails), vp.of([vp.confirmUnlinkBtn, vp.cancel]))
     },
 
     vpsLinkedSSHkeys : async () => {
@@ -1396,14 +1415,53 @@ bot?.on('message', async msg => {
       vpsDetails.linkedSSHKeys = list
       saveInfo('vpsDetails', vpsDetails)
       return list.length ? 
-        send(chatId, vp.linkedKeyList(list, info.userVPSDetails.name), vp.of([vp.linkSSHKeyBtn, vp.unlinkSSHKeyBtn, vp.downloadSSHKeyBtn])) :
-        send(chatId, vp.noLinkedKey(info.userVPSDetails.name), vp.of([vp.linkSSHKeyBtn])) 
+        send(chatId, vp.linkedKeyList(list, info.userVPSDetails.name), vp.of([vp.linkVpsSSHKeyBtn, vp.unlinkSSHKeyBtn, vp.downloadSSHKeyBtn])) :
+        send(chatId, vp.noLinkedKey(info.userVPSDetails.name), vp.of([vp.linkVpsSSHKeyBtn])) 
     },
 
     vpsUnlinkSSHKey: () => {
       set(state, chatId, 'action', a.vpsUnlinkSSHKey)
       const linkedSSHKeys = info.vpsDetails.linkedSSHKeys
-      send(chatId, vp.unlinkSSHKeyList(info.userVPSDetails.name), vp.of([...linkedSSHKeys, vp.cancel]))
+      return send(chatId, vp.unlinkSSHKeyList(info.userVPSDetails.name), vp.of([...linkedSSHKeys, vp.cancel]))
+    },
+
+    confirmVpsUnlinkSSHKey : () => {
+      set(state, chatId, 'action', a.confirmVpsUnlinkSSHKey)
+      return send(chatId, vp.confirmUnlinkKey(info.vpsDetails), vp.of([vp.confirmUnlinkBtn, vp.cancel]))
+    },
+
+    vpslinkNewSSHKey : async () => {
+      set(state, chatId, 'action', a.vpslinkNewSSHKey)
+      let list = []
+      const sshKeyList = await fetchUserSSHkeyList(chatId)
+      if (!sshKeyList) return send(chatId, vp.failedFetchingData, trans('o'))
+      let vpsDetails = info.vpsDetails
+      if (sshKeyList && sshKeyList.keys.length) {
+        let newList = sshKeyList.keys.map((key) => key.name)
+        list = newList.filter((key) => !vpsDetails.linkedSSHKeys.includes(key))
+      }
+      vpsDetails.allSSHkeys = list
+      saveInfo('vpsDetails', vpsDetails)
+      return list.length ? 
+        send(chatId, vp.userSSHKeyList(info.userVPSDetails.name), vp.of([...list, vp.uploadNewKeyBtn, vp.cancel])) :
+        send(chatId, vp.noUserKeyList, vp.of([vp.uploadNewKeyBtn, vp.cancel])) 
+    },
+
+    uploadSShKeyToAttach: () => {
+      set(state, chatId, 'action', a.uploadSShKeyToAttach)
+      return send(chatId, vp.askToUploadSSHKey, vp.of([]))
+    },
+
+    downloadSSHKey: () => {
+      set(state, chatId, 'action', a.downloadSSHKey)
+      const list = info.vpsDetails.linkedSSHKeys
+      return send(chatId, vp.selectSSHKeyToDownload, vp.of([...list, vp.cancel]))
+    },
+
+    confirmVPSRenewDetails: () => {
+      set(state, chatId, 'action', a.confirmVPSRenewDetails)
+      let vpsDetails = info.vpsDetails
+      return send(chatId, vpsDetails.upgradeType === 'vps-renew' ?  vp.renewVpsPlanConfirmMsg(vpsDetails, info.userVPSDetails) : vp.renewVpsPanelConfirmMsg(vpsDetails, info.userVPSDetails), vp.of([vp.payNowBtn, vp.cancel]))
     }
   }
 
@@ -1542,7 +1600,7 @@ bot?.on('message', async msg => {
     },
     'vps-upgrade-plan-pay': async coin => {
       set(state, chatId, 'action', 'none')
-      const price = Number(info?.vpsDetails.upgradePrice)
+      const price = Number(info?.vpsDetails.totalPrice)
       const wallet = await get(walletOf, chatId)
       const { usdBal, ngnBal } = await getBalance(walletOf, chatId)
 
@@ -1569,7 +1627,7 @@ bot?.on('message', async msg => {
         const ngnOut = isNaN(wallet?.ngnOut) ? 0 : Number(wallet?.ngnOut)
         await set(walletOf, chatId, 'ngnOut', ngnOut + priceNgn)
       }
-      sendMessage(chatId, translation('vp.paymentRecieved', lang), rem)
+      sendMessage(chatId, translation('vp.vpsChangePaymentRecieved', lang), rem)
 
       const isSuccess = await upgradeVPSDetails(chatId, lang, vpsDetails)
       if (!isSuccess) return
@@ -2241,9 +2299,12 @@ bot?.on('message', async msg => {
     vpsDetails.plan = plan
     const planCost = generateBilingCost(vpsDetails, plan)
     vpsDetails.plantotalPrice = planCost
+    vpsDetails.couponApplied = false
+    vpsDetails.couponDiscount = 0
+    vpsDetails.planNewPrice = 0
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)
-    return goto.askCouponForVPSPlan()
+    return vpsDetails.plan != 'hourly' ? goto.askCouponForVPSPlan() : goto.askVpsCpanel()
   }
 
   if (action === a.askCouponForVPSPlan) {
@@ -2289,7 +2350,7 @@ bot?.on('message', async msg => {
 
   if (action === a.askVpsCpanel) {
     let vpsDetails = info?.vpsDetails
-    if (message === vp.back) return vpsDetails.plan != 'hourly' ? goto.askVPSPlanAutoRenewal() : goto.askCouponForVPSPlan()
+    if (message === vp.back) return vpsDetails.plan != 'hourly' ? goto.askVPSPlanAutoRenewal() : goto.askUserVpsPlan()
     const cpanels = trans('vpsCpanelOptional') 
     if (!cpanels.includes(message)) return send (chatId, vp.validCpanel, vp.cpanelMenu)
     vpsDetails.panel = message === vp.noControlPanel ? null : {
@@ -2400,7 +2461,7 @@ bot?.on('message', async msg => {
     if (message === vp.uploadNewKeyBtn) {
       return goto.askUploadSSHPublicKey()
     }
-    const sshKeyList = info.vpsSSHKeysList
+    const sshKeyList = vpsDetails.sshKeysList
     if (!sshKeyList.includes(message)) return send(chatId, vp.selectValidSShKey, vp.of([...sshKeyList, vp.uploadNewKeyBtn, vp.cancel]))
     vpsDetails.sshKeyName = message
     info.vpsDetails = vpsDetails
@@ -2485,7 +2546,7 @@ bot?.on('message', async msg => {
       } else {
         send(chatId, vp.failedStartedVPS(userVPSDetails.name))
       }
-      return goto.getUserAllVmIntances()
+      return goto.getVPSDetails()
     }
     if (message === vp.restartVpsBtn) {
       send(chatId, vp.vpsBeingRestarted(userVPSDetails.name))
@@ -2495,7 +2556,7 @@ bot?.on('message', async msg => {
       } else {
         send(chatId, vp.failedRestartingVPS(userVPSDetails.name))
       }
-      return goto.getUserAllVmIntances()
+      return goto.getVPSDetails()
     }
     return send(chatId, vp.selectCorrectOption)
   }
@@ -2516,7 +2577,7 @@ bot?.on('message', async msg => {
       } else {
         send(chatId, vp.failedStoppingVPS(userVPSDetails.name))
       }
-      return goto.getUserAllVmIntances()
+      return goto.getVPSDetails()
     }
     return send(chatId, vp.selectCorrectOption, vp.of([ vp.confirmChangeBtn, vp.cancel]))
   }
@@ -2559,7 +2620,7 @@ bot?.on('message', async msg => {
 
   if (action === a.upgradeVpsPlan) {
     if (message === vp.back) return goto.upgradeVpsInstance()
-    if (message === vp.cancel) return goto.getUserAllVmIntances()
+    if (message === vp.cancel) return goto.getVPSDetails()
     const vpsDetails = info.vpsDetails
     if (vpsDetails.upgradeType === 'plan') {
       const upgradeBtn = vp.newVpsPlanBtn(info.userVPSDetails.plan)
@@ -2575,7 +2636,7 @@ bot?.on('message', async msg => {
       vpsDetails.newConfig = newConfig
       //@TODO Change this to actual price and cycle
       vpsDetails.billingCycle = 'hourly'
-      vpsDetails.upgradePrice = newConfig.hourlyPrice 
+      vpsDetails.totalPrice = newConfig.hourlyPrice 
       info.vpsDetails = vpsDetails
       saveInfo('vpsDetails', vpsDetails)
       return goto.askVpsUpgradePayment()
@@ -2587,8 +2648,8 @@ bot?.on('message', async msg => {
       vpsDetails.currentDisk = info.userVPSDetails.diskType
       vpsDetails.newDisk = upgradeOption.upgradeType
       vpsDetails.pricePerMonth = upgradeOption.pricePerMonth
-      //@TODO Change this to actual price and cycle
-      vpsDetails.upgradePrice = upgradeOption.pricePerMonth 
+      //@TODO Change this to actual price
+      vpsDetails.totalPrice = upgradeOption.pricePerMonth 
       info.vpsDetails = vpsDetails
       saveInfo('vpsDetails', vpsDetails)
       return goto.askVpsUpgradePayment()
@@ -2598,7 +2659,6 @@ bot?.on('message', async msg => {
   if (action === a.askVpsUpgradePayment) {
     if (message === vp.back) return goto.upgradeVpsInstance()
     if (message === vp.no) {
-      saveInfo('vpsDetails', null)
       set(state, chatId, 'action', 'none')
       return goto.getVPSDetails()
     }
@@ -2608,27 +2668,193 @@ bot?.on('message', async msg => {
 
   if (action === a.vpsSubscription) {
     if (message === vp.back) return goto.getVPSDetails()
-    if (message !== vp.manageVpsSubBtn && message !== vp.manageVpsPanelBtn) 
-      return send(chatId, vp.selectCorrectOption, vp.of([vp.manageVpsSubBtn, vp.manageVpsPanelBtn]))
+    if (message !== vp.manageVpsSubBtn && message !== vp.manageVpsPanelBtn) {
+      const availableOptions = info.userVPSDetails.cPanel ? [vp.manageVpsSubBtn, vp.manageVpsPanelBtn] : [vp.manageVpsSubBtn]
+      return send(chatId, vp.selectCorrectOption, vp.of(availableOptions))
+    }
     if (message === vp.manageVpsSubBtn) return goto.manageVpsSub()
+    if (message === vp.manageVpsPanelBtn) return goto.manageVpsPanel()
   }
 
   if (action === a.manageVpsSub) {
     if (message === vp.back) return goto.vpsSubscription()
+    if (message === vp.vpsDisableRenewalBtn || message === vp.vpsEnableRenewalBtn) {
+      let vpsDetails = info.userVPSDetails
+      const changeAutoRenewal = await changeVpsAutoRenewal(chatId, vpsDetails.name, !vpsDetails.autoRenewable)
+      if (changeAutoRenewal) {
+        await vpsPlansOf.updateOne(
+          { name: vpsDetails.name },
+          { $set: { 'autoRenewal':  changeAutoRenewal.autoRenewable } },
+        )
+        vpsDetails.autoRenewable = changeAutoRenewal.autoRenewable
+        saveInfo('userVPSDetails', vpsDetails)
+        send(chatId, message === vp.vpsDisableRenewalBtn ? vp.disabledAutoRenewal(vpsDetails) : vp.enabledAutoRenewal(vpsDetails))
+      } else {
+        send(chatId, vp.failedDeletingVPS(vpsDetails.name))
+      }
+      return goto.vpsSubscription()
+    }
+    if (message === vp.vpsPlanRenewBtn) {
+      let vpsDetails = info.vpsDetails
+      vpsDetails.upgradeType = 'vps-renew'
+      //@TODO calculate actual price
+      vpsDetails.totalPrice = 20
+      info.vpsDetails = vpsDetails
+      saveInfo('vpsDetails', vpsDetails)
+      return goto.confirmVPSRenewDetails()
+    }
+    return send(chatId, vp.selectCorrectOption)
+  }
+
+  if (action === a.manageVpsPanel) {
+    if (message === vp.back) return goto.vpsSubscription()
+    if (message === vp.vpsDisableRenewalBtn || message === vp.vpsEnableRenewalBtn) {
+      let vpsDetails = info.userVPSDetails
+      //@TODO add API for enable and disable auto renewal and show message
+      return goto.vpsSubscription()
+    }
+    if (message === vp.vpsPlanRenewBtn) {
+      let vpsDetails = info.vpsDetails
+      vpsDetails.upgradeType = 'vps-cPanel-renew'
+      //@TODO calculate actual price
+      vpsDetails.totalPrice = 20
+      vpsDetails.cPanel = info.userVPSDetails.cPanel
+      info.vpsDetails = vpsDetails
+      saveInfo('vpsDetails', vpsDetails)
+      return goto.confirmVPSRenewDetails()
+    }
+    if (message === vp.unlinkVpsPanelBtn) return goto.confirmVpsCpanelUnlink()
+    return send(chatId, vp.selectCorrectOption)
+  }
+
+  if (action === a.confirmVpsCpanelUnlink) {
+    if (message === vp.back) return goto.manageVpsPanel()
+    if (message === vp.cancel) return goto.vpsSubscription()
+    if (message === vp.confirmUnlinkBtn) {
+      //@TODO Add API to unlink cpanel
+      send(chatId, vp.unlinkCpanelConfirmed(info.userVPSDetails))
+      return goto.vpsSubscription()
+    }
+    return send(chatId, vp.selectCorrectOption, vp.of([vp.confirmUnlinkBtn, vp.cancel]))
+  }
+
+  if (action === a.confirmVPSRenewDetails) {
+    let vpsDetails = info.vpsDetails
+    if (message === vp.back) return vpsDetails.upgradeType === 'vps-renew' ? goto.manageVpsSub() : goto.manageVpsPanel()
+    if (message === vp.payNowBtn) return goto['vps-upgrade-plan-pay']()
     return send(chatId, vp.selectCorrectOption)
   }
 
   if (action === a.vpsLinkedSSHkeys) {
     if (message === vp.back) return goto.getVPSDetails()
     if (message === vp.unlinkSSHKeyBtn) return goto.vpsUnlinkSSHKey()
-    return goto.getVPSDetails()
+    if (message === vp.linkVpsSSHKeyBtn) return goto.vpslinkNewSSHKey()
+    if (message === vp.downloadSSHKeyBtn) return goto.downloadSSHKey()
+    return goto.vpsLinkedSSHkeys()
   }
 
   if (action === a.vpsUnlinkSSHKey) {
     if (message === vp.back) return goto.vpsLinkedSSHkeys()
-    const linkedSSHKeys = info.vpsDetails.linkedSSHKeys
+    let vpsDetails = info.vpsDetails
+    const linkedSSHKeys = vpsDetails.linkedSSHKeys
     if (message === vp.cancel) return goto.getVPSDetails()
-    return goto.vpsUnlinkSSHKey()
+    if (!linkedSSHKeys.includes(message)) return goto.vpsUnlinkSSHKey()
+    vpsDetails.keyForUnlink = message
+    info.vpsDetails = vpsDetails
+    saveInfo('vpsDetails', vpsDetails)
+    return goto.confirmVpsUnlinkSSHKey()
+  }
+
+  if (action === a.confirmVpsUnlinkSSHKey) {
+    if (message === vp.back) return goto.vpsUnlinkSSHKey()
+    if (message === vp.cancel) return goto.vpsLinkedSSHkeys()
+    if (message === vp.confirmUnlinkBtn) {
+      const vpsDetails = info.vpsDetails
+      const unlinkKey = await unlinkSSHKeyFromVps(chatId, vpsDetails.keyForUnlink, info.userVPSDetails)
+      if (unlinkKey) {
+        send(chatId, vp.keyUnlinkedMsg(vpsDetails))
+      } else {
+        send(chatId, vp.failedUnlinkingKey(vpsDetails))
+      }
+      return goto.vpsLinkedSSHkeys()
+    }
+    return send(chatId, vp.selectCorrectOption, vp.of([vp.confirmUnlinkBtn, vp.cancel]))
+  }
+
+  if (action === a.vpslinkNewSSHKey) {
+    if (message === vp.back) return goto.vpsLinkedSSHkeys()
+    if (message === vp.cancel) return goto.getVPSDetails()
+    if (message === vp.uploadNewKeyBtn) return goto.uploadSShKeyToAttach()
+    let vpsDetails = info.vpsDetails
+    let allSSHkeys = vpsDetails.allSSHkeys
+    if (!allSSHkeys.includes(message)) return send(chatId, vp.selectCorrectOption, vp.of([...allSSHkeys, vp.uploadNewKeyBtn, vp.cancel]))
+    const data = {
+      zone: info.userVPSDetails.zone,
+      name: info.userVPSDetails.name,
+      sshKeys: [ message ],
+      telegramId: chatId,
+    }
+    const linkedKey = await attachSSHKeysToVM(data)
+    if (linkedKey) {
+      send(chatId, vp.linkKeyToVpsSuccess(message, vpsDetails.name))
+    } else {
+      send(chatId, vp.failedLinkingSSHkeyToVps(message, vpsDetails.name))
+    }
+    return goto.vpsLinkedSSHkeys()
+  }
+
+  if (action === a.uploadSShKeyToAttach) {
+    if (message === vp.back) return goto.vpslinkNewSSHKey()
+    let vpsDetails = info.vpsDetails
+    let newSShKey;
+    if (msg.document) {
+      try {
+        if (!msg.document?.file_name.includes('.pub')) return send(chatId, vp.fileTypePub)
+        const fileLink = await bot?.getFileLink(msg.document.file_id)
+        const content = (await axios.get(fileLink, { responseType: 'text' }))?.data
+        newSShKey = await uploadSSHPublicKey(chatId, content)
+      } catch (error) {
+        console.error('Error:', error.message)
+        return send(chatId, t.fileError)
+      }
+    } else if (message.length) {
+      newSShKey = await uploadSSHPublicKey(chatId, message)
+    }
+    if (!newSShKey) {
+      send(chatId, vp.failedGeneratingSSHKey)
+      return goto.vpslinkNewSSHKey()
+    }
+    const data = {
+      zone: info.userVPSDetails.zone,
+      name: info.userVPSDetails.name,
+      sshKeys: [ newSShKey.sshKeyName ],
+      telegramId: chatId,
+    }
+    const linkedKey = await attachSSHKeysToVM(data)
+    if (linkedKey) {
+      send(chatId, vp.linkKeyToVpsSuccess(newSShKey.sshKeyName, vpsDetails.name))
+    } else {
+      send(chatId, vp.failedLinkingSSHkeyToVps(newSShKey.sshKeyName, vpsDetails.name))
+    }
+    return goto.vpslinkNewSSHKey()
+  }
+
+  if (action === a.downloadSSHKey) {
+    if (message === vp.back) return goto.vpsLinkedSSHkeys()
+    if (message === vp.cancel) return goto.getVPSDetails()
+    let vpsDetails = info.vpsDetails
+    let linkedSSHKeys = vpsDetails.linkedSSHKeys
+    if (!linkedSSHKeys.includes(message)) return send(chatId, vp.selectCorrectOption, vp.of([...linkedSSHKeys, vp.cancel]))
+    const response = await downloadSSHKeyFile(chatId, message)
+    if (response) {
+      const filename = `${message}.ppk`
+      fs.writeFileSync(filename, response)
+      bot
+        ?.sendDocument(chatId, filename)
+        ?.then(() => fs.unlinkSync(filename))
+        ?.catch(log)
+    }
+    return goto.vpsLinkedSSHkeys()
   }
 
   if (action === a.redSelectUrl) {
@@ -3161,7 +3387,8 @@ bot?.on('message', async msg => {
 
   //upgrade Plan payments
   if (action === 'vps-upgrade-plan-pay') {
-    if (message === t.back) return goto.askVpsUpgradePayment()
+    if (message === t.back) return info.vpsDetails.upgradeType === 'vps-renew' || info.vpsDetails.upgradeType === 'vps-cPanel-renew' ? goto.confirmVPSRenewDetails()
+      : goto.askVpsUpgradePayment()
     const payOption = message
 
     if (payOption === payIn.crypto) {
@@ -3186,7 +3413,7 @@ bot?.on('message', async msg => {
     if (message === t.back) return goto['vps-upgrade-plan-pay']()
     const email = message
     const vpsDetails = info?.vpsDetails
-    const price = vpsDetails.upgradePrice
+    const price = vpsDetails.totalPrice
     if (!isValidEmail(email)) return send(chatId, t.askValidEmail)
 
     const ref = nanoid()
@@ -3203,6 +3430,10 @@ bot?.on('message', async msg => {
       return send(chatId, vp.bankPayVPSUpgradePlan(priceNGN, vpsDetails), trans('payBank', url))
     } else if (vpsDetails.upgradeType === 'disk') {
       return send(chatId, vp.bankPayVPSUpgradeDisk(priceNGN, vpsDetails), trans('payBank', url))
+    } else if (vpsDetails.upgradeType === 'vps-renew') {
+      return send(chatId, vp.bankPayVPSRenewPlan(priceNGN, vpsDetails), trans('payBank', url))
+    } else if (vpsDetails.upgradeType === 'vps-cPanel-renew') {
+      return send(chatId, vp.bankPayVPSRenewCpanel(priceNGN, vpsDetails), trans('payBank', url))
     }
   }
 
@@ -3213,7 +3444,7 @@ bot?.on('message', async msg => {
     const ticker = supportedCryptoView[tickerView]
     if (!ticker) return send(chatId, t.askValidCrypto)
     const vpsDetails = info.vpsDetails
-    const price = vpsDetails.upgradePrice
+    const price = vpsDetails.totalPrice
     const ref = nanoid()
     if (BLOCKBEE_CRYTPO_PAYMENT_ON === 'true') {
       const coin = tickerOf[ticker]
@@ -4171,7 +4402,7 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
       config: vpsDetails.config,
       autoRenewal: vpsDetails.plan === 'hourly' ? true : vpsDetails.autoRenewalPlan,
       planPrice: vpsDetails.couponApplied ? vpsDetails.planNewPrice : vpsDetails.plantotalPrice, 
-      cpanel: cpanelDetails,
+      cPanel: cpanelDetails,
       os: osDetails,
       diskType: vpsDetails.diskType,
       host: vpsData.host,
@@ -4184,14 +4415,14 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
     if (vpsDetails.sshKeyName) {
       const data = {
         zone: vpsDetails.zone,
-        instanceName: vpsData.name,
+        name: vpsData.name,
         sshKeys: [ vpsDetails.sshKeyName],
         telegramId: chatId,
       }
       await attachSSHKeysToVM(data)
     }
 
-    await sleep(10000)
+    await sleep(60000)
 
     const credentials = await setVpsSshCredentials(vpsData.host)
 
@@ -4214,7 +4445,7 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
   }
 }
 
-// @TODO
+// @TODO Implement API to upgrade plan, upgrade disk, renew plan, renew cpanel
 const upgradeVPSDetails = async (chatId, lang, vpsDetails) => {
   try {
     log(vpsDetails)
@@ -4232,7 +4463,7 @@ const upgradeVPSDetails = async (chatId, lang, vpsDetails) => {
     return true
   } catch (error) {
     const errorMessage = `err buyUPgradingVPSProcess ${error?.message} ${JSON.stringify(error?.response?.data, null, 2)}`
-    const m = translation('vp.errorUpgradingVPS', lang, vpsDetails) // @TODO add text here too
+    const m = translation('', lang, vpsDetails) // @TODO add text here too
     sendMessage(chatId, m)
     sendMessage(TELEGRAM_DEV_CHAT_ID, errorMessage)
     console.error(errorMessage)
@@ -4428,7 +4659,7 @@ const bankApis = {
     }
     await insert(vpsTransactions, chatId, "bank", transaction)
 
-    sendMessage(chatId, translation('vp.paymentRecieved', lang))
+    sendMessage(chatId, translation('vp.vpsChangePaymentRecieved', lang))
     // Update Wallet
     const ngnPrice = await usdToNgn(price)
     if (usdIn * 1.06 < price) {
@@ -4732,7 +4963,7 @@ app.get('/crypto-pay-upgrade-vps', auth, async (req, res) => {
   const lang = info?.userLanguage ?? 'en'
   // const totalPrice = vpsDetails?.totalPrice
 
-  sendMessage(chatId, translation('vp.paymentRecieved', lang))
+  sendMessage(chatId, translation('vp.vpsChangePaymentRecieved', lang))
   // Logs
   del(chatIdOfPayment, ref)
   let transaction = {
@@ -4952,7 +5183,7 @@ app.post('/dynopay/crypto-pay-upgrade-vps', authDyno, async (req, res) => {
   const lang = info?.userLanguage ?? 'en'
   // const totalPrice = vpsDetails?.totalPrice
 
-  sendMessage(chatId, translation('vp.paymentRecieved', lang))
+  sendMessage(chatId, translation('vp.vpsChangePaymentRecieved', lang))
   // Logs
   del(chatIdOfDynopayPayment, ref)
   let transaction = {

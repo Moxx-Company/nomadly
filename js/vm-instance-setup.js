@@ -16,47 +16,47 @@ const headers = {
 
 const upgradeDiskOptions = [
   {
-    currentName : '📀 Standard Persistent Disk',
-    currentType : 'pd-standard',
-    upgradeName : '⚖️ Balanced Persistent Disk',
-    upgradeType : 'pd-balanced',
-    pricePerMonth : 5,
+    currentName: '📀 Standard Persistent Disk',
+    currentType: 'pd-standard',
+    upgradeName: '⚖️ Balanced Persistent Disk',
+    upgradeType: 'pd-balanced',
+    pricePerMonth: 5,
   },
   {
-    currentName : '📀 Standard Persistent Disk',
-    currentType : 'pd-standard',
-    upgradeName : '🚀 SSD Persistent Disk',
-    upgradeType : 'pd-ssd',
-    pricePerMonth : 15
+    currentName: '📀 Standard Persistent Disk',
+    currentType: 'pd-standard',
+    upgradeName: '🚀 SSD Persistent Disk',
+    upgradeType: 'pd-ssd',
+    pricePerMonth: 15,
   },
   {
-    currentName : '📀 Standard Persistent Disk',
-    currentType : 'pd-standard',
-    upgradeName : '🔥 Extreme Persistent Disk',
-    upgradeType : 'pd-extreme',
-    pricePerMonth : 30
+    currentName: '📀 Standard Persistent Disk',
+    currentType: 'pd-standard',
+    upgradeName: '🔥 Extreme Persistent Disk',
+    upgradeType: 'pd-extreme',
+    pricePerMonth: 30,
   },
   {
-    currentName : '⚖️ Balanced Persistent Disk',
-    currentType : 'pd-balanced',
-    upgradeName : '🚀 SSD Persistent Disk',
-    upgradeType : 'pd-ssd',
-    pricePerMonth : 10
+    currentName: '⚖️ Balanced Persistent Disk',
+    currentType: 'pd-balanced',
+    upgradeName: '🚀 SSD Persistent Disk',
+    upgradeType: 'pd-ssd',
+    pricePerMonth: 10,
   },
   {
-    currentName : '⚖️ Balanced Persistent Disk',
-    currentType : 'pd-balanced',
-    upgradeName : '🔥 Extreme Persistent Disk',
-    upgradeType : 'pd-extreme',
-    pricePerMonth : 25
+    currentName: '⚖️ Balanced Persistent Disk',
+    currentType: 'pd-balanced',
+    upgradeName: '🔥 Extreme Persistent Disk',
+    upgradeType: 'pd-extreme',
+    pricePerMonth: 25,
   },
   {
-    currentName : '🚀 SSD Persistent Disk',
-    currentType : 'pd-ssd',
-    upgradeName : '🔥 Extreme Persistent Disk',
-    upgradeType : 'pd-extreme',
-    pricePerMonth : 15
-  }
+    currentName: '🚀 SSD Persistent Disk',
+    currentType: 'pd-ssd',
+    upgradeName: '🔥 Extreme Persistent Disk',
+    upgradeType: 'pd-extreme',
+    pricePerMonth: 15,
+  },
 ]
 
 const vpsToUpgradePlan = {
@@ -180,31 +180,31 @@ function generateRandomSSHName() {
 }
 
 function generateRandomUsername() {
-  const randomSuffix = Math.random().toString(36).substr(2, 8);
-  return `user-${randomSuffix}`;
+  const randomSuffix = Math.random().toString(36).substr(2, 8)
+  return `user-${randomSuffix}`
 }
 
 function generateRandomPassword(length = 16) {
-  const upperCase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const lowerCase = 'abcdefghijklmnopqrstuvwxyz';
-  const numbers = '0123456789';
-  const symbols = '!@#$%^&*()';
-  const allCharacters = upperCase + lowerCase + numbers + symbols;
+  const upperCase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  const lowerCase = 'abcdefghijklmnopqrstuvwxyz'
+  const numbers = '0123456789'
+  const symbols = '!@#$%^&*()'
+  const allCharacters = upperCase + lowerCase + numbers + symbols
 
   let password = [
     upperCase[Math.floor(Math.random() * upperCase.length)],
     lowerCase[Math.floor(Math.random() * lowerCase.length)],
     numbers[Math.floor(Math.random() * numbers.length)],
-    symbols[Math.floor(Math.random() * symbols.length)]
-  ];
+    symbols[Math.floor(Math.random() * symbols.length)],
+  ]
 
   for (let i = password.length; i < length; i++) {
-    password.push(allCharacters[Math.floor(Math.random() * allCharacters.length)]);
+    password.push(allCharacters[Math.floor(Math.random() * allCharacters.length)])
   }
 
-  password = password.sort(() => Math.random() - 0.5).join('');
+  password = password.sort(() => Math.random() - 0.5).join('')
 
-  return password;
+  return password
 }
 
 function generateBilingCost(data, plan) {
@@ -327,7 +327,7 @@ async function generateNewSSSkey(telegramId, sshName) {
 
 async function uploadSSHPublicKey(telegramId, key, sshName) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/ssh/generate`
+    const url = `${NAMEWORD_BASE_URL}/ssh/upload-key`
 
     let response = await axios.post(
       url,
@@ -398,26 +398,66 @@ async function attachSSHKeysToVM(payload) {
     const url = `${NAMEWORD_BASE_URL}/attach/sshkeys`
     let newPayload = {
       project: VM_PROJECT_ID,
-      ...payload,
+      zone: payload.zone,
+      instanceName: payload.name,
+      sshKeys: payload.sshKeys,
+      telegramId: payload.telegramId,
     }
     console.log(newPayload)
     const response = await axios.post(url, newPayload, { headers })
     if (response?.data) {
-      console.log(response?.data)
-      return { success: true, data: response?.data }
-    } else {
-      let errorMessage = `Issue in attaching SSH key to VMS instance ${response?.data}`
-      console.error(errorMessage)
-      return { error: errorMessage }
+      return response?.data
     }
+    return false
   } catch (error) {
-    const errorMessage = `Error in attaching SSH key to VMS instance ${error.message} ${JSON.stringify(
-      error?.response?.data,
-      null,
-      2,
-    )}`
-    console.error(errorMessage)
-    return { error: errorMessage }
+    console.log('Error in Attaching SSH key to VPS', error?.response?.data)
+    return false
+  }
+}
+
+async function unlinkSSHKeyFromVps(telegramId, key, vpsDetails) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/detach/sshkeys`
+    const payload = {
+      project: VM_PROJECT_ID,
+      zone: vpsDetails.zone,
+      instanceName: vpsDetails.name,
+      sshKeys: [key],
+      telegramId: telegramId,
+    }
+    const response = await axios.delete(url, {
+      headers: headers,
+      data: payload,
+    })
+    if (response?.data) {
+      return response?.data
+    }
+    return false
+  } catch (err) {
+    console.log('Error in unlinking SSH Public key from VPS', err?.response?.data)
+    return false
+  }
+}
+
+async function downloadSSHKeyFile(telegramId, sshKeyName) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/ssh/download`
+    const params = {
+      telegramId,
+      sshKeyName
+    }
+    const response = await axios.get(url, {
+      headers,
+      params,
+      responseType: 'arraybuffer'
+    });
+    if (response?.data) {
+      return response?.data
+    }
+    return false
+  } catch (err) {
+    console.log('Error in downloading SSH Public key from VPS', err?.response?.data)
+    return false
   }
 }
 
@@ -427,7 +467,7 @@ async function setVpsSshCredentials(host) {
     let newPayload = {
       host: host,
       targetUsername: generateRandomUsername(),
-      targetPassword: generateRandomPassword()
+      targetPassword: generateRandomPassword(),
     }
     console.log(newPayload)
     const response = await axios.post(url, newPayload, { headers })
@@ -476,6 +516,26 @@ async function fetchVPSDetails(telegramId, vpsName) {
     return false
   } catch (err) {
     console.log('Error in fetching VPS details', err?.response?.data)
+    return false
+  }
+}
+
+async function changeVpsAutoRenewal(telegramId, vpsName, autoRenewable) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/update/plan/vm`
+
+    const payload = {
+      instanceName: vpsName,
+      autoRenewable: autoRenewable,
+      telegramId: telegramId,
+    }
+    const response = await axios.post(url, payload, { headers })
+    if (response?.data?.data) {
+      return response?.data?.data
+    }
+    return false
+  } catch (err) {
+    console.log('Error in Changing Auto renewable for VPS details', err?.response?.data)
     return false
   }
 }
@@ -687,6 +747,9 @@ module.exports = {
   fetchVPSDetails,
   deleteVPSinstance,
   setVpsSshCredentials,
+  unlinkSSHKeyFromVps,
+  changeVpsAutoRenewal,
+  downloadSSHKeyFile,
   upgradeDiskOptions,
-  vpsToUpgradePlan
+  vpsToUpgradePlan,
 }
