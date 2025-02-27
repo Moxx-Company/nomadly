@@ -1343,7 +1343,9 @@ bot?.on('message', async msg => {
       if (!vpsData) return send(chatId, vp.failedFetchingData, trans('o'))
       saveInfo('userVPSDetails', vpsData)
       let action = vpsData.status === 'RUNNING' ? [vp.stopVpsBtn, vp.restartVpsBtn] : [vp.startVpsBtn]
-      return send(chatId, vp.selectedVpsData(vpsData), vp.of([ ...action, vp.subscriptionBtn, vp.VpsLinkedKeysBtn, vp.upgradeVpsBtn,  vp.deleteVpsBtn]))
+      // @TODO
+      // return send(chatId, vp.selectedVpsData(vpsData), vp.of([ ...action, vp.subscriptionBtn, vp.VpsLinkedKeysBtn, vp.upgradeVpsBtn,  vp.deleteVpsBtn]))
+      return send(chatId, vp.selectedVpsData(vpsData), vp.of([ ...action, vp.VpsLinkedKeysBtn,  vp.deleteVpsBtn]))
     },
 
     confirmStopVps : () => {
@@ -1399,8 +1401,8 @@ bot?.on('message', async msg => {
 
     manageVpsPanel: () => {
       set(state, chatId, 'action', a.manageVpsPanel)
-      // @TODO change condition
-      const btn = info.userVPSDetails.autoRenewable ? vp.vpsDisableRenewalBtn : vp.vpsEnableRenewalBtn
+      // @TODO change condition and text
+      const btn = info.userVPSDetails.cPanel ? vp.vpsDisableRenewalBtn : vp.vpsEnableRenewalBtn
       return send(chatId, vp.vpsSubDetails(info.userVPSDetails), vp.of([btn, vp.vpsPlanRenewBtn, vp.unlinkVpsPanelBtn]))
     },
 
