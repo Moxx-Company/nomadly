@@ -225,19 +225,9 @@ async function calculateVpsInstanceCost(payload) {
   }
 }
 
-function generateRandomVpsName() {
+function generateRandomName(prefix) {
   const randomSuffix = Math.random().toString(36).substr(2, 12)
-  return `vm-instance-${randomSuffix}`
-}
-
-function generateRandomSSHName() {
-  const randomSuffix = Math.random().toString(36).substr(2, 12)
-  return `ssh-key-${randomSuffix}`
-}
-
-function generateRandomUsername() {
-  const randomSuffix = Math.random().toString(36).substr(2, 8)
-  return `user-${randomSuffix}`
+  return `${prefix}-${randomSuffix}`
 }
 
 function generateRandomPassword(length = 16) {
@@ -367,7 +357,7 @@ async function generateNewSSSkey(telegramId, sshName) {
       url,
       {
         telegramId,
-        sshKeyName: sshName ? sshName : generateRandomSSHName(),
+        sshKeyName: sshName ? sshName : generateRandomName('ssh-key'),
       },
       { headers },
     )
@@ -389,7 +379,7 @@ async function uploadSSHPublicKey(telegramId, key, sshName) {
       url,
       {
         telegramId,
-        sshKeyName: sshName ? sshName : generateRandomSSHName(),
+        sshKeyName: sshName ? sshName : generateRandomName('ssh-key'),
         publicKey: key,
       },
       { headers },
@@ -408,7 +398,7 @@ async function createVPSInstance(telegramId, vpsDetails) {
   try {
     const url = `${NAMEWORD_BASE_URL}/create/vm/instance`
     let payload = {
-      name: generateRandomVpsName(),
+      name: generateRandomName('vm-instance'),
       diskSizeGB: vpsDetails.config.specs.disk,
       autoDelete: true,
       boot: true,
@@ -522,7 +512,7 @@ async function setVpsSshCredentials(host) {
     const url = `${NAMEWORD_BASE_URL}/ssh/set-password`
     let newPayload = {
       host: host,
-      targetUsername: generateRandomUsername(),
+      targetUsername: generateRandomName('user'),
       targetPassword: generateRandomPassword(),
     }
     console.log(newPayload)

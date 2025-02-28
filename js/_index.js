@@ -140,8 +140,6 @@ const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVW
 const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
-const VPS_WINDOWS_SERVER_OS_PRICE = parseFloat(process.env.VPS_WINDOWS_SERVER_OS_PRICE)
-const VPS_CPANEL_PRICE = parseFloat(process.env.VPS_CPANEL_PRICE)
 const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE)
 const HOSTING_TRIAL_PLAN_ON = process.env.HOSTING_TRIAL_PLAN_ON
 
@@ -1267,7 +1265,10 @@ bot?.on('message', async msg => {
 
     askVpsCpanel: () => {
       set(state, chatId, 'action', a.askVpsCpanel)
-      return send(chatId, vp.askVpsCpanel, vp.cpanelMenu)
+      //@TODO revert to add WHM too
+      // return send(chatId, vp.askVpsCpanel, vp.cpanelMenu)
+      const cpanels = trans('vpsCpanelOptional')
+      return send(chatId, vp.askVpsCpanel, vp.of([cpanels[1], cpanels[2]]))
     },
 
     askVpsCpanelLicense: async () => {
@@ -1284,8 +1285,9 @@ bot?.on('message', async msg => {
       const osData = await fetchAvailableOS(info.vpsDetails.panel)
       if (!osData) return send(chatId, vp.failedFetchingData, trans('o'))
       const osList = osData.map((item) => item.name)
+      const winosDetails = osData.find((ar) => ar.value === 'win')
       saveInfo('vpsOSList', osData)
-      return send(chatId, vp.askVpsOS, vp.of([...osList, vp.skipOSBtn]))
+      return send(chatId, vp.askVpsOS(winosDetails?.price), vp.of([...osList, vp.skipOSBtn]))
     },
 
     vpsAskSSHKey: async () => {
@@ -2399,19 +2401,14 @@ bot?.on('message', async msg => {
     const osData = info?.vpsOSList
     const osList = osData.map((item) => item.name)     
     if (!osList.includes(message) && message != vp.skipOSBtn) return send(chatId, vp.chooseValidOS, vp.of([...osList, vp.skipOSBtn]))
-    const osDetails = osData.find((ar) => ar.name === message)
-    const ubuntuDetails = osData.find((ar) => ar.name === 'Ubuntu')
+    const osDetails = osData.find((ar) => ar.name ===  (message === vp.skipOSBtn ? 'Ubuntu' : message))
 
     vpsDetails.os = {
-      name: message === vp.skipOSBtn ? ubuntuDetails.name : osDetails.name,
-      value: message === vp.skipOSBtn ? ubuntuDetails.value : osDetails.value,
-      pricePerMonth:  message === vp.skipOSBtn ? 0 : osDetails.value === 'win' ? VPS_WINDOWS_SERVER_OS_PRICE : 0
+      name: osDetails.name,
+      value: osDetails.value,
+      pricePerMonth: osDetails.price
     }
-    if (message != vp.skipOSBtn && osDetails.value === 'win') {
-      vpsDetails.selectedOSPrice = VPS_WINDOWS_SERVER_OS_PRICE
-    } else {
-      vpsDetails.selectedOSPrice = 0
-    }
+    vpsDetails.selectedOSPrice = osDetails.price
     const planPrice = vpsDetails.couponApplied ? vpsDetails.planNewPrice : vpsDetails.plantotalPrice
     const OSprice = vpsDetails.selectedOSPrice
     const selectedCpanelPrice = vpsDetails.selectedCpanelPrice
@@ -4426,7 +4423,6 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
       diskType: vpsDetails.diskType,
       host: vpsData.host,
       status: vpsData.status,
-      serverIP: vpsData.networkInterfaces[0].networkIP,
       timestamp: new Date()
     });
     await sleep(10000)

@@ -33,8 +33,6 @@ const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_P
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
 const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) || 50
-const VPS_WINDOWS_SERVER_OS_PRICE = parseFloat(process.env.VPS_WINDOWS_SERVER_OS_PRICE)
-const VPS_CPANEL_PRICE = parseFloat(process.env.VPS_CPANEL_PRICE)
 
 const npl = {
   // New Zealand
@@ -1145,13 +1143,13 @@ ${list
   goBackToCoupon: '❌ Go Back & Apply Coupon',
 
   // os
-  askVpsOS: `💡 Default OS: Ubuntu (Linux) (if no selection is made).
-💻 Select an OS (Windows Server adds $${VPS_WINDOWS_SERVER_OS_PRICE}/month).
+  askVpsOS: (price) => `💡 Default OS: Ubuntu (Linux) (if no selection is made).
+💻 Select an OS (Windows Server adds $${price}/month).
 
 <strong>💡 Recommended: </strong>
 <strong>• Ubuntu –</strong> Best for general use and development
 <strong>• CentOS –</strong> Stable for enterprise applications
-<strong>• Windows Server –</strong> For Windows-based applications (+$${VPS_WINDOWS_SERVER_OS_PRICE}/month)`,
+<strong>• Windows Server –</strong> For Windows-based applications (+$${price}/month)`,
   chooseValidOS: `Please select a valid OS from available list:`,
   skipOSBtn: '❌ Skip OS Selection',
   skipOSwarning: '⚠️ Your VPS will launch without an OS. You’ll need to install one manually via SSH or recovery mode.',
@@ -1178,7 +1176,6 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
     `✅ ${panel == 'whm' ? 'WHM' : 'Plesk'} Free Trial (${
       panel == 'whm' ? '15' : '7'
     } days) activated. You can upgrade anytime by reaching out to support.`,
-  trialPanelWarning: panel => `ℹ️ ${panel} trial auto-renews for $${VPS_CPANEL_PRICE}/month unless canceled.`,
 
   vpsWaitingTime: '⚙️ Retrieving cost information... This will only take a moment.',
   failedCostRetrieval: 'Failied in retrieving cost information... Please try again after some time.',

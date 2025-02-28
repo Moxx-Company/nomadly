@@ -33,8 +33,6 @@ const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_P
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
 const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) || 50
-const VPS_WINDOWS_SERVER_OS_PRICE = parseFloat(process.env.VPS_WINDOWS_SERVER_OS_PRICE)
-const VPS_CPANEL_PRICE = parseFloat(process.env.VPS_CPANEL_PRICE)
 
 const npl = {
   // New Zealand
@@ -1098,13 +1096,13 @@ ${list
   confirmSkip: "✅ Confirmer l'ignorance",
   goBackToCoupon: '❌ Retourner et appliquer le coupon',
 
-  askVpsOS: `💡 Système d'exploitation par défaut : Ubuntu (Linux) (si aucune sélection n'est effectuée).
-💻 Sélectionnez un système d'exploitation (Windows Server ajoute ${VPS_WINDOWS_SERVER_OS_PRICE} $/mois).
+  askVpsOS: (price) => `💡 Système d'exploitation par défaut : Ubuntu (Linux) (si aucune sélection n'est effectuée).
+💻 Sélectionnez un système d'exploitation (Windows Server ajoute ${price} $/mois).
 
 <strong>💡 Recommandé : </strong>
 <strong>• Ubuntu –</strong> Idéal pour un usage général et le développement
 <strong>• CentOS –</strong> Stable pour les applications d'entreprise
-<strong>• Windows Server –</strong> Pour les applications basées sur Windows (+${VPS_WINDOWS_SERVER_OS_PRICE} $/mois)`,
+<strong>• Windows Server –</strong> Pour les applications basées sur Windows (+${price} $/mois)`,
   chooseValidOS: `Veuillez sélectionner un OS valide dans la liste disponible :`,
   skipOSBtn: "❌ Passer la sélection de l'OS",
   skipOSwarning:
@@ -1133,9 +1131,6 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
     `✅ ${panel == 'whm' ? 'WHM' : 'Plesk'} Essai gratuit (${
       panel == 'whm' ? '15' : '7'
     } jours) activé. Vous pouvez passer à une version payante à tout moment en contactant le support.`,
-
-  trialPanelWarning: panel =>
-    `ℹ️ L'essai de ${panel} se renouvelle automatiquement pour $${VPS_CPANEL_PRICE}/mois sauf annulation.`,
 
   vpsWaitingTime: "⚙️ Récupération des informations de coût... Cela ne prendra qu'un instant.",
   failedCostRetrieval: 'Échec de la récupération des informations de coût... Veuillez réessayer après un moment.',

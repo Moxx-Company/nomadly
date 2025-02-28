@@ -33,8 +33,6 @@ const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_P
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
 const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) || 50
-const VPS_WINDOWS_SERVER_OS_PRICE = parseFloat(process.env.VPS_WINDOWS_SERVER_OS_PRICE)
-const VPS_CPANEL_PRICE = parseFloat(process.env.VPS_CPANEL_PRICE)
 
 const npl = {
   // New Zealand
@@ -1068,13 +1066,13 @@ ${list
   confirmSkip: '✅ 确认跳过',
   goBackToCoupon: '❌ 返回并应用优惠券',
 
-  askVpsOS: `💡 默认操作系统：Ubuntu（Linux）（如果未进行选择）。
-💻 选择操作系统（Windows Server 额外收费 $${VPS_WINDOWS_SERVER_OS_PRICE}/月）。  
+  askVpsOS: (price) => `💡 默认操作系统：Ubuntu（Linux）（如果未进行选择）。
+💻 选择操作系统（Windows Server 额外收费 $${price}/月）。  
 
 <strong>💡 推荐: </strong>  
 <strong>• Ubuntu –</strong> 适用于常规使用和开发  
 <strong>• CentOS –</strong> 适用于企业级应用，稳定可靠  
-<strong>• Windows Server –</strong> 适用于基于 Windows 的应用（+$${VPS_WINDOWS_SERVER_OS_PRICE}/月）`,
+<strong>• Windows Server –</strong> 适用于基于 Windows 的应用（+$${price}/月）`,
   chooseValidOS: `请选择可用列表中的有效操作系统：`,
   skipOSBtn: '❌ 跳过操作系统选择',
   skipOSwarning: '⚠️ 您的VPS将没有操作系统启动。您需要通过SSH或恢复模式手动安装一个。',
@@ -1102,8 +1100,6 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
     `✅ ${panel == 'whm' ? 'WHM' : 'Plesk'} 免费试用（${
       panel == 'whm' ? '15' : '7'
     } 天）已激活。您可以随时联系支持进行升级。`,
-
-  trialPanelWarning: panel => `ℹ️ ${panel} 试用期将自动续订，每月 $${VPS_CPANEL_PRICE}，除非取消。`,
 
   vpsWaitingTime: '⚙️ 正在获取成本信息... 这将只需片刻。',
   failedCostRetrieval: '获取成本信息失败... 请稍后再试。',
