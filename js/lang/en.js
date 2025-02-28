@@ -556,7 +556,7 @@ ${bal(usd, ngn)}`,
   comingSoon: `Coming Soon`,
   goBackToCoupon: '❌ Go Back & Apply Coupon',
   errorFetchingCryptoAddress: `Error fetching cryptocurrency address. Please try again later.`,
-  paymentSuccessFul: '✅ Payment successful! Your order is being processed. Details will be available shortly.'
+  paymentSuccessFul: '✅ Payment successful! Your order is being processed. Details will be available shortly.',
 }
 
 const phoneNumberLeads = ['💰📲 Buy PhoneLeads', '✅📲 Validate PhoneLeads']
@@ -1117,7 +1117,7 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
 <strong>• 📅 Annually –</strong> $${generateBilingCost(vpsDetails, 'annually')} → Save 20%
 `,
   planTypeMenu: vpsOptionsOf(vpsPlanMenu),
-  hourlyBillingMessage: `⚠️ A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} refundable deposit is required for hourly billing. (This ensures uninterrupted service and is refunded if unused.
+  hourlyBillingMessage: `⚠️ A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD refundable deposit is required for hourly billing. (This ensures uninterrupted service and is refunded if unused.
   
 ✅ Billing is deducted from your wallet balance every hour.
 🔹 Monthly licenses (Windows/WHM/Plesk) are billed upfront.`,
@@ -1143,7 +1143,7 @@ ${list
   goBackToCoupon: '❌ Go Back & Apply Coupon',
 
   // os
-  askVpsOS: (price) => `💡 Default OS: Ubuntu (Linux) (if no selection is made).
+  askVpsOS: price => `💡 Default OS: Ubuntu (Linux) (if no selection is made).
 💻 Select an OS (Windows Server adds $${price}/month).
 
 <strong>💡 Recommended: </strong>
@@ -1189,21 +1189,31 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
 
 <strong>•📅 Disk Type –</strong> $${vpsDetails.diskType}
 <strong>•🖥️ VPS Plan:</strong> ${vpsDetails.config.name}
-<strong>•📅 Billing Cycle (${vpsPlans[vpsDetails.plan]} Plan) –</strong> $${vpsDetails.plantotalPrice}
+<strong>•📅 Billing Cycle (${vpsPlans[vpsDetails.plan]} Plan) –</strong> $${vpsDetails.plantotalPrice} USD
 <strong>•💻 OS License (${vpsDetails.os ? vpsDetails.os.name : 'Not Selected'}) –</strong> $${
     vpsDetails.selectedOSPrice
-  }
+  } USD
 <strong>•🛠️ Control Panel (${
     vpsDetails.panel
       ? `${vpsDetails.panel.name == 'whm' ? 'WHM' : 'Plesk'} ${vpsDetails.panel.licenseName}`
       : 'Not Selected'
-  }) –</strong> $${vpsDetails.selectedCpanelPrice}
-<strong>•🎟️ Coupon Discount –</strong> -$${vpsDetails.couponDiscount}
+  }) –</strong> $${vpsDetails.selectedCpanelPrice} USD
+<strong>•🎟️ Coupon Discount –</strong> -$${vpsDetails.couponDiscount} USD
 <strong>•🔄 Auto-Renewal –</strong>  ${
     vpsDetails.plan === 'hourly' || vpsDetails.autoRenewalPlan ? '✅ Enabled' : '❌ Disabled'
   }
 
-<strong>💰 Total:</strong> $${vpsDetails.totalPrice}
+${
+  vpsDetails.plan === 'hourly'
+    ? `Note: A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD deposit is included in your total. After the first hourly rate is deducted, the remaining deposit will be credited to your wallet.`
+    : ''
+}
+
+<strong>💰 Total:</strong> $${
+    vpsDetails.plan === 'hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      : vpsDetails.totalPrice
+  } USD
 
 <strong>✅ Proceed with the order?</strong>`,
 
@@ -1212,14 +1222,8 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
 
   askPaymentMethod: 'Choose a payment method:',
 
-  showDepositCryptoInfoVps: (priceCrypto, tickerView, address, vpsDetails) =>
+  showDepositCryptoInfoVps: (priceCrypto, tickerView, address) =>
     `Please remit ${priceCrypto} ${tickerView} to\n\n<code>${address}</code>
-
-${
-  vpsDetails.plan === 'hourly'
-    ? `Please note, for hourly plan you need to pay atleast ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$. The remaining amount will go into you wallet.`
-    : ''
-}
 
 Please note, crypto transactions can take up to 30 minutes to complete. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan will be seamlessly activated.
 
@@ -1260,14 +1264,7 @@ ${price}$ has been deducted from your wallet.`,
   bankPayVPS: (
     priceNGN,
     plan,
-  ) => `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your  ${
-    vpsPlans[plan]
-  } VPS plan will be seamlessly activated.
-${
-  plan === 'hourly'
-    ? `Please note, for hourly plan you need to pay atleast ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$. The remaining amount will go into you wallet.`
-    : ''
-},
+  ) => `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your  ${vpsPlans[plan]} VPS plan will be seamlessly activated.
 
 Best regards,
 ${CHAT_BOT_NAME}`,
@@ -1496,7 +1493,7 @@ Please Try again after sometime.`,
   bankPayVPSRenewPlan: priceNGN =>
     `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan be seamlessly activated and renewed.`,
 
-  renewVpsPanelConfirmMsg : (data, vpsDetails) => `<strong>💳 Proceed with Control Panel renewal?</strong>
+  renewVpsPanelConfirmMsg: (data, vpsDetails) => `<strong>💳 Proceed with Control Panel renewal?</strong>
 
   <strong>📜 Invoice Summary</strong>
   <strong>• Linked VPS ID:</strong> ${vpsDetails.name}
@@ -1507,8 +1504,9 @@ Please Try again after sometime.`,
 
   bankPayVPSRenewCpanel: (priceNGN, vpsDetails) =>
     `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan be seamlessly activated and ${vpsDetails.cPanel} Control Panel will be renewed.`,
-  vpsUnlinkCpanelWarning: (vpsDetails) => `⚠️ Warning: Unlinking will remove the ${vpsDetails.cPanel} license from VPS ${vpsDetails.name}, and you will lose access to its features. Do you want to proceed?`,
-  unlinkCpanelConfirmed: (data) => `✅ Control Panel ${data.cPanel} successfully unlinked from VPS ${data.name}.`
+  vpsUnlinkCpanelWarning: vpsDetails =>
+    `⚠️ Warning: Unlinking will remove the ${vpsDetails.cPanel} license from VPS ${vpsDetails.name}, and you will lose access to its features. Do you want to proceed?`,
+  unlinkCpanelConfirmed: data => `✅ Control Panel ${data.cPanel} successfully unlinked from VPS ${data.name}.`,
 }
 
 const en = {

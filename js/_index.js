@@ -1577,6 +1577,7 @@ bot?.on('message', async msg => {
       const price = Number(info?.vpsDetails.totalPrice)
       const wallet = await get(walletOf, chatId)
       const { usdBal, ngnBal } = await getBalance(walletOf, chatId)
+      const vpsDetails = info?.vpsDetails
 
       if (![u.usd, u.ngn].includes(coin)) return send(chatId, 'Some Issue')
 
@@ -1585,9 +1586,16 @@ bot?.on('message', async msg => {
       if (coin === u.usd && usdBal < priceUsd) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
       const priceNgn = await usdToNgn(price)
       if (coin === u.ngn && ngnBal < priceNgn) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
+      
+      // IN case of hourly need atleast min amount in wallet
+      if (vpsDetails.plan === 'hourly' && price < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) {
+        const priceUsdCheck = VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+        if (coin === u.usd && usdBal < priceUsdCheck) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
+        const priceNgnCheck = await usdToNgn(VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE)
+        if (coin === u.ngn && ngnBal < priceNgnCheck) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
+      }      
 
       // buy VPS
-      const vpsDetails = info?.vpsDetails
       const lang = info?.userLanguage ?? 'en'
       const name = await get(nameOf, chatId)
 
@@ -4934,7 +4942,7 @@ app.get('/crypto-pay-vps', auth, async (req, res) => {
   if (!ref || !chatId || !price || !coin || !value) return log(translation('t.argsErr')) || res.send(html(translation('t.argsErr')))
   const info = await state.findOne({ _id: parseFloat(chatId) })
   const lang = info?.userLanguage ?? 'en'
-  const totalPrice = vpsDetails?.totalPrice
+  const totalPrice = Number(vpsDetails?.totalPrice)
 
   sendMessage(chatId, translation('vp.paymentRecieved', lang))
   // Logs
@@ -4958,7 +4966,7 @@ app.get('/crypto-pay-vps', auth, async (req, res) => {
   }
 
   if (vpsDetails.plan === 'hourly') {
-    addFundsTo(walletOf, chatId, 'usd', usdIn - totalPrice, lang)
+    addFundsTo(walletOf, chatId, 'usd', Number(usdIn) - totalPrice, lang)
     sendMessage(chatId, translation('vp.extraMoney', lang))
   }
 

@@ -504,8 +504,10 @@ ${CHAT_BOT_NAME}`,
   registeredDomainList: domainsText => `Voici vos domaines achetés :\n${domainsText}`,
   comingSoon: `Bientôt disponible`,
   goBackToCoupon: '❌ Retourner & Appliquer le Coupon',
-  errorFetchingCryptoAddress: "Erreur lors de la récupération de l'adresse de la cryptomonnaie. Veuillez réessayer plus tard.",
-  paymentSuccessFul: '✅ Paiement réussi ! Votre commande est en cours de traitement. Les détails seront disponibles sous peu.'
+  errorFetchingCryptoAddress:
+    "Erreur lors de la récupération de l'adresse de la cryptomonnaie. Veuillez réessayer plus tard.",
+  paymentSuccessFul:
+    '✅ Paiement réussi ! Votre commande est en cours de traitement. Les détails seront disponibles sous peu.',
 }
 
 const phoneNumberLeads = ['💰📲 Acheter des leads téléphoniques', '✅📲 Valider les leads téléphoniques']
@@ -1070,7 +1072,7 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
 <strong>• 📅 Trimestriel –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} → Économisez 15%
 <strong>• 📅 Annuel –</strong> $${generateBilingCost(vpsDetails, 'annually')} → Économisez 20% `,
   planTypeMenu: vpsOptionsOf(vpsPlanMenu),
-  hourlyBillingMessage: `⚠️ Un dépôt remboursable de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} est requis pour la facturation horaire. (Cela garantit un service ininterrompu et est remboursé s'il n'est pas utilisé.)
+  hourlyBillingMessage: `⚠️ Un dépôt remboursable de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD est requis pour la facturation horaire. (Cela garantit un service ininterrompu et est remboursé s'il n'est pas utilisé.)
   
 ✅ La facturation est déduite du solde de votre portefeuille chaque heure.
 🔹 Les licences mensuelles (Windows/WHM/Plesk) sont facturées à l'avance.`,
@@ -1096,7 +1098,7 @@ ${list
   confirmSkip: "✅ Confirmer l'ignorance",
   goBackToCoupon: '❌ Retourner et appliquer le coupon',
 
-  askVpsOS: (price) => `💡 Système d'exploitation par défaut : Ubuntu (Linux) (si aucune sélection n'est effectuée).
+  askVpsOS: price => `💡 Système d'exploitation par défaut : Ubuntu (Linux) (si aucune sélection n'est effectuée).
 💻 Sélectionnez un système d'exploitation (Windows Server ajoute ${price} $/mois).
 
 <strong>💡 Recommandé : </strong>
@@ -1144,21 +1146,31 @@ Découvrez-en plus sur ${TG_HANDLE}.`,
 
 <strong>•📅 Type de disque –</strong> $${vpsDetails.diskType}
 <strong>•🖥️ Plan VPS :</strong> ${vpsDetails.config.name}
-<strong>•📅 Cycle de facturation (${vpsPlans[vpsDetails.plan]} Plan) –</strong> $${vpsDetails.plantotalPrice}
+<strong>•📅 Cycle de facturation (${vpsPlans[vpsDetails.plan]} Plan) –</strong> $${vpsDetails.plantotalPrice} USD
 <strong>•💻 Licence OS (${vpsDetails.os ? vpsDetails.os.name : 'Non sélectionné'}) –</strong> $${
     vpsDetails.selectedOSPrice
-  }
+  } USD
 <strong>•🛠️ Panneau de contrôle (${
     vpsDetails.panel
       ? `${vpsDetails.panel.name == 'whm' ? 'WHM' : 'Plesk'} ${vpsDetails.panel.licenseName}`
       : 'Non sélectionné'
-  }) –</strong> $${vpsDetails.selectedCpanelPrice}
-<strong>•🎟️ Remise coupon –</strong> -$${vpsDetails.couponDiscount}
+  }) –</strong> $${vpsDetails.selectedCpanelPrice} USD
+<strong>•🎟️ Remise coupon –</strong> -$${vpsDetails.couponDiscount} USD
 <strong>•🔄 Renouvellement automatique –</strong>  ${
     vpsDetails.plan === 'hourly' || vpsDetails.autoRenewalPlan ? '✅ Activé' : '❌ Désactivé'
   }
 
-<strong>💰 Total :</strong> $${vpsDetails.totalPrice}
+${
+  vpsDetails.plan === 'hourly'
+    ? `Remarque : Un dépôt de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD est inclus dans votre total. Après la première déduction horaire, le reste du dépôt sera crédité sur votre portefeuille.`
+    : ''
+}
+
+<strong>💰 Total :</strong> $${
+    vpsDetails.plan === 'hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      : vpsDetails.totalPrice
+  } USD
 
 <strong>✅ Procéder à la commande ?</strong>`,
 
@@ -1169,12 +1181,6 @@ Découvrez-en plus sur ${TG_HANDLE}.`,
 
   showDepositCryptoInfoVps: (priceCrypto, tickerView, address, vpsDetails) =>
     `Veuillez envoyer ${priceCrypto} ${tickerView} à\n\n<code>${address}</code>
-
-${
-  vpsDetails.plan === 'hourly'
-    ? `Veuillez noter que pour le plan horaire, vous devez payer au moins ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$. Le montant restant sera crédité dans votre portefeuille.`
-    : ''
-}
 
 Veuillez noter que les transactions en crypto-monnaie peuvent prendre jusqu'à 30 minutes pour être confirmées. Une fois la transaction confirmée, vous serez rapidement notifié et votre plan VPS sera activé.
 
@@ -1214,14 +1220,7 @@ ${price}$ ont été débités de votre portefeuille.`,
   bankPayVPS: (
     priceNGN,
     plan,
-  ) => `Veuillez envoyer ${priceNGN} NGN en cliquant sur "Effectuer le paiement" ci-dessous. Une fois la transaction confirmée, vous serez rapidement notifié et votre ${
-    vpsPlans[plan]
-  } plan VPS sera activé.
-${
-  plan === 'hourly'
-    ? `Veuillez noter que pour le plan horaire, vous devez payer au moins ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$. Le montant restant sera crédité dans votre portefeuille.`
-    : ''
-},
+  ) => `Veuillez envoyer ${priceNGN} NGN en cliquant sur "Effectuer le paiement" ci-dessous. Une fois la transaction confirmée, vous serez rapidement notifié et votre ${vpsPlans[plan]} plan VPS sera activé.
 
 Cordialement,
 ${CHAT_BOT_NAME}`,

@@ -484,8 +484,8 @@ ${CHAT_BOT_NAME}`,
   registeredDomainList: domainsText => `以下是您购买的域名：\n${domainsText}`,
   comingSoon: `即将推出`,
   goBackToCoupon: '❌ 返回并应用优惠券',
-  errorFetchingCryptoAddress: "获取加密货币地址时出错。请稍后再试。",
-  paymentSuccessFul: '✅ 付款成功！您的订单正在处理。详细信息将很快提供。'
+  errorFetchingCryptoAddress: '获取加密货币地址时出错。请稍后再试。',
+  paymentSuccessFul: '✅ 付款成功！您的订单正在处理。详细信息将很快提供。',
 }
 
 const phoneNumberLeads = ['💰📲 购买电话线索', '✅📲 验证电话线索']
@@ -1040,7 +1040,7 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
 <strong>• 📅 按年 –</strong> $${generateBilingCost(vpsDetails, 'annually')} → 节省 20%
 `,
   planTypeMenu: vpsOptionsOf(vpsPlanMenu),
-  hourlyBillingMessage: `⚠️ 按小时计费需要支付 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} 可退款押金。（此押金确保服务不中断，未使用部分可退款。）
+  hourlyBillingMessage: `⚠️ 按小时计费需要支付 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 可退款押金。（此押金确保服务不中断，未使用部分可退款。）
 
 ✅ 账单每小时从您的钱包余额中扣除。
 🔹 月度许可证（Windows/WHM/Plesk）需提前支付。`,
@@ -1066,7 +1066,7 @@ ${list
   confirmSkip: '✅ 确认跳过',
   goBackToCoupon: '❌ 返回并应用优惠券',
 
-  askVpsOS: (price) => `💡 默认操作系统：Ubuntu（Linux）（如果未进行选择）。
+  askVpsOS: price => `💡 默认操作系统：Ubuntu（Linux）（如果未进行选择）。
 💻 选择操作系统（Windows Server 额外收费 $${price}/月）。  
 
 <strong>💡 推荐: </strong>  
@@ -1113,32 +1113,35 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
 
 <strong>•📅 硬盘类型 –</strong> $${vpsDetails.diskType}
 <strong>•🖥️ VPS 方案：</strong> ${vpsDetails.config.name}
-<strong>•📅 计费周期（${vpsPlans[vpsDetails.plan]} 方案） –</strong> $${vpsDetails.plantotalPrice}
-<strong>•💻 操作系统许可证 (${vpsDetails.os ? vpsDetails.os.name : '未选择'}) –</strong> $${vpsDetails.selectedOSPrice}
+<strong>•📅 计费周期 (${vpsPlans[vpsDetails.plan]} 方案) –</strong> $${vpsDetails.plantotalPrice} USD
+<strong>•💻 操作系统许可证 (${vpsDetails.os ? vpsDetails.os.name : '未选择'}) –</strong> $${
+    vpsDetails.selectedOSPrice
+  } USD
 <strong>•🛠️ 控制面板 (${
     vpsDetails.panel ? `${vpsDetails.panel.name == 'whm' ? 'WHM' : 'Plesk'} ${vpsDetails.panel.licenseName}` : '未选择'
-  }) –</strong> $${vpsDetails.selectedCpanelPrice}
-<strong>•🎟️ 优惠券折扣 –</strong> -$${vpsDetails.couponDiscount}
-<strong>•🔄 自动续订 –</strong>  ${
-    vpsDetails.plan === 'hourly' || vpsDetails.autoRenewalPlan ? '✅ 已启用' : '❌ 未启用'
-  }
+  }) –</strong> $${vpsDetails.selectedCpanelPrice} USD
+<strong>•🎟️ 优惠券折扣 –</strong> -$${vpsDetails.couponDiscount} USD
+<strong>•🔄 自动续费 –</strong>  ${vpsDetails.plan === 'hourly' || vpsDetails.autoRenewalPlan ? '✅ 启用' : '❌ 禁用'}
 
-<strong>💰 总计：</strong> $${vpsDetails.totalPrice}
+${
+  vpsDetails.plan === 'hourly'
+    ? `注意：您的总费用中包含 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 作为预存款。在第一小时费率扣除后，剩余金额将返还至您的钱包。`
+    : ''
+}
+
+<strong>💰 总计：</strong> $${
+    vpsDetails.plan === 'hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      : vpsDetails.totalPrice
+  } USD
 
 <strong>✅ 是否继续下单？</strong>`,
-
   no: '❌ 取消订单',
   yes: '✅ 确认订单',
   askPaymentMethod: '选择支付方式：',
 
   showDepositCryptoInfoVps: (priceCrypto, tickerView, address, vpsDetails) =>
     `请将 ${priceCrypto} ${tickerView} 汇款至\n\n<code>${address}</code>
-
-${
-  vpsDetails.plan === 'hourly'
-    ? `请注意，对于按小时计费的计划，您需要至少支付 ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$. 剩余金额将存入您的钱包。`
-    : ''
-}
 
 请注意，密码货币交易可能需要最多 30 分钟才能完成。一旦交易确认，您将及时收到通知，您的 VPS 计划将被顺利激活。
 
@@ -1175,14 +1178,10 @@ ${CHAT_BOT_NAME}
 您的 VPS 计划实例 ${vpsName} 已成功续订。
 ${price}$ 已从您的钱包中扣除。`,
 
-  bankPayVPS: (priceNGN, plan) => `请点击“进行支付”以汇款 ${priceNGN} NGN。交易确认后，您将及时收到通知，您的 ${
-    vpsPlans[plan]
-  } VPS 计划将顺利激活。
-${
-  plan === 'hourly'
-    ? `请注意，对于按小时计费的计划，您需要至少支付 ${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE}$. 剩余金额将存入您的钱包。`
-    : ''
-},
+  bankPayVPS: (
+    priceNGN,
+    plan,
+  ) => `请点击“进行支付”以汇款 ${priceNGN} NGN。交易确认后，您将及时收到通知，您的 ${vpsPlans[plan]} VPS 计划将顺利激活。
 
 此致,
 ${CHAT_BOT_NAME}`,
