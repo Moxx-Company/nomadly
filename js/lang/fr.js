@@ -75,7 +75,7 @@ const user = {
   phoneNumberLeads: '📲 Pistes SMS HQ',
   wallet: '👛 Mon portefeuille',
   urlShortenerMain: "🔗✂️ Raccourcisseur d'URL",
-  vpsPlans: '🔧 Gérer votre VPS',
+  vpsPlans: 'Acheter un VPS Bulletproof🛡️ - Horaire/Mensuel',
   buyPlan: '🔔 Souscrire ici',
   domainNames: '🌐 Noms de domaine',
   viewPlan: '🔔 Mon plan',
@@ -1068,11 +1068,11 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
   askPlanType: vpsDetails => `💳 Choisissez un cycle de facturation :
 
 <strong>• ⏳ Horaire –</strong> $${generateBilingCost(vpsDetails, 'hourly')} (Aucune réduction)
-<strong>• 📅 Mensuel –</strong> $${generateBilingCost(vpsDetails, 'monthly')} → Économisez 10%
-<strong>• 📅 Trimestriel –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} → Économisez 15%
-<strong>• 📅 Annuel –</strong> $${generateBilingCost(vpsDetails, 'annually')} → Économisez 20% `,
+<strong>• 📅 Mensuel –</strong> $${generateBilingCost(vpsDetails, 'monthly')} (Inclut 10% de réduction)
+<strong>• 📅 Trimestriel –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} (Inclut 15% de réduction)
+<strong>• 📅 Annuel –</strong> $${generateBilingCost(vpsDetails, 'annually')} (Inclut 20% de réduction)`,
   planTypeMenu: vpsOptionsOf(vpsPlanMenu),
-  hourlyBillingMessage: `⚠️ Un dépôt remboursable de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD est requis pour la facturation horaire. (Cela garantit un service ininterrompu et est remboursé s'il n'est pas utilisé.)
+  hourlyBillingMessage: `⚠️ Un dépôt remboursable de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD est requis pour la facturation horaire. Cela garantit un service ininterrompu et est remboursé s'il n'est pas utilisé.
   
 ✅ La facturation est déduite du solde de votre portefeuille chaque heure.
 🔹 Les licences mensuelles (Windows/WHM/Plesk) sont facturées à l'avance.`,
@@ -1083,7 +1083,7 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
 ${list
   .map(
     config =>
-      `<strong>• ${config.name} -</strong>  $${config.monthlyPrice}/mois ($${config.hourlyPrice}/heure) – ${config.specs.vCPU} vCPU, ${config.specs.RAM}GB RAM, ${config.specs.disk}GB Disque`,
+      `<strong>• ${config.name} -</strong>  ${config.specs.vCPU} vCPU, ${config.specs.RAM}GB RAM, ${config.specs.disk}GB Disque`,
   )
   .join('\n')}`,
 
@@ -1091,7 +1091,8 @@ ${list
 
   configMenu: vpsOptionsOf(vpsConfigurationMenu),
 
-  askForCoupon: `🎟️ Entrez un code de coupon pour bénéficier d'une réduction, ou sautez cette étape.`,
+  askForCoupon:
+    '🎟️ Vous avez un code promo ? Entrez-le pour une réduction supplémentaire si applicable, ou passez cette étape. Les réductions du cycle de facturation sont déjà incluses.',
   couponInvalid: `❌ Invalide : Code expiré, non applicable ou incorrect. Veuillez réessayer.`,
   couponValid: amt => `✅ Valide : réduction appliquée : -$${amt}.`,
   skipCouponwarning: `⚠️ Passer cette étape signifie que vous ne pourrez pas appliquer de réduction plus tard.`,
@@ -1157,7 +1158,7 @@ Découvrez-en plus sur ${TG_HANDLE}.`,
   }) –</strong> $${vpsDetails.selectedCpanelPrice} USD
 <strong>•🎟️ Remise coupon –</strong> -$${vpsDetails.couponDiscount} USD
 <strong>•🔄 Renouvellement automatique –</strong>  ${
-    vpsDetails.plan === 'hourly' || vpsDetails.autoRenewalPlan ? '✅ Activé' : '❌ Désactivé'
+    vpsDetails.plan === 'hourly' ? '⏳ Horaire' : vpsDetails.autoRenewalPlan ? '✅ Activé' : '❌ Désactivé'
   }
 
 ${
@@ -1203,7 +1204,7 @@ Veuillez recharger votre portefeuille pour continuer à utiliser votre plan VPS.
   <strong>• IP:</strong> ${response.host}
   <strong>• OS:</strong> ${vpsDetails.os ? vpsDetails.os.name : 'Non sélectionné'}
   <strong>• Nom d'utilisateur:</strong> ${credentials.username}
-  <strong>• Mot de passe:</strong> Envoyé par email (changez immédiatement).
+  <strong>• Mot de passe:</strong> ${credentials.password} (changez immédiatement).
     
 📧 Ces détails ont également été envoyés à votre email enregistré. Veuillez les garder en sécurité.
 
@@ -1304,7 +1305,11 @@ Veuillez réessayer après un certain temps.`,
 
 Veuillez réessayer après un certain temps.`,
   confirmDeleteVpstext: name =>
-    `⚠️ Avertissement : Supprimer ce VPS (${name}) est permanent et toutes les données seront perdues. Voulez-vous continuer ?`,
+    `⚠️ Avertissement : La suppression de ce VPS ${name} est permanente et toutes les données seront perdues.
+    • Aucun remboursement pour le temps d'abonnement non utilisé.
+    • Le renouvellement automatique sera annulé et aucun frais supplémentaire ne s'appliquera.
+    
+  Voulez-vous continuer ?`,
   vpsBeingDeleted: name => `⚙️ Veuillez patienter pendant que votre VPS (${name}) est en cours de suppression`,
   vpsDeleted: name => `✅ Le VPS (${name}) a été supprimé de manière permanente.`,
   failedDeletingVPS: name => `❌ Échec de la suppression du VPS (${name}).

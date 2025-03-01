@@ -109,7 +109,9 @@ const {
   setVpsSshCredentials,
   unlinkSSHKeyFromVps,
   changeVpsAutoRenewal,
-  downloadSSHKeyFile
+  downloadSSHKeyFile,
+  checkMissingEmailForNameword,
+  addUserEmailForNameWord
 } = require('./vm-instance-setup.js')
 const { console } = require('inspector')
 
@@ -1186,6 +1188,17 @@ bot?.on('message', async msg => {
         if (result) {
           saveInfo('isRegisteredTelegramForVps', true)
           info.isRegisteredTelegramForVps = true
+        }
+      }
+      if (!info.isEmailRegisteredForNameword) {
+        const result = await checkMissingEmailForNameword(chatId)
+        if (result?.missingEmail) {
+          const addEmail = await addUserEmailForNameWord(chatId, info?.userEmail)
+          if (addEmail) {
+            saveInfo('isEmailRegisteredForNameword', true)
+          }
+        } else {
+          saveInfo('isEmailRegisteredForNameword', true)
         }
       }
       send(chatId, t.select, trans('k.of', [user.manageVpsPlan, user.buyVpsPlan]))
@@ -2292,6 +2305,7 @@ bot?.on('message', async msg => {
     const vpsConfigurations = info?.vpsConfigTypes
     const configTypes = vpsConfigurations.map((item) => item.name)
     if (!configTypes.includes(message)) return send(chatId, vp.validVpsConfig, vp.of(configTypes))
+    send(chatId, vp.vpsWaitingTime)
     let vpsDetails = info?.vpsDetails
     const selectedConfigType = vpsConfigurations.find((item) => item.name === message)
     vpsDetails.config = selectedConfigType

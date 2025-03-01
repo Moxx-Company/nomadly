@@ -17,53 +17,45 @@ const headers = {
 const configOptions = [
   {
     name: 'Basic',
-    label: 'Basic – $32/month ($0.045/hour) – 2 vCPU, 4GB RAM, 64GB Disk',
+    label: 'Basic – 2 vCPU, 4GB RAM, 64GB Disk',
     specs: {
       vCPU: 2,
       RAM: 4,
       disk: 64,
     },
-    monthlyPrice: 32,
-    hourlyPrice: 0.045,
     level: 1,
     upgrade_options: [],
   },
   {
     name: 'Standard',
-    label: 'Standard – $65/month ($0.09/hour) – 4 vCPU, 8GB RAM, 80GB Disk',
+    label: 'Standard – 4 vCPU, 8GB RAM, 80GB Disk',
     specs: {
       vCPU: 4,
       RAM: 8,
       disk: 80,
     },
-    monthlyPrice: 65,
-    hourlyPrice: 0.09,
     level: 2,
     upgrade_options: [],
   },
   {
     name: 'Premium',
-    label: 'Premium – $129/month ($0.18/hour) – 8 vCPU, 16GB RAM, 160GB Disk',
+    label: 'Premium – 8 vCPU, 16GB RAM, 160GB Disk',
     specs: {
       vCPU: 8,
       RAM: 16,
       disk: 160,
     },
-    monthlyPrice: 129,
-    hourlyPrice: 0.18,
     level: 3,
     upgrade_options: [],
   },
   {
     name: 'Enterprise',
-    label: 'Enterprise – $256/month ($0.35/hour) – 16 vCPU, 32GB RAM, 200GB Disk',
+    label: 'Enterprise – 16 vCPU, 32GB RAM, 200GB Disk',
     specs: {
       vCPU: 16,
       RAM: 32,
       disk: 200,
     },
-    monthlyPrice: 256,
-    hourlyPrice: 0.35,
     level: 4,
     upgrade_options: [],
   },
@@ -197,7 +189,7 @@ async function fetchAvailableDiskTpes(zone) {
 }
 
 async function fetchAvailableVPSConfigs() {
-  return configOptions;
+  return configOptions
   // try {
   //   const url = `${NAMEWORD_BASE_URL}/list-vps-plans`
   //   let response = await axios.get(url, { headers })
@@ -322,12 +314,52 @@ async function registerVpsTelegram(telegramId, email) {
       },
       { headers },
     )
-    if (response?.data?.data) {
-      return response?.data?.data
+    if (response?.data) {
+      return response?.data
     }
     return false
   } catch (err) {
     console.log('Error in registering user', err?.response?.data)
+    if (err?.response?.data?.error.includes('already exists')) {
+      return true
+    }
+    return false
+  }
+}
+
+async function checkMissingEmailForNameword(telegramId) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/auth/check-missing-email?telegramId=${telegramId}`
+
+    let response = await axios.get(url, { headers })
+    if (response?.data) {
+      return response?.data
+    }
+    return false
+  } catch (err) {
+    console.log('Error in checking mail for user', err?.response?.data)
+    return false
+  }
+}
+
+async function addUserEmailForNameWord(telegramId, email) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/auth/update-user`
+
+    let response = await axios.post(
+      url,
+      {
+        email,
+        telegramId,
+      },
+      { headers },
+    )
+    if (response?.data) {
+      return response?.data
+    }
+    return false
+  } catch (err) {
+    console.log('Error in updating user email', err?.response?.data)
     return false
   }
 }
@@ -796,6 +828,8 @@ module.exports = {
   unlinkSSHKeyFromVps,
   changeVpsAutoRenewal,
   downloadSSHKeyFile,
+  checkMissingEmailForNameword,
+  addUserEmailForNameWord,
   upgradeDiskOptions,
   vpsToUpgradePlan,
 }

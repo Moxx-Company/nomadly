@@ -74,7 +74,7 @@ const user = {
   phoneNumberLeads: '📲 HQ SMS Lead',
   wallet: '👛 My Wallet',
   urlShortenerMain: '🔗✂️ URL Shortener',
-  vpsPlans: '🔧 Manage your VPS',
+  vpsPlans: 'Buy Bulletproof VPS🛡️ - Hourly/Monthly',
   buyPlan: '🔔 Subscribe Here',
   domainNames: '🌐 Domain Names',
   viewPlan: '🔔 My Plan',
@@ -1112,12 +1112,12 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
   askPlanType: vpsDetails => `💳 Choose a billing cycle:
 
 <strong>• ⏳ Hourly –</strong> $${generateBilingCost(vpsDetails, 'hourly')} (No discount)
-<strong>• 📅 Monthly –</strong> $${generateBilingCost(vpsDetails, 'monthly')} → Save 10%
-<strong>• 📅 Quarterly –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} → Save 15%
-<strong>• 📅 Annually –</strong> $${generateBilingCost(vpsDetails, 'annually')} → Save 20%
+<strong>• 📅 Monthly –</strong> $${generateBilingCost(vpsDetails, 'monthly')} (Includes 10% off)
+<strong>• 📅 Quarterly –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} (Includes 15% off)
+<strong>• 📅 Annually –</strong> $${generateBilingCost(vpsDetails, 'annually')}  (Includes 20% off)
 `,
   planTypeMenu: vpsOptionsOf(vpsPlanMenu),
-  hourlyBillingMessage: `⚠️ A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD refundable deposit is required for hourly billing. (This ensures uninterrupted service and is refunded if unused.
+  hourlyBillingMessage: `⚠️ A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD refundable deposit is required for hourly billing. This ensures uninterrupted service and is refunded if unused.
   
 ✅ Billing is deducted from your wallet balance every hour.
 🔹 Monthly licenses (Windows/WHM/Plesk) are billed upfront.`,
@@ -1128,14 +1128,14 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
 ${list
   .map(
     config =>
-      `<strong>• ${config.name} -</strong>  $${config.monthlyPrice}/month ($${config.hourlyPrice}/hour) – ${config.specs.vCPU} vCPU, ${config.specs.RAM}GB RAM, ${config.specs.disk}GB Disk`,
+      `<strong>• ${config.name} -</strong> ${config.specs.vCPU} vCPU, ${config.specs.RAM}GB RAM, ${config.specs.disk}GB Disk`,
   )
   .join('\n')}`,
   validVpsConfig: 'Please select a valid vps configuration:',
   configMenu: vpsOptionsOf(vpsConfigurationMenu),
 
   //discount
-  askForCoupon: `🎟️ Enter a coupon code for a discount, or skip this step.`,
+  askForCoupon: `🎟️ Have a coupon code? Enter it for an extra discount if applicable, or skip this step. Any billing cycle discounts are already included.`,
   couponInvalid: `❌ Invalid: Code expired, not applicable, or incorrect. Try again.`,
   couponValid: amt => `✅ Valid: Discount applied: -$${amt}.`,
   skipCouponwarning: `⚠️ Skipping means you cannot apply a discount later.`,
@@ -1200,7 +1200,7 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
   }) –</strong> $${vpsDetails.selectedCpanelPrice} USD
 <strong>•🎟️ Coupon Discount –</strong> -$${vpsDetails.couponDiscount} USD
 <strong>•🔄 Auto-Renewal –</strong>  ${
-    vpsDetails.plan === 'hourly' || vpsDetails.autoRenewalPlan ? '✅ Enabled' : '❌ Disabled'
+    vpsDetails.plan === 'hourly' ? '⏳ Hourly' : vpsDetails.autoRenewalPlan ? '✅ Enabled' : '❌ Disabled'
   }
 
 ${
@@ -1247,7 +1247,7 @@ Please top up your wallet to continue using your VPS Plan.
   <strong>• IP:</strong> ${response.host}
   <strong>• OS:</strong> ${vpsDetails.os ? vpsDetails.os.name : 'Not Selected'}
   <strong>• Username:</strong> ${credentials.username}
-  <strong>• Password:</strong> Sent via email (change immediately).
+  <strong>• Password:</strong> ${credentials.password} (change immediately).
 
 📧 These details have also been sent to your registered email. Please keep them secure.
 
@@ -1348,7 +1348,11 @@ Please Try again after sometime.`,
 
 Please Try again after sometime.`,
   confirmDeleteVpstext: name =>
-    `⚠️ Warning: Deleting this VPS (${name}) is permanent, and all data will be lost. Do you want to proceed?`,
+    `⚠️ Warning: Deleting this VPS ${name} is permanent, and all data will be lost.
+	•	No refund for unused subscription time.
+	•	Auto-renewal will be canceled, and no further charges will apply.
+
+Do you want to proceed?`,
   vpsBeingDeleted: name => `⚙️ Please wait while your VPS (${name}) is being deleted`,
   vpsDeleted: name => `✅ VPS (${name}) has been permanently deleted.`,
   failedDeletingVPS: name => `❌ Failed to delete VPS (${name}). 

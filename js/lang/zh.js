@@ -74,7 +74,7 @@ const user = {
   phoneNumberLeads: '📲 HQ 短信线索',
   wallet: '👛 我的钱包',
   urlShortenerMain: '🔗✂️ URL 缩短器',
-  vpsPlans: '🔧 管理您的VPS',
+  vpsPlans: '购买防弹 VPS🛡️ - 按小时/按月',
   buyPlan: '🔔 订阅这里',
   domainNames: '🌐 域名',
   viewPlan: '🔔 我的计划',
@@ -1035,12 +1035,12 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
   askPlanType: vpsDetails => `💳 选择账单周期：
 
 <strong>• ⏳ 按小时 –</strong> $${generateBilingCost(vpsDetails, 'hourly')}（无折扣）
-<strong>• 📅 按月 –</strong> $${generateBilingCost(vpsDetails, 'monthly')} → 节省 10%
-<strong>• 📅 按季度 –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} → 节省 15%
-<strong>• 📅 按年 –</strong> $${generateBilingCost(vpsDetails, 'annually')} → 节省 20%
+<strong>• 📅 按月 –</strong> $${generateBilingCost(vpsDetails, 'monthly')} （包括 10% 折扣）
+<strong>• 📅 按季度 –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} （包括 15% 折扣）
+<strong>• 📅 按年 –</strong> $${generateBilingCost(vpsDetails, 'annually')} （包括 20% 折扣）
 `,
   planTypeMenu: vpsOptionsOf(vpsPlanMenu),
-  hourlyBillingMessage: `⚠️ 按小时计费需要支付 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 可退款押金。（此押金确保服务不中断，未使用部分可退款。）
+  hourlyBillingMessage: `⚠️ 按小时计费需要支付 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 可退款押金。此押金确保服务不中断，未使用部分可退款。
 
 ✅ 账单每小时从您的钱包余额中扣除。
 🔹 月度许可证（Windows/WHM/Plesk）需提前支付。`,
@@ -1051,7 +1051,7 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
 ${list
   .map(
     config =>
-      `<strong>• ${config.name} -</strong>  $${config.monthlyPrice}/月 ($${config.hourlyPrice}/小时) – ${config.specs.vCPU} vCPU, ${config.specs.RAM}GB 内存, ${config.specs.disk}GB 硬盘`,
+      `<strong>• ${config.name} -</strong>  ${config.specs.vCPU} vCPU, ${config.specs.RAM}GB 内存, ${config.specs.disk}GB 硬盘`,
   )
   .join('\n')}`,
 
@@ -1059,7 +1059,7 @@ ${list
 
   configMenu: vpsOptionsOf(vpsConfigurationMenu),
 
-  askForCoupon: `🎟️ 输入优惠券代码以获得折扣，或跳过此步骤。`,
+  askForCoupon: '🎟️ 有优惠券代码吗？输入它可享受额外折扣（如适用），或者跳过此步骤。任何计费周期折扣已包含在内。',
   couponInvalid: `❌ 无效：代码已过期、不适用或输入错误。请重试。`,
   couponValid: amt => `✅ 有效：应用的折扣：-$${amt}。`,
   skipCouponwarning: `⚠️ 跳过意味着您以后无法再应用折扣。`,
@@ -1121,7 +1121,9 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
     vpsDetails.panel ? `${vpsDetails.panel.name == 'whm' ? 'WHM' : 'Plesk'} ${vpsDetails.panel.licenseName}` : '未选择'
   }) –</strong> $${vpsDetails.selectedCpanelPrice} USD
 <strong>•🎟️ 优惠券折扣 –</strong> -$${vpsDetails.couponDiscount} USD
-<strong>•🔄 自动续费 –</strong>  ${vpsDetails.plan === 'hourly' || vpsDetails.autoRenewalPlan ? '✅ 启用' : '❌ 禁用'}
+<strong>•🔄 自动续费 –</strong>  ${
+    vpsDetails.plan === 'hourly' ? '⏳ 按小时' : vpsDetails.autoRenewalPlan ? '✅ 启用' : '❌ 禁用'
+  }
 
 ${
   vpsDetails.plan === 'hourly'
@@ -1164,7 +1166,7 @@ ${CHAT_BOT_NAME}`,
   <strong>• IP:</strong> ${response.host}
   <strong>• 操作系统:</strong> ${vpsDetails.os ? vpsDetails.os.name : '未选择'}
   <strong>• 用户名:</strong> ${credentials.username}
-  <strong>• 密码:</strong> 通过电子邮件发送（立即更改）。
+  <strong>• 密码:</strong> ${credentials.password}（立即更改）。
     
 📧 这些详细信息也已发送到您的注册电子邮件。请保管好它们。
 
@@ -1262,7 +1264,11 @@ ${list
   failedRestartingVPS: name => `❌ 重启 VPS (${name}) 失败。
 
 请稍后再试。`,
-  confirmDeleteVpstext: name => `⚠️ 警告：删除此 VPS (${name}) 是永久性的，所有数据将丢失。您确定要继续吗？`,
+  confirmDeleteVpstext: name => `⚠️ 警告：删除此 VPS ${name} 是永久性的，所有数据将丢失。
+  • 未使用的订阅时间不予退款。
+  • 自动续订将被取消，不会产生额外费用。
+  
+您确定要继续吗？`,
   vpsBeingDeleted: name => `⚙️ 请稍等，您的 VPS (${name}) 正在删除中`,
   vpsDeleted: name => `✅ VPS (${name}) 已永久删除。`,
   failedDeletingVPS: name => `❌ 删除 VPS (${name}) 失败。
