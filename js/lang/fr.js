@@ -1,5 +1,5 @@
 const { areasOfCountry, carriersOf, countryCodeOf } = require('../areasOfCountry')
-const { generateBilingCost, vpsToUpgradePlan } = require('../vm-instance-setup')
+const { vpsToUpgradePlan } = require('../vm-instance-setup')
 
 const format = (cc, n) => `+${cc}(${n.toString().padStart(2, '0')})`
 
@@ -1065,12 +1065,16 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
 
   chooseValidDiskType: 'Veuillez choisir un type de disque valide',
 
-  askPlanType: vpsDetails => `💳 Choisissez un cycle de facturation :
+  askPlanType: plans => `💳 Choisissez un cycle de facturation :
 
-<strong>• ⏳ Horaire –</strong> $${generateBilingCost(vpsDetails, 'hourly')} (Aucune réduction)
-<strong>• 📅 Mensuel –</strong> $${generateBilingCost(vpsDetails, 'monthly')} (Inclut 10% de réduction)
-<strong>• 📅 Trimestriel –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} (Inclut 15% de réduction)
-<strong>• 📅 Annuel –</strong> $${generateBilingCost(vpsDetails, 'annually')} (Inclut 20% de réduction)`,
+${plans
+  .map(
+    item =>
+      `<strong>• ${item.type === 'Hourly' ? '⏳' : '📅'} ${item.type} –</strong> $${item.originalPrice} ${
+        item.discount === 0 ? '(Aucune réduction)' : `(Inclut ${item.discount}% de réduction)`
+      }`,
+  )
+  .join('\n')}`,
   planTypeMenu: vpsOptionsOf(vpsPlanMenu),
   hourlyBillingMessage: `⚠️ Un dépôt remboursable de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD est requis pour la facturation horaire. Cela garantit un service ininterrompu et est remboursé s'il n'est pas utilisé.
   
@@ -1131,11 +1135,11 @@ ${list
 ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : ''}${item.label}`).join('\n')}`,
 
   trialCpanelMessage: panel =>
-    `✅ ${panel == 'whm' ? 'WHM' : 'Plesk'} Essai gratuit (${
-      panel == 'whm' ? '15' : '7'
+    `✅ ${panel.name == 'whm' ? 'WHM' : 'Plesk'} Essai gratuit (${
+      panel.duration
     } jours) activé. Vous pouvez passer à une version payante à tout moment en contactant le support.`,
 
-  vpsWaitingTime: "⚙️ Récupération des informations de coût... Cela ne prendra qu'un instant.",
+  vpsWaitingTime: "⚙️ Récupération des détails... Cela ne prendra qu'un instant.",
   failedCostRetrieval: 'Échec de la récupération des informations de coût... Veuillez réessayer après un moment.',
 
   errorPurchasingVPS: plan => `Une erreur est survenue lors de la configuration de votre plan VPS ${plan}.
@@ -1158,17 +1162,17 @@ Découvrez-en plus sur ${TG_HANDLE}.`,
   }) –</strong> $${vpsDetails.selectedCpanelPrice} USD
 <strong>•🎟️ Remise coupon –</strong> -$${vpsDetails.couponDiscount} USD
 <strong>•🔄 Renouvellement automatique –</strong>  ${
-    vpsDetails.plan === 'hourly' ? '⏳ Horaire' : vpsDetails.autoRenewalPlan ? '✅ Activé' : '❌ Désactivé'
+    vpsDetails.plan === 'Hourly' ? '⏳ Horaire' : vpsDetails.autoRenewalPlan ? '✅ Activé' : '❌ Désactivé'
   }
 
 ${
-  vpsDetails.plan === 'hourly'
+  vpsDetails.plan === 'Hourly'
     ? `Remarque : Un dépôt de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD est inclus dans votre total. Après la première déduction horaire, le reste du dépôt sera crédité sur votre portefeuille.`
     : ''
 }
 
 <strong>💰 Total :</strong> $${
-    vpsDetails.plan === 'hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+    vpsDetails.plan === 'Hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
       ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
       : vpsDetails.totalPrice
   } USD
@@ -1198,7 +1202,7 @@ Votre plan VPS pour l'instance ${vpsName} a été arrêté en raison d'un solde 
 Veuillez recharger votre portefeuille pour continuer à utiliser votre plan VPS.`,
 
   vpsBoughtSuccess: (vpsDetails, response) =>
-    `<strong>🎉 VPS [${response.name}] est actif !</strong>
+    `<strong>🎉 VPS [${response.label}] est actif !</strong>
 
 <strong>🔑 Informations de connexion:</strong>
   <strong>• IP:</strong> ${response.host}
@@ -1273,10 +1277,10 @@ ${list
   selectCorrectOption: 'Veuillez sélectionner une option dans la liste',
   selectedVpsData: data => `<strong>🖥️ ID du VPS :</strong> ${data.name}
 
-<strong>• Plan :</strong> ${data.plan}
-<strong>• vCPUs :</strong> ${data.vCPUs} | RAM : ${data.RAM} Go | Disque : ${data.disk} Go (${data.diskType})
-<strong>• OS :</strong> ${data.os}
-<strong>• Panneau de contrôle :</strong> ${data.cPanel ? data.cPanel : 'Aucun'}
+<strong>• Plan :</strong> ${data.planDetails.name}
+<strong>• vCPUs :</strong> ${data.planDetails.specs.vCPU} | RAM : ${data.planDetails.specs.RAM} Go | Disque : ${data.planDetails.specs.disk} Go (${data.diskTypeDetails.type})
+<strong>• OS :</strong> ${data.osDetails.name}
+<strong>• Panneau de contrôle :</strong> ${data.cPanelPlanDetails ? data.cPanelPlanDetails.type : 'Aucun'}
 <strong>• Statut :</strong> ${data.status === 'RUNNING' ? '🟢' : '🔴'} ${data.status}
 <strong>• Renouvellement automatique :</strong> ${data.autoRenewable ? 'Activé' : 'Désactivé'}
 <strong>• Adresse IP :</strong> ${data.host}`,
@@ -1361,7 +1365,7 @@ ${upgrades
 <strong>• Ancien plan : </strong> ${vpsDetails.plan}
 <strong>• Nouveau plan : </strong> ${newData.newConfig.name}
 <strong>• Nouveau tarif de facturation : </strong> $${newData.totalPrice}/${
-    newData.billingCycle === 'hourly' ? 'heure' : 'mois'
+    newData.billingCycle === 'Hourly' ? 'heure' : 'mois'
   }  (ajustement au prorata appliqué)
 
 <strong>✅ Poursuivre la commande ?</strong>`,

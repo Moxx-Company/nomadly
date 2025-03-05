@@ -1032,13 +1032,16 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
 
   chooseValidDiskType: '请选择有效的磁盘类型',
 
-  askPlanType: vpsDetails => `💳 选择账单周期：
+  askPlanType: plans => `💳 选择账单周期：
 
-<strong>• ⏳ 按小时 –</strong> $${generateBilingCost(vpsDetails, 'hourly')}（无折扣）
-<strong>• 📅 按月 –</strong> $${generateBilingCost(vpsDetails, 'monthly')} （包括 10% 折扣）
-<strong>• 📅 按季度 –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} （包括 15% 折扣）
-<strong>• 📅 按年 –</strong> $${generateBilingCost(vpsDetails, 'annually')} （包括 20% 折扣）
-`,
+${plans
+  .map(
+    item =>
+      `<strong>• ${item.type === 'Hourly' ? '⏳' : '📅'} ${item.type} –</strong> $${item.originalPrice} ${
+        item.discount === 0 ? '(无折扣）' : `（包括 ${item.discount}% 折扣）`
+      }`,
+  )
+  .join('\n')}`,
   planTypeMenu: vpsOptionsOf(vpsPlanMenu),
   hourlyBillingMessage: `⚠️ 按小时计费需要支付 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 可退款押金。此押金确保服务不中断，未使用部分可退款。
 
@@ -1097,11 +1100,9 @@ ${list
 ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : ''}${item.label}`).join('\n')}`,
 
   trialCpanelMessage: panel =>
-    `✅ ${panel == 'whm' ? 'WHM' : 'Plesk'} 免费试用（${
-      panel == 'whm' ? '15' : '7'
-    } 天）已激活。您可以随时联系支持进行升级。`,
+    `✅ ${panel.name == 'whm' ? 'WHM' : 'Plesk'} 免费试用（${panel.duration} 天）已激活。您可以随时联系支持进行升级。`,
 
-  vpsWaitingTime: '⚙️ 正在获取成本信息... 这将只需片刻。',
+  vpsWaitingTime: '⚙️ 正在获取详细信息... 这只需要一点时间。',
   failedCostRetrieval: '获取成本信息失败... 请稍后再试。',
 
   errorPurchasingVPS: plan => `在设置您的 ${plan} VPS 计划时出现问题。
@@ -1122,17 +1123,17 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
   }) –</strong> $${vpsDetails.selectedCpanelPrice} USD
 <strong>•🎟️ 优惠券折扣 –</strong> -$${vpsDetails.couponDiscount} USD
 <strong>•🔄 自动续费 –</strong>  ${
-    vpsDetails.plan === 'hourly' ? '⏳ 按小时' : vpsDetails.autoRenewalPlan ? '✅ 启用' : '❌ 禁用'
+    vpsDetails.plan === 'Hourly' ? '⏳ 按小时' : vpsDetails.autoRenewalPlan ? '✅ 启用' : '❌ 禁用'
   }
 
 ${
-  vpsDetails.plan === 'hourly'
+  vpsDetails.plan === 'Hourly'
     ? `注意：您的总费用中包含 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 作为预存款。在第一小时费率扣除后，剩余金额将返还至您的钱包。`
     : ''
 }
 
 <strong>💰 总计：</strong> $${
-    vpsDetails.plan === 'hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+    vpsDetails.plan === 'Hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
       ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
       : vpsDetails.totalPrice
   } USD
@@ -1160,7 +1161,7 @@ ${CHAT_BOT_NAME}`,
 请充值您的钱包以继续使用 VPS 计划。`,
 
   vpsBoughtSuccess: (vpsDetails, response) =>
-    `<strong>🎉 VPS [${response.name}] 已激活！</strong>
+    `<strong>🎉 VPS [${response.label}] 已激活！</strong>
 
 <strong>🔑 登录凭据:</strong>
   <strong>• IP:</strong> ${response.host}
@@ -1233,10 +1234,10 @@ ${list
   selectCorrectOption: '请选择列表中的一个选项',
   selectedVpsData: data => `<strong>🖥️ VPS ID：</strong> ${data.name}
 
-<strong>• 计划：</strong> ${data.plan}
-<strong>• vCPUs：</strong> ${data.vCPUs} | RAM: ${data.RAM} GB | 硬盘：${data.disk} GB (${data.diskType})
-<strong>• 操作系统：</strong> ${data.os}
-<strong>• 控制面板：</strong> ${data.cPanel ? data.cPanel : '无'}
+<strong>• 计划：</strong> ${data.planDetails.name}
+<strong>• vCPUs：</strong> ${data.planDetails.specs.vCPU} | RAM: ${data.planDetails.specs.RAM} GB | 硬盘：${data.planDetails.specs.disk} GB (${data.diskTypeDetails.type})
+<strong>• 操作系统：</strong> ${data.osDetails.name}
+<strong>• 控制面板：</strong> ${data.cPanelPlanDetails ? data.cPanelPlanDetails.type : '无'}
 <strong>• 状态：</strong> ${data.status === 'RUNNING' ? '🟢' : '🔴'} ${data.status}
 <strong>• 自动续费：</strong> ${data.autoRenewable ? '已启用' : '已禁用'}
 <strong>• IP 地址：</strong> ${data.host}`,
@@ -1319,7 +1320,7 @@ ${upgrades
 <strong>• 旧计划: </strong> ${vpsDetails.plan}
 <strong>• 新计划: </strong> ${newData.newConfig.name}
 <strong>• 新账单费率: </strong> $${newData.totalPrice}/${
-    newData.billingCycle === 'hourly' ? '小时' : '月'
+    newData.billingCycle === 'Hourly' ? '小时' : '月'
   }  (按比例调整)
 
 <strong>✅ 是否继续订单？</strong>`,

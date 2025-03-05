@@ -1049,13 +1049,17 @@ const vp = {
 ${list.map(item => `• ${item.description}`).join('\n')}`,
   chooseValidDiskType: 'कृपया एक वैध डिस्क प्रकार चुनें',
 
-  askPlanType: vpsDetails => `💳 बिलिंग चक्र चुनें:
+  askPlanType: plans => `💳 बिलिंग चक्र चुनें:
 
-<strong>• ⏳ प्रति घंटा –</strong> $${generateBilingCost(vpsDetails, 'hourly')} (कोई छूट नहीं)
-<strong>• 📅 मासिक –</strong> $${generateBilingCost(vpsDetails, 'monthly')} (10% छूट शामिल है)
-<strong>• 📅 तिमाही –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} (15% छूट शामिल है)
-<strong>• 📅 वार्षिक –</strong> $${generateBilingCost(vpsDetails, 'annually')} (20% छूट शामिल है)
-`,
+${plans
+  .map(
+    item =>
+      `<strong>• ${item.type === 'Hourly' ? '⏳' : '📅'} ${item.type} –</strong> $${item.originalPrice} ${
+        item.discount === 0 ? '(कोई छूट नहीं)' : `(${item.discount}% छूट शामिल है)`
+      }`,
+  )
+  .join('\n')}`,
+
   planTypeMenu: vpsOptionsOf(vpsPlanMenu),
   hourlyBillingMessage: `⚠️ प्रति घंटा बिलिंग के लिए $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD की वापसी योग्य जमा राशि आवश्यक है। यह निर्बाध सेवा सुनिश्चित करता है और यदि अप्रयुक्त रहता है तो वापस कर दिया जाता है।
 
@@ -1115,11 +1119,11 @@ ${list
 ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : ''}${item.label}`).join('\n')}`,
 
   trialCpanelMessage: panel =>
-    `✅ ${panel == 'whm' ? 'WHM' : 'Plesk'} निःशुल्क परीक्षण (${
-      panel == 'whm' ? '15' : '7'
+    `✅ ${panel.name == 'whm' ? 'WHM' : 'Plesk'} निःशुल्क परीक्षण (${
+      panel.duration
     } दिन) सक्रिय किया गया। आप किसी भी समय समर्थन से संपर्क करके अपग्रेड कर सकते हैं।`,
 
-  vpsWaitingTime: '⚙️ लागत जानकारी प्राप्त की जा रही है... यह केवल कुछ पल में होगा।',
+  vpsWaitingTime: '⚙️ विवरण प्राप्त कर रहे हैं... इसमें बस एक क्षण लगेगा।',
   failedCostRetrieval: 'लागत जानकारी प्राप्त करने में विफल... कृपया कुछ समय बाद पुनः प्रयास करें।',
 
   errorPurchasingVPS: plan => `कुछ गलत हो गया जब आप अपना ${plan} VPS योजना सेटअप कर रहे थे।
@@ -1142,17 +1146,17 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
   }) –</strong> $${vpsDetails.selectedCpanelPrice} USD
 <strong>•🎟️ कूपन छूट –</strong> -$${vpsDetails.couponDiscount} USD
 <strong>•🔄 स्वचालित नवीनीकरण –</strong>  ${
-    vpsDetails.plan === 'hourly' ? '⏳ प्रति घंटा' : vpsDetails.autoRenewalPlan ? '✅ सक्षम' : '❌ अक्षम'
+    vpsDetails.plan === 'Hourly' ? '⏳ प्रति घंटा' : vpsDetails.autoRenewalPlan ? '✅ सक्षम' : '❌ अक्षम'
   }
 
 ${
-  vpsDetails.plan === 'hourly'
+  vpsDetails.plan === 'Hourly'
     ? `नोट: आपकी कुल राशि में $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD जमा शामिल है। पहली घंटे की कटौती के बाद, शेष जमा राशि आपके वॉलेट में जमा कर दी जाएगी।`
     : ''
 }
 
 <strong>💰 कुल :</strong> $${
-    vpsDetails.plan === 'hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+    vpsDetails.plan === 'Hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
       ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
       : vpsDetails.totalPrice
   } USD
@@ -1181,7 +1185,7 @@ ${CHAT_BOT_NAME}`,
 कृपया अपनी वॉलेट को टॉप-अप करें ताकि आप अपनी VPS योजना का उपयोग जारी रख सकें।`,
 
   vpsBoughtSuccess: (vpsDetails, response) =>
-    `<strong>🎉 VPS [${response.name}] सक्रिय हो गया!</strong>
+    `<strong>🎉 VPS [${response.label}] सक्रिय हो गया!</strong>
 
 <strong>🔑 लॉगिन विवरण:</strong>
   <strong>• IP:</strong> ${response.host}
@@ -1255,10 +1259,10 @@ ${list
   selectCorrectOption: 'कृपया सूची में से एक विकल्प चुनें',
   selectedVpsData: data => `<strong>🖥️ VPS आईडी:</strong> ${data.name}
 
-<strong>• योजना:</strong> ${data.plan}
-<strong>• vCPUs:</strong> ${data.vCPUs} | RAM: ${data.RAM} GB | डिस्क: ${data.disk} GB (${data.diskType})
-<strong>• OS:</strong> ${data.os}
-<strong>• नियंत्रण पैनल:</strong> ${data.cPanel ? data.cPanel : 'कोई नहीं'}
+<strong>• योजना:</strong> ${data.planDetails.name}
+<strong>• vCPUs:</strong> ${data.planDetails.specs.vCPU} | RAM: ${data.planDetails.specs.RAM} GB | डिस्क: ${data.planDetails.specs.disk} GB (${data.diskTypeDetails.type})
+<strong>• OS:</strong> ${data.osDetails.name}
+<strong>• नियंत्रण पैनल:</strong> ${data.cPanelPlanDetails ? data.cPanelPlanDetails.type : 'कोई नहीं'}
 <strong>• स्थिति:</strong> ${data.status === 'RUNNING' ? '🟢' : '🔴'} ${data.status}
 <strong>• स्वचालित नवीनीकरण:</strong> ${data.autoRenewable ? 'सक्षम' : 'अक्षम'}
 <strong>• आईपी पता:</strong> ${data.host}`,
@@ -1342,7 +1346,7 @@ ${upgrades
 <strong>• पुरानी योजना: </strong> ${vpsDetails.plan}
 <strong>• नई योजना: </strong> ${newData.newConfig.name}
 <strong>• नई बिलिंग दर: </strong> $${newData.totalPrice}/${
-    newData.billingCycle === 'hourly' ? 'घंटा' : 'महीना'
+    newData.billingCycle === 'Hourly' ? 'घंटा' : 'महीना'
   }  (प्रोरेटेड समायोजन लागू)
 
 <strong>✅ आदेश के साथ आगे बढ़ें?</strong>`,
