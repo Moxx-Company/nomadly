@@ -6,6 +6,7 @@ require('dotenv').config()
 const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL
 const X_API_KEY = process.env.NAMEWORD_API_KEY
 const VM_PROJECT_ID = process.env.GOOGLE_CONSOLE_PROJECTID
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 
 const headers = {
   accept: 'application/json',
@@ -360,6 +361,7 @@ async function createVPSInstance(telegramId, vpsDetails) {
         Number(vpsDetails.plantotalPrice) + Number(vpsDetails.selectedOSPrice) + Number(vpsDetails.selectedCpanelPrice),
       zone: vpsDetails.zone,
       googleConsoleProjectId: VM_PROJECT_ID,
+      telegramBotToken: TELEGRAM_BOT_TOKEN,
       autoRenewable: vpsDetails.plan === 'Hourly' ? true : vpsDetails.autoRenewalPlan,
     }
     if (vpsDetails.panel) {
