@@ -4373,15 +4373,14 @@ async function checkVPSPlansExpiryandPayment() {
     }).toArray()
 
     for ( const vpsPlan of expiredHourlyVpsPlans) {
-      const { chatId, _id, planPrice, plan, name, zone } = vpsPlan
+      const { chatId, _id, planPrice, plan, vpsId, label } = vpsPlan
       const info = await state.findOne({ _id: parseFloat(chatId) })
       const wallet = await get(walletOf, chatId)
       const { usdBal } = await getBalance(walletOf, chatId)
       if (usdBal < planPrice) {
         try {
           let payload = {
-            name: name,
-            zone: zone
+            _id: vpsId
           }
           const stopVPS = await changeVpsInstanceStatus(payload, 'stop')
           if (stopVPS.success) {
@@ -4389,7 +4388,7 @@ async function checkVPSPlansExpiryandPayment() {
               { _id: _id },
               { $set: { 'status': 'TERMINATED' } },
             )
-            return send(chatId, translation('vp.lowWalletBalance', info?.userLanguage, name))
+            return send(chatId, translation('vp.lowWalletBalance', info?.userLanguage, label))
           }
         } catch (error) {
           console.log(error)
@@ -4401,7 +4400,7 @@ async function checkVPSPlansExpiryandPayment() {
         )
         set(payments, nanoid(), `Wallet,VPSPlan,${plan},$${planPrice},${chatId},${new Date()}`)
         const usdOut = (wallet?.usdOut || 0) + Number(planPrice)
-        send(chatId, translation('vp.vpsHourlyPlanRenewed', info?.userLanguage, name, planPrice))
+        send(chatId, translation('vp.vpsHourlyPlanRenewed', info?.userLanguage, label, planPrice))
         await set(walletOf, chatId, 'usdOut', usdOut)
         const { usdBal: usd, ngnBal: ngn } = await getBalance(walletOf, chatId)
         send(chatId, translation('t.showWallet', info?.userLanguage, usd, ngn))
@@ -4429,9 +4428,10 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
     await vpsPlansOf.insertOne({
       chatId: chatId,
       name: vpsData.vps_name,
+      label: vpsData.label,
       vpsId: vpsData._id,
       start_time: now, 
-      end_time: vpsData.subscription.subscriptionEnd, 
+      end_time: new Date(vpsData.subscription.subscriptionEnd), 
       plan: vpsDetails.plan,
       planPrice: vpsDetails.plantotalPrice, 
       status: vpsData.status,

@@ -1114,7 +1114,7 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
 
 <strong>•📅 硬盘类型 –</strong> $${vpsDetails.diskType}
 <strong>•🖥️ VPS 方案：</strong> ${vpsDetails.config.name}
-<strong>•📅 计费周期 (${vpsPlans[vpsDetails.plan]} 方案) –</strong> $${vpsDetails.plantotalPrice} USD
+<strong>•📅 计费周期 (${vpsDetails.plan} 方案) –</strong> $${vpsDetails.plantotalPrice} USD
 <strong>•💻 操作系统许可证 (${vpsDetails.os ? vpsDetails.os.name : '未选择'}) –</strong> $${
     vpsDetails.selectedOSPrice
   } USD
@@ -1184,7 +1184,7 @@ ${price}$ 已从您的钱包中扣除。`,
   bankPayVPS: (
     priceNGN,
     plan,
-  ) => `请点击“进行支付”以汇款 ${priceNGN} NGN。交易确认后，您将及时收到通知，您的 ${vpsPlans[plan]} VPS 计划将顺利激活。
+  ) => `请点击“进行支付”以汇款 ${priceNGN} NGN。交易确认后，您将及时收到通知，您的 ${plan} VPS 计划将顺利激活。
 
 此致,
 ${CHAT_BOT_NAME}`,

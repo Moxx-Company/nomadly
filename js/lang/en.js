@@ -1193,7 +1193,7 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
 
 <strong>•📅 Disk Type –</strong> $${vpsDetails.diskType}
 <strong>•🖥️ VPS Plan:</strong> ${vpsDetails.config.name}
-<strong>•📅 Billing Cycle (${vpsPlans[vpsDetails.plan]} Plan) –</strong> $${vpsDetails.plantotalPrice} USD
+<strong>•📅 Billing Cycle (${vpsDetails.plan} Plan) –</strong> $${vpsDetails.plantotalPrice} USD
 <strong>•💻 OS License (${vpsDetails.os ? vpsDetails.os.name : 'Not Selected'}) –</strong> $${
     vpsDetails.selectedOSPrice
   } USD
@@ -1268,7 +1268,7 @@ ${price}$ has been deducted from your wallet.`,
   bankPayVPS: (
     priceNGN,
     plan,
-  ) => `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your  ${vpsPlans[plan]} VPS plan will be seamlessly activated.
+  ) => `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your  ${plan} VPS plan will be seamlessly activated.
 
 Best regards,
 ${CHAT_BOT_NAME}`,

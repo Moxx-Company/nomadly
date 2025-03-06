@@ -1151,7 +1151,7 @@ Découvrez-en plus sur ${TG_HANDLE}.`,
 
 <strong>•📅 Type de disque –</strong> $${vpsDetails.diskType}
 <strong>•🖥️ Plan VPS :</strong> ${vpsDetails.config.name}
-<strong>•📅 Cycle de facturation (${vpsPlans[vpsDetails.plan]} Plan) –</strong> $${vpsDetails.plantotalPrice} USD
+<strong>•📅 Cycle de facturation (${vpsDetails.plan} Plan) –</strong> $${vpsDetails.plantotalPrice} USD
 <strong>•💻 Licence OS (${vpsDetails.os ? vpsDetails.os.name : 'Non sélectionné'}) –</strong> $${
     vpsDetails.selectedOSPrice
   } USD
@@ -1225,7 +1225,7 @@ ${price}$ ont été débités de votre portefeuille.`,
   bankPayVPS: (
     priceNGN,
     plan,
-  ) => `Veuillez envoyer ${priceNGN} NGN en cliquant sur "Effectuer le paiement" ci-dessous. Une fois la transaction confirmée, vous serez rapidement notifié et votre ${vpsPlans[plan]} plan VPS sera activé.
+  ) => `Veuillez envoyer ${priceNGN} NGN en cliquant sur "Effectuer le paiement" ci-dessous. Une fois la transaction confirmée, vous serez rapidement notifié et votre ${plan} plan VPS sera activé.
 
 Cordialement,
 ${CHAT_BOT_NAME}`,
