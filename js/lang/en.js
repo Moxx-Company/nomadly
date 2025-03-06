@@ -76,7 +76,7 @@ const user = {
   urlShortenerMain: '🔗✂️ URL Shortener',
   vpsPlans: 'Buy Bulletproof VPS🛡️ - Hourly/Monthly',
   buyPlan: '🔔 Subscribe Here',
-  domainNames: '🌐 Domain Names',
+  domainNames: '🌐 Register Domain Names - ❌ DMCA',
   viewPlan: '🔔 My Plan',
   becomeReseller: '💼 Become A Reseller',
   getSupport: '💬 Get Support',

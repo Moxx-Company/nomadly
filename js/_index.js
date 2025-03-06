@@ -576,8 +576,10 @@ bot?.on('message', async msg => {
       set(state, chatId, 'action', 'hosting-pay')
       send(chatId, hP.generateInvoiceText(payload), k.pay)
     },
-    'vps-plan-pay' : () => {
+    'vps-plan-pay' : async () => {
       set(state, chatId, 'action', 'vps-plan-pay')
+      const { usdBal, ngnBal } = await getBalance(walletOf, chatId)
+      send(chatId, t.showWallet(usdBal, ngnBal))
       send(chatId, vp.askPaymentMethod, k.pay)
     },
     'vps-upgrade-plan-pay' : () => {

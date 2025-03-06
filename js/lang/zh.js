@@ -76,7 +76,7 @@ const user = {
   urlShortenerMain: '🔗✂️ URL 缩短器',
   vpsPlans: '购买防弹 VPS🛡️ - 按小时/按月',
   buyPlan: '🔔 订阅这里',
-  domainNames: '🌐 域名',
+  domainNames: '🌐 注册域名 - ❌ DMCA',
   viewPlan: '🔔 我的计划',
   becomeReseller: '💼 成为代理商',
   getSupport: '💬 获取支持',
