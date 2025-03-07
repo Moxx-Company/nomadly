@@ -1,5 +1,5 @@
 const { areasOfCountry, carriersOf, countryCodeOf } = require('../areasOfCountry')
-const { generateBilingCost, vpsToUpgradePlan } = require('../vm-instance-setup')
+const { vpsToUpgradePlan } = require('../vm-instance-setup')
 
 const format = (cc, n) => `+${cc}(${n.toString().padStart(2, '0')})`
 
@@ -76,7 +76,7 @@ const user = {
   urlShortenerMain: '🔗✂️ URL Shortener',
   vpsPlans: 'Buy Bulletproof VPS🛡️ - Hourly/Monthly',
   buyPlan: '🔔 Subscribe Here',
-  domainNames: '🌐 Domain Names',
+  domainNames: '🌐 Register Domain Names - ❌ DMCA',
   viewPlan: '🔔 My Plan',
   becomeReseller: '💼 Become A Reseller',
   getSupport: '💬 Get Support',
@@ -1109,13 +1109,17 @@ ${list.map(item => `• ${item.description}`).join('\n')}`,
   chooseValidDiskType: 'Please choose a valid disk type',
 
   // plans
-  askPlanType: vpsDetails => `💳 Choose a billing cycle:
+  askPlanType: plans => `💳 Choose a billing cycle:
 
-<strong>• ⏳ Hourly –</strong> $${generateBilingCost(vpsDetails, 'hourly')} (No discount)
-<strong>• 📅 Monthly –</strong> $${generateBilingCost(vpsDetails, 'monthly')} (Includes 10% off)
-<strong>• 📅 Quarterly –</strong> $${generateBilingCost(vpsDetails, 'quaterly')} (Includes 15% off)
-<strong>• 📅 Annually –</strong> $${generateBilingCost(vpsDetails, 'annually')}  (Includes 20% off)
-`,
+${plans
+  .map(
+    item =>
+      `<strong>• ${item.type === 'Hourly' ? '⏳' : '📅'} ${item.type} –</strong> $${item.originalPrice} ${
+        item.discount === 0 ? '(No discount)' : `(includes ${item.discount}% off)`
+      }`,
+  )
+  .join('\n')}`,
+
   planTypeMenu: vpsOptionsOf(vpsPlanMenu),
   hourlyBillingMessage: `⚠️ A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD refundable deposit is required for hourly billing. This ensures uninterrupted service and is refunded if unused.
   
@@ -1173,11 +1177,11 @@ ${list
 
 ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : ''}${item.label}`).join('\n')}`,
   trialCpanelMessage: panel =>
-    `✅ ${panel == 'whm' ? 'WHM' : 'Plesk'} Free Trial (${
-      panel == 'whm' ? '15' : '7'
+    `✅ ${panel.name == 'whm' ? 'WHM' : 'Plesk'} Free Trial (${
+      panel.duration
     } days) activated. You can upgrade anytime by reaching out to support.`,
 
-  vpsWaitingTime: '⚙️ Retrieving cost information... This will only take a moment.',
+  vpsWaitingTime: '⚙️ Retrieving Details... This will only take a moment.',
   failedCostRetrieval: 'Failied in retrieving cost information... Please try again after some time.',
 
   errorPurchasingVPS: plan => `Something went wrong while setting up your ${plan} VPS Plan.
@@ -1187,9 +1191,9 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
 
   generateBillSummary: vpsDetails => `<strong>📋 Final Cost Breakdown:</strong>
 
-<strong>•📅 Disk Type –</strong> $${vpsDetails.diskType}
+<strong>•📅 Disk Type –</strong> ${vpsDetails.diskType}
 <strong>•🖥️ VPS Plan:</strong> ${vpsDetails.config.name}
-<strong>•📅 Billing Cycle (${vpsPlans[vpsDetails.plan]} Plan) –</strong> $${vpsDetails.plantotalPrice} USD
+<strong>•📅 Billing Cycle (${vpsDetails.plan} Plan) –</strong> $${vpsDetails.plantotalPrice} USD
 <strong>•💻 OS License (${vpsDetails.os ? vpsDetails.os.name : 'Not Selected'}) –</strong> $${
     vpsDetails.selectedOSPrice
   } USD
@@ -1200,17 +1204,17 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
   }) –</strong> $${vpsDetails.selectedCpanelPrice} USD
 <strong>•🎟️ Coupon Discount –</strong> -$${vpsDetails.couponDiscount} USD
 <strong>•🔄 Auto-Renewal –</strong>  ${
-    vpsDetails.plan === 'hourly' ? '⏳ Hourly' : vpsDetails.autoRenewalPlan ? '✅ Enabled' : '❌ Disabled'
+    vpsDetails.plan === 'Hourly' ? '⏳ Hourly' : vpsDetails.autoRenewalPlan ? '✅ Enabled' : '❌ Disabled'
   }
 
 ${
-  vpsDetails.plan === 'hourly'
+  vpsDetails.plan === 'Hourly'
     ? `Note: A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD deposit is included in your total. After the first hourly rate is deducted, the remaining deposit will be credited to your wallet.`
     : ''
 }
 
 <strong>💰 Total:</strong> $${
-    vpsDetails.plan === 'hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+    vpsDetails.plan === 'Hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
       ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
       : vpsDetails.totalPrice
   } USD
@@ -1241,7 +1245,7 @@ Please top up your wallet to continue using your VPS Plan.
 `,
 
   vpsBoughtSuccess: (vpsDetails, response, credentials) =>
-    `<strong>🎉 VPS [${response.name}] is active!</strong>
+    `<strong>🎉 VPS [${response.label}] is active!</strong>
 
 <strong>🔑 Login Credentials:</strong>
   <strong>• IP:</strong> ${response.host}
@@ -1264,7 +1268,7 @@ ${price}$ has been deducted from your wallet.`,
   bankPayVPS: (
     priceNGN,
     plan,
-  ) => `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your  ${vpsPlans[plan]} VPS plan will be seamlessly activated.
+  ) => `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your  ${plan} VPS plan will be seamlessly activated.
 
 Best regards,
 ${CHAT_BOT_NAME}`,
@@ -1316,10 +1320,12 @@ ${list
   selectCorrectOption: 'Please select a option from the list',
   selectedVpsData: data => `<strong>🖥️ VPS ID:</strong> ${data.name}
 
-<strong>• Plan:</strong> ${data.plan}
-<strong>• vCPUs:</strong> ${data.vCPUs} | RAM: ${data.RAM} GB | Disk: ${data.disk} GB (${data.diskType})
-<strong>• OS:</strong> ${data.os}
-<strong>• Control Panel:</strong> ${data.cPanel ? data.cPanel : 'None'}
+<strong>• Plan:</strong> ${data.planDetails.name}
+<strong>• vCPUs:</strong> ${data.planDetails.specs.vCPU} | RAM: ${data.planDetails.specs.RAM} GB | Disk: ${
+    data.planDetails.specs.disk
+  } GB (${data.diskTypeDetails.type})
+<strong>• OS:</strong> ${data.osDetails.name}
+<strong>• Control Panel:</strong> ${data.cPanelPlanDetails ? data.cPanelPlanDetails.type : 'None'}
 <strong>• Status:</strong> ${data.status === 'RUNNING' ? '🟢' : '🔴'} ${data.status}
 <strong>• Auto-Renewal:</strong> ${data.autoRenewable ? 'Enabled' : 'Disabled'}
 <strong>• IP Address:</strong> ${data.host}`,
@@ -1403,7 +1409,7 @@ ${upgrades
 <strong>• Old Plan: </strong> ${vpsDetails.plan}
 <strong>• New Plan: </strong> ${newData.newConfig.name}
 <strong>• New Billing Rate: </strong> $${newData.totalPrice}/${
-    newData.billingCycle === 'hourly' ? 'hourly' : 'monthly'
+    newData.billingCycle === 'Hourly' ? 'hourly' : 'monthly'
   }  (prorated adjustment applied)
 
 <strong>✅ Proceed with the order?</strong>`,

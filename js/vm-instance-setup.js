@@ -6,60 +6,13 @@ require('dotenv').config()
 const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL
 const X_API_KEY = process.env.NAMEWORD_API_KEY
 const VM_PROJECT_ID = process.env.GOOGLE_CONSOLE_PROJECTID
-const PERCENT_INCREASE_VPS = Number(process.env.VPS_PLAN_PRICE_INCREASE_PERC)
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 
 const headers = {
   accept: 'application/json',
   'content-type': 'application/json',
   'x-api-key': X_API_KEY,
 }
-
-const configOptions = [
-  {
-    name: 'Basic',
-    label: 'Basic – 2 vCPU, 4GB RAM, 64GB Disk',
-    specs: {
-      vCPU: 2,
-      RAM: 4,
-      disk: 64,
-    },
-    level: 1,
-    upgrade_options: [],
-  },
-  {
-    name: 'Standard',
-    label: 'Standard – 4 vCPU, 8GB RAM, 80GB Disk',
-    specs: {
-      vCPU: 4,
-      RAM: 8,
-      disk: 80,
-    },
-    level: 2,
-    upgrade_options: [],
-  },
-  {
-    name: 'Premium',
-    label: 'Premium – 8 vCPU, 16GB RAM, 160GB Disk',
-    specs: {
-      vCPU: 8,
-      RAM: 16,
-      disk: 160,
-    },
-    level: 3,
-    upgrade_options: [],
-  },
-  {
-    name: 'Enterprise',
-    label: 'Enterprise – 16 vCPU, 32GB RAM, 200GB Disk',
-    specs: {
-      vCPU: 16,
-      RAM: 32,
-      disk: 200,
-    },
-    level: 4,
-    upgrade_options: [],
-  },
-]
 
 const upgradeDiskOptions = [
   {
@@ -176,7 +129,7 @@ async function fetchAvailableZones(region) {
 
 async function fetchAvailableDiskTpes(zone) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/disk-type-list?projectId=${VM_PROJECT_ID}&zone=${zone}`
+    const url = `${NAMEWORD_BASE_URL}/vps-disk/all`
     let response = await axios.get(url, { headers })
     if (response?.data?.data) {
       return response?.data?.data
@@ -188,36 +141,21 @@ async function fetchAvailableDiskTpes(zone) {
   }
 }
 
-async function fetchAvailableVPSConfigs() {
-  return configOptions
-  // try {
-  //   const url = `${NAMEWORD_BASE_URL}/list-vps-plans`
-  //   let response = await axios.get(url, { headers })
-  //   if (response?.data?.data) {
-  //     return response?.data?.data.plans
-  //   }
-  //   return false
-  // } catch (err) {
-  //   console.log('Error in fetching VPS config types', err?.response?.data)
-  //   return false
-  // }
-}
-
-async function calculateVpsInstanceCost(payload) {
+async function fetchAvailableVPSConfigs(telegramId, vpsDetails) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/cost/vm/instance?region=${payload.region}&vcpuCount=${payload.config.specs.vCPU}&memoryGb=${payload.config.specs.RAM}&diskType=${payload.diskType}&diskSizeGb=${payload.config.specs.disk}&preemptible=false`
+    const url = `${NAMEWORD_BASE_URL}/vps-plan/all?region=${vpsDetails.region}&diskType=${vpsDetails.diskType}&telegramId=${telegramId}`
     let response = await axios.get(url, { headers })
     if (response?.data?.data) {
-      return response?.data.data
+      return response?.data?.data
     }
     return false
   } catch (err) {
-    console.log('Error in fetching instance cost', err?.response?.data)
+    console.log('Error in fetching VPS config types', err?.response?.data)
     return false
   }
 }
 
-function generateRandomName(prefix) {
+function generateRandomName(prefix, number = 12) {
   const randomSuffix = Math.random().toString(36).substr(2, 12)
   return `${prefix}-${randomSuffix}`
 }
@@ -243,30 +181,6 @@ function generateRandomPassword(length = 16) {
   password = password.sort(() => Math.random() - 0.5).join('')
 
   return password
-}
-
-function generateBilingCost(data, plan) {
-  let totalCost = 0
-  const incrementPerc = Number(PERCENT_INCREASE_VPS)
-  switch (plan) {
-    case 'hourly':
-      totalCost = Number(data.totalCostInHour) + (Number(data.totalCostInHour) * incrementPerc) / 100
-      break
-    case 'monthly':
-      totalCost = Number(data.totalCostInMonth) + (Number(data.totalCostInMonth) * incrementPerc) / 100
-      break
-    case 'quaterly':
-      let costQuaterly = Number(data.totalCostInMonth) * 3
-      totalCost = costQuaterly + (costQuaterly * incrementPerc) / 100
-      break
-    case 'annually':
-      let costYearly = Number(data.totalCostInMonth) * 12
-      totalCost = costYearly + (costYearly * incrementPerc) / 100
-      break
-    default:
-      break
-  }
-  return parseFloat(totalCost.toFixed(2))
 }
 
 async function fetchSelectedCpanelOptions(cpanel) {
@@ -364,11 +278,11 @@ async function addUserEmailForNameWord(telegramId, email) {
   }
 }
 
-async function fetchUserSSHkeyList(telegramId, instanceName) {
+async function fetchUserSSHkeyList(telegramId, vpsId) {
   try {
     let url = `${NAMEWORD_BASE_URL}/ssh/retrieve-All?telegramId=${telegramId}`
-    if (instanceName) {
-      url += `&instanceName=${instanceName}`
+    if (vpsId) {
+      url += `&vps_id=${vpsId}`
     }
     let response = await axios.get(url, { headers })
     if (response?.data?.data) {
@@ -381,7 +295,7 @@ async function fetchUserSSHkeyList(telegramId, instanceName) {
   }
 }
 
-async function generateNewSSSkey(telegramId, sshName) {
+async function generateNewSSHkey(telegramId, sshName) {
   try {
     const url = `${NAMEWORD_BASE_URL}/ssh/generate`
 
@@ -428,27 +342,30 @@ async function uploadSSHPublicKey(telegramId, key, sshName) {
 
 async function createVPSInstance(telegramId, vpsDetails) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/create/vm/instance`
+    const vpsList = await fetchUserVPSList(telegramId)
+    let newVpsCount = 1
+    if (vpsList.length) {
+      const lastVpsName = vpsList[vpsList.length - 1].name
+      newVpsCount = parseInt(lastVpsName.split('-')[2]) + 1
+    }
+    const url = `${NAMEWORD_BASE_URL}/create/vps`
     let payload = {
-      name: generateRandomName('vm-instance'),
-      diskSizeGB: vpsDetails.config.specs.disk,
-      autoDelete: true,
-      boot: true,
-      diskType: vpsDetails.diskType,
-      machineType: 'e2-standard-8',
-      networkName: 'global/networks/default',
-      googleConsoleProjectId: VM_PROJECT_ID,
-      zone: vpsDetails.zone,
+      label: `VM-Instance-${newVpsCount}`,
+      vps_name: generateRandomName('vm-instance'),
       telegramId: telegramId,
-      autoRenewable: vpsDetails.plan === 'hourly' ? true : vpsDetails.autoRenewalPlan,
-      plan: vpsDetails.config.name,
-      vCPUs: vpsDetails.config.specs.vCPU,
-      RAM: vpsDetails.config.specs.RAM,
-      os: vpsDetails.os.value,
+      planId: vpsDetails.config._id,
+      billingCycleId: vpsDetails.billingCycleId,
+      osId: vpsDetails.os.id,
+      diskTypeId: vpsDetails.diskTypeId,
+      price:
+        Number(vpsDetails.plantotalPrice) + Number(vpsDetails.selectedOSPrice) + Number(vpsDetails.selectedCpanelPrice),
+      zone: vpsDetails.zone,
+      googleConsoleProjectId: VM_PROJECT_ID,
+      telegramBotToken: TELEGRAM_BOT_TOKEN,
+      autoRenewable: vpsDetails.plan === 'Hourly' ? true : vpsDetails.autoRenewalPlan,
     }
     if (vpsDetails.panel) {
-      payload.cPanel = vpsDetails.panel.name
-      payload.license = vpsDetails.panel.license
+      payload.cPanelPlanId = vpsDetails.panel.id
     }
     console.log(payload)
     const response = await axios.post(url, payload, { headers })
@@ -473,11 +390,10 @@ async function createVPSInstance(telegramId, vpsDetails) {
 
 async function attachSSHKeysToVM(payload) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/attach/sshkeys`
+    const url = `${NAMEWORD_BASE_URL}/attach/sshkeys/${payload.vpsId}`
     let newPayload = {
       project: VM_PROJECT_ID,
       zone: payload.zone,
-      instanceName: payload.name,
       sshKeys: payload.sshKeys,
       telegramId: payload.telegramId,
     }
@@ -493,13 +409,27 @@ async function attachSSHKeysToVM(payload) {
   }
 }
 
+async function createPleskResetLink(telegramId, vpsData) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/vm/reset-plesk-password-link?host=${vpsData.host}&os=${vpsData.subscription.osId.os_name}&telegramId=${telegramId}`
+    console.log('####Plesk reset API url', url)
+    const response = await axios.get(url, { headers })
+    if (response?.data) {
+      return response?.data
+    }
+    return false
+  } catch (error) {
+    console.log('Error in creating reset plesk link', error?.response?.data)
+    return false
+  }
+}
+
 async function unlinkSSHKeyFromVps(telegramId, key, vpsDetails) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/detach/sshkeys`
+    const url = `${NAMEWORD_BASE_URL}/detach/sshkeys/${vpsDetails._id}`
     const payload = {
       project: VM_PROJECT_ID,
       zone: vpsDetails.zone,
-      instanceName: vpsDetails.name,
       sshKeys: [key],
       telegramId: telegramId,
     }
@@ -570,7 +500,7 @@ async function setVpsSshCredentials(host) {
 
 async function fetchUserVPSList(telegramId) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/list/vm/instances?telegramId=${telegramId}&project=${VM_PROJECT_ID}`
+    const url = `${NAMEWORD_BASE_URL}/list/vps?telegramId=${telegramId}&project=${VM_PROJECT_ID}`
 
     let response = await axios.get(url, { headers })
     if (response?.data?.data) {
@@ -583,9 +513,9 @@ async function fetchUserVPSList(telegramId) {
   }
 }
 
-async function fetchVPSDetails(telegramId, vpsName) {
+async function fetchVPSDetails(telegramId, vpsId) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/get/vm/instance?telegramId=${telegramId}&project=${VM_PROJECT_ID}&instanceName=${vpsName}`
+    const url = `${NAMEWORD_BASE_URL}/get/vps/${vpsId}?telegramId=${telegramId}&project=${VM_PROJECT_ID}`
 
     let response = await axios.get(url, { headers })
     if (response?.data?.data) {
@@ -620,11 +550,9 @@ async function changeVpsAutoRenewal(telegramId, vpsName, autoRenewable) {
 
 async function changeVpsInstanceStatus(vpsDetails, changeStatus) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/${changeStatus}/vm/instance`
+    const url = `${NAMEWORD_BASE_URL}/${changeStatus}/vps/${vpsDetails._id}`
     const payload = {
-      instanceName: vpsDetails.name,
       project: VM_PROJECT_ID,
-      zone: vpsDetails.zone,
     }
     const response = await axios.post(url, payload, { headers })
     if (response?.data) {
@@ -645,15 +573,17 @@ async function changeVpsInstanceStatus(vpsDetails, changeStatus) {
   }
 }
 
-async function deleteVPSinstance(chatId, name) {
+async function deleteVPSinstance(chatId, vpsId) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/delete/vm/instance`
+    const url = `${NAMEWORD_BASE_URL}/delete/vps/${vpsId}`
     const payload = {
-      instanceName: name,
       project: VM_PROJECT_ID,
       telegramId: chatId,
     }
-    const response = await axios.post(url, payload, { headers })
+    const response = await axios.delete(url, {
+      headers: headers,
+      data: payload,
+    })
     if (response?.data) {
       return { success: true, data: response?.data?.data ? response?.data?.data : response?.data }
     } else {
@@ -667,7 +597,7 @@ async function deleteVPSinstance(chatId, name) {
       null,
       2,
     )}`
-    console.error(error)
+    console.error(error.response.data)
     return { error: errorMessage }
   }
 }
@@ -757,18 +687,18 @@ const getExpiryDateVps = plan => {
   const now = new Date()
   let expiresAt
   switch (plan) {
-    case 'hourly':
+    case 'Hourly':
       expiresAt = new Date(now.getTime() + 1 * 60 * 60 * 1000)
       break
-    case 'monthly':
+    case 'Monthly':
       expiresAt = new Date(now)
       expiresAt.setMonth(expiresAt.getMonth() + 1)
       break
-    case 'quaterly':
+    case 'Quaterly':
       expiresAt = new Date(now)
       expiresAt.setMonth(expiresAt.getMonth() + 3)
       break
-    case 'annually':
+    case 'Annually':
       expiresAt = new Date(now)
       expiresAt.setFullYear(expiresAt.getFullYear() + 1)
       break
@@ -779,44 +709,19 @@ const getExpiryDateVps = plan => {
   return expiresAt
 }
 
-const calculatePriceForVPS = (amountPerMonth, plan) => {
-  let price
-  switch (plan) {
-    case 'hourly':
-      const totalHours = 30 * 24 // 30 days * 24 hours per day
-      price = (amountPerMonth / totalHours).toFixed(2)
-      break
-    case 'monthly':
-      price = amountPerMonth
-      break
-    case 'quaterly':
-      price = amountPerMonth * 3
-      break
-    case 'annually':
-      price = amountPerMonth * 12
-      break
-    default:
-      break
-  }
-  return price
-}
-
 module.exports = {
   fetchAvailableCountries,
   fetchAvailableRegionsOfCountry,
   fetchAvailableZones,
-  calculateVpsInstanceCost,
   createVPSInstance,
   sendVPSCredentialsEmail,
   getExpiryDateVps,
   changeVpsInstanceStatus,
-  generateBilingCost,
   fetchAvailableDiskTpes,
   fetchAvailableOS,
-  calculatePriceForVPS,
   registerVpsTelegram,
   fetchUserSSHkeyList,
-  generateNewSSSkey,
+  generateNewSSHkey,
   uploadSSHPublicKey,
   fetchAvailableVPSConfigs,
   fetchSelectedCpanelOptions,
@@ -830,6 +735,7 @@ module.exports = {
   downloadSSHKeyFile,
   checkMissingEmailForNameword,
   addUserEmailForNameWord,
+  createPleskResetLink,
   upgradeDiskOptions,
   vpsToUpgradePlan,
 }
