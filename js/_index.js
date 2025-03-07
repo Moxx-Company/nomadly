@@ -1358,7 +1358,6 @@ bot?.on('message', async msg => {
     getVPSDetails: async () => {
       set(state, chatId, 'action', a.getVPSDetails)
       send(chatId, vp.vpsWaitingTime)
-      log(info.vpsDetails)
       const vpsData = await fetchVPSDetails(chatId, info.vpsDetails._id)
       if (!vpsData) return send(chatId, vp.failedFetchingData, trans('o'))
       saveInfo('userVPSDetails', vpsData)
@@ -4462,15 +4461,7 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
       log('Error sending email:', error)
       send(TELEGRAM_DEV_CHAT_ID, 'Error sending email', translation('o'))
     }
-    
-    //@TODO
-    // if (vpsDetails.panel && vpsDetails.panel.name === 'plesk') {
-    //   await sleep(30000)
-    //   const pleskLink = await createPleskResetLink(vpsData)
-    //   if (pleskLink) {
-    //     send(chatId, translation('vp.vpsPleskResetLinkSuccess', lang, pleskLink), translation('pleskResetUrl', lang, pleskUrl))
-    //   }
-    // }
+
     return true
   } catch (error) {
     const errorMessage = `err buyVPSPlanFullProcess ${error?.message} ${JSON.stringify(error?.response?.data, null, 2)}`

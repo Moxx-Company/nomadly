@@ -1133,7 +1133,7 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
 
   generateBillSummary: vpsDetails => `<strong>📋 अंतिम लागत विवरण :</strong>
 
-<strong>•📅 डिस्क प्रकार –</strong> $${vpsDetails.diskType}
+<strong>•📅 डिस्क प्रकार –</strong> ${vpsDetails.diskType}
 <strong>•🖥️ VPS योजना :</strong> ${vpsDetails.config.name}
 <strong>•📅 बिलिंग चक्र (${vpsDetails.plan} योजना) –</strong> $${vpsDetails.plantotalPrice} USD
 <strong>•💻 OS लाइसेंस (${vpsDetails.os ? vpsDetails.os.name : 'चयन नहीं किया गया'}) –</strong> $${

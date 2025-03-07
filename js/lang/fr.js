@@ -1149,7 +1149,7 @@ Découvrez-en plus sur ${TG_HANDLE}.`,
 
   generateBillSummary: vpsDetails => `<strong>📋 Détail final des coûts :</strong>
 
-<strong>•📅 Type de disque –</strong> $${vpsDetails.diskType}
+<strong>•📅 Type de disque –</strong> ${vpsDetails.diskType}
 <strong>•🖥️ Plan VPS :</strong> ${vpsDetails.config.name}
 <strong>•📅 Cycle de facturation (${vpsDetails.plan} Plan) –</strong> $${vpsDetails.plantotalPrice} USD
 <strong>•💻 Licence OS (${vpsDetails.os ? vpsDetails.os.name : 'Non sélectionné'}) –</strong> $${

@@ -1191,7 +1191,7 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
 
   generateBillSummary: vpsDetails => `<strong>📋 Final Cost Breakdown:</strong>
 
-<strong>•📅 Disk Type –</strong> $${vpsDetails.diskType}
+<strong>•📅 Disk Type –</strong> ${vpsDetails.diskType}
 <strong>•🖥️ VPS Plan:</strong> ${vpsDetails.config.name}
 <strong>•📅 Billing Cycle (${vpsDetails.plan} Plan) –</strong> $${vpsDetails.plantotalPrice} USD
 <strong>•💻 OS License (${vpsDetails.os ? vpsDetails.os.name : 'Not Selected'}) –</strong> $${

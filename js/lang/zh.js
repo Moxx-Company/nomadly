@@ -1112,7 +1112,7 @@ ${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : '
 
   generateBillSummary: vpsDetails => `<strong>📋 最终费用明细：</strong>
 
-<strong>•📅 硬盘类型 –</strong> $${vpsDetails.diskType}
+<strong>•📅 硬盘类型 –</strong> ${vpsDetails.diskType}
 <strong>•🖥️ VPS 方案：</strong> ${vpsDetails.config.name}
 <strong>•📅 计费周期 (${vpsDetails.plan} 方案) –</strong> $${vpsDetails.plantotalPrice} USD
 <strong>•💻 操作系统许可证 (${vpsDetails.os ? vpsDetails.os.name : '未选择'}) –</strong> $${
