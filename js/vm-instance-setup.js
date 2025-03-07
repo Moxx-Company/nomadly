@@ -220,11 +220,12 @@ async function registerVpsTelegram(telegramId, email) {
   try {
     const url = `${NAMEWORD_BASE_URL}/auth/register-telegram-user`
 
+    console.log('#User register for telegram:', telegramId, email)
     let response = await axios.post(
       url,
       {
-        email,
-        telegramId,
+        email: email,
+        telegramId: telegramId,
       },
       { headers },
     )
@@ -234,7 +235,7 @@ async function registerVpsTelegram(telegramId, email) {
     return false
   } catch (err) {
     console.log('Error in registering user', err?.response?.data)
-    if (err?.response?.data?.error.includes('already exists')) {
+    if (err?.response?.data?.error && err?.response?.data?.error.includes('already exists')) {
       return true
     }
     return false
