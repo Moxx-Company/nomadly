@@ -14,72 +14,6 @@ const headers = {
   'x-api-key': X_API_KEY,
 }
 
-const upgradeDiskOptions = [
-  {
-    currentName: '📀 Standard Persistent Disk',
-    currentType: 'pd-standard',
-    upgradeName: '⚖️ Balanced Persistent Disk',
-    upgradeType: 'pd-balanced',
-    pricePerMonth: 5,
-  },
-  {
-    currentName: '📀 Standard Persistent Disk',
-    currentType: 'pd-standard',
-    upgradeName: '🚀 SSD Persistent Disk',
-    upgradeType: 'pd-ssd',
-    pricePerMonth: 15,
-  },
-  {
-    currentName: '📀 Standard Persistent Disk',
-    currentType: 'pd-standard',
-    upgradeName: '🔥 Extreme Persistent Disk',
-    upgradeType: 'pd-extreme',
-    pricePerMonth: 30,
-  },
-  {
-    currentName: '⚖️ Balanced Persistent Disk',
-    currentType: 'pd-balanced',
-    upgradeName: '🚀 SSD Persistent Disk',
-    upgradeType: 'pd-ssd',
-    pricePerMonth: 10,
-  },
-  {
-    currentName: '⚖️ Balanced Persistent Disk',
-    currentType: 'pd-balanced',
-    upgradeName: '🔥 Extreme Persistent Disk',
-    upgradeType: 'pd-extreme',
-    pricePerMonth: 25,
-  },
-  {
-    currentName: '🚀 SSD Persistent Disk',
-    currentType: 'pd-ssd',
-    upgradeName: '🔥 Extreme Persistent Disk',
-    upgradeType: 'pd-extreme',
-    pricePerMonth: 15,
-  },
-]
-
-const vpsToUpgradePlan = {
-  Basic: {
-    newplan: 'Standard',
-    current: 'Basic',
-    pricePerMonth: 65,
-    pricePerHour: 0.09,
-  },
-  Standard: {
-    newplan: 'Premium',
-    current: 'Standard',
-    pricePerMonth: 129,
-    pricePerHour: 0.18,
-  },
-  Premium: {
-    newplan: 'Enterprise',
-    current: 'Premium',
-    pricePerMonth: 256,
-    pricePerHour: 0.35,
-  },
-}
-
 async function fetchAvailableCountries() {
   try {
     const url = `${NAMEWORD_BASE_URL}/areas?projectId=${VM_PROJECT_ID}`
@@ -529,16 +463,15 @@ async function fetchVPSDetails(telegramId, vpsId) {
   }
 }
 
-async function changeVpsAutoRenewal(telegramId, vpsName, autoRenewable) {
+async function changeVpsAutoRenewal(telegramId, vpsDetails) {
   try {
-    const url = `${NAMEWORD_BASE_URL}/update/plan/vm`
+    const url = `${NAMEWORD_BASE_URL}/subscription/update/${vpsDetails.subscription_id}`
 
     const payload = {
-      instanceName: vpsName,
-      autoRenewable: autoRenewable,
+      autoRenewable: !vpsDetails.autoRenewable,
       telegramId: telegramId,
     }
-    const response = await axios.post(url, payload, { headers })
+    const response = await axios.put(url, payload, { headers })
     if (response?.data?.data) {
       return response?.data?.data
     }
@@ -600,6 +533,96 @@ async function deleteVPSinstance(chatId, vpsId) {
     )}`
     console.error(error.response.data)
     return { error: errorMessage }
+  }
+}
+
+async function fetchVpsUpgradeOptions(telegramId, vpsId, upgradeType = 'vps') {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/upgrade/${upgradeType}/${vpsId}?telegramId=${telegramId}`
+
+    const response = await axios.get(url, { headers })
+    if (response?.data?.data) {
+      return response?.data?.data
+    }
+    return false
+  } catch (err) {
+    console.log('Error in Changing Auto renewable for VPS details', err?.response?.data)
+    return false
+  }
+}
+
+async function upgradeVPSPlanType(telegramId, vpsDetails) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/upgrade/vps/${vpsDetails._id}`
+    let payload = {
+      new_plan_id: vpsDetails.upgradeOption._id,
+      telegramId: telegramId,
+      new_plan_price: vpsDetails.totalPrice,
+      projectId: VM_PROJECT_ID,
+    }
+    console.log(payload)
+    const response = await axios.post(url, payload, { headers })
+    if (response?.data?.data) {
+      console.log(response?.data.data)
+      return { success: true, data: response?.data?.data }
+    } else {
+      let errorMessage = `Issue in Upgrading VPS Plan type ${response?.data?.responseMsg?.message}`
+      console.error(errorMessage)
+      return { error: errorMessage }
+    }
+  } catch (error) {
+    const errorMessage = `Error in Upgrading VMS Plan type ${error.message} ${JSON.stringify(
+      error?.response?.data,
+      null,
+      2,
+    )}`
+    console.error(errorMessage)
+    return { error: errorMessage }
+  }
+}
+
+async function upgradeVPSDiskType(telegramId, vpsDetails) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/upgrade/disk/${vpsDetails._id}`
+    let payload = {
+      new_disk_id: vpsDetails.upgradeOption.id,
+      telegramId: telegramId,
+      new_disk_price: vpsDetails.totalPrice,
+      projectId: VM_PROJECT_ID,
+    }
+    console.log(payload)
+    const response = await axios.post(url, payload, { headers })
+    if (response?.data?.data) {
+      console.log(response?.data.data)
+      return { success: true, data: response?.data?.data }
+    } else {
+      let errorMessage = `Issue in Upgrading VPS Disk Type ${response?.data?.responseMsg?.message}`
+      console.error(errorMessage)
+      return { error: errorMessage }
+    }
+  } catch (error) {
+    const errorMessage = `Error in upgrading VPS Disk Type ${error.message} ${JSON.stringify(
+      error?.response?.data,
+      null,
+      2,
+    )}`
+    console.error(errorMessage)
+    return { error: errorMessage }
+  }
+}
+
+const getVpsUpgradePrice = vpsDetails => {
+  switch (vpsDetails.billingCycle) {
+    case 'Hourly':
+      return vpsDetails.upgradeOption.hourlyPrice
+    case 'Monthly':
+      return vpsDetails.upgradeOption.monthlyPrice
+    case 'Quarterly':
+      return vpsDetails.upgradeOption.quarterlyCycle
+    case 'Annually':
+      return vpsDetails.upgradeOption.annuallyCycle
+    default:
+      break
   }
 }
 
@@ -737,6 +760,8 @@ module.exports = {
   checkMissingEmailForNameword,
   addUserEmailForNameWord,
   createPleskResetLink,
-  upgradeDiskOptions,
-  vpsToUpgradePlan,
+  fetchVpsUpgradeOptions,
+  getVpsUpgradePrice,
+  upgradeVPSPlanType,
+  upgradeVPSDiskType,
 }

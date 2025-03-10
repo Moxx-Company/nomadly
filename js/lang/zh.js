@@ -1,5 +1,4 @@
 const { areasOfCountry, carriersOf, countryCodeOf } = require('../areasOfCountry')
-const { generateBilingCost, vpsToUpgradePlan } = require('../vm-instance-setup')
 
 const format = (cc, n) => `+${cc}(${n.toString().padStart(2, '0')})`
 
@@ -1235,9 +1234,13 @@ ${list
   selectedVpsData: data => `<strong>🖥️ VPS ID：</strong> ${data.name}
 
 <strong>• 计划：</strong> ${data.planDetails.name}
-<strong>• vCPUs：</strong> ${data.planDetails.specs.vCPU} | RAM: ${data.planDetails.specs.RAM} GB | 硬盘：${data.planDetails.specs.disk} GB (${data.diskTypeDetails.type})
+<strong>• vCPUs：</strong> ${data.planDetails.specs.vCPU} | RAM: ${data.planDetails.specs.RAM} GB | 硬盘：${
+    data.planDetails.specs.disk
+  } GB (${data.diskTypeDetails.type})
 <strong>• 操作系统：</strong> ${data.osDetails.name}
-<strong>• 控制面板：</strong> ${data.cPanelPlanDetails ? data.cPanelPlanDetails.type : '无'}
+<strong>• 控制面板：</strong> ${
+    data.cPanelPlanDetails && data.cPanelPlanDetails.type ? data.cPanelPlanDetails.type : '无'
+  }
 <strong>• 状态：</strong> ${data.status === 'RUNNING' ? '🟢' : '🔴'} ${data.status}
 <strong>• 自动续费：</strong> ${data.autoRenewable ? '已启用' : '已禁用'}
 <strong>• IP 地址：</strong> ${data.host}`,
@@ -1281,18 +1284,17 @@ ${list
   upgradeVpsDiskBtn: '📀 磁盘类型',
   upgradeVpsDiskTypeBtn: '💾 升级磁盘类型',
   upgradeVPS: '选择升级类型',
-  newVpsPlanBtn: plan => {
-    const newPlan = vpsToUpgradePlan[plan]
-    return `🔼 升级到 ${newPlan.newplan}`
+  upgradeOptionVPSBtn: to => {
+    return `🔼 升级到 ${to}`
   },
-  upgradeVpsPlanMsg: `⚙️ 选择一个新计划以扩展您的 VPS 资源。
+  upgradeVpsPlanMsg: options => `⚙️ 选择一个新计划以扩展您的 VPS 资源。
 💡 升级增加 vCPUs、RAM 和存储，但无法撤销。
 
 📌 可用的升级：
-${Object.values(vpsToUpgradePlan)
+${options
   .map(
     planDetails =>
-      `<strong>• ${planDetails.current} ➡ ${planDetails.newplan} –</strong> $${planDetails.pricePerMonth}/月 ($${planDetails.pricePerHour}/小时)`,
+      `<strong>• ${planDetails.from} ➡ ${planDetails.to} –</strong> $${planDetails.monthlyPrice}/月 ($${planDetails.hourlyPrice}/小时)`,
   )
   .join('\n')}
 
@@ -1300,41 +1302,62 @@ ${Object.values(vpsToUpgradePlan)
 
   alreadyEnterprisePlan: '⚠️ 您已在最高可用计划（企业版）上。无法进行进一步的升级。',
 
-  alreadyHighestDisk: `⚠️ 您已在最高可用磁盘（极限持久磁盘）上。无法进行进一步的升级。`,
+  alreadyHighestDisk: vpsData => `⚠️ 您已在最高可用磁盘（${vpsData.diskTypeDetails.type}）上。无法进行进一步的升级。`,
   newVpsDiskBtn: type => `升级到 ${type}`,
   upgradeVpsDiskMsg: upgrades => `💾 升级您的存储类型以获得更好的性能。
 ⚠️ 磁盘升级是永久性的，不能降级。
 
 📌 可用选项：
-${upgrades
-  .map(
-    val =>
-      `<strong>• ${val.currentName} (${val.currentType}) ➡ ${val.upgradeName} (${val.upgradeType}) –</strong> +$${val.pricePerMonth}/月`,
-  )
-  .join('\n')}
+${upgrades.map(val => `<strong>• ${val.from} ➡ ${val.to} –</strong> +$${val.price}/${val.duration}`).join('\n')}
 
 💰 账单通知：如果在账单周期中途应用升级，将按比例调整当前账单周期未使用的部分。`,
   upgradePlanSummary: (newData, vpsDetails) => `<strong>📜 订单摘要：</strong>
 
-<strong>• VPS ID: </strong> ${vpsDetails.name}
-<strong>• 旧计划: </strong> ${vpsDetails.plan}
-<strong>• 新计划: </strong> ${newData.newConfig.name}
-<strong>• 新账单费率: </strong> $${newData.totalPrice}/${
-    newData.billingCycle === 'Hourly' ? '小时' : '月'
-  }  (按比例调整)
+<strong>• VPS ID：</strong> ${vpsDetails.name}
+<strong>• 旧方案：</strong> ${newData.upgradeOption.from}
+<strong>• 新方案：</strong> ${newData.upgradeOption.to}
+<strong>• 计费周期：</strong> ${newData.billingCycle}
+<strong>• 新计费费率：</strong> $${newData.totalPrice} USD（已应用按比例调整）
+<strong>• 生效日期：</strong> 立即生效
 
-<strong>✅ 是否继续订单？</strong>`,
+${
+  newData.billingCycle === 'Hourly'
+    ? `注意：您的总费用中已包含 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 的押金。扣除第一小时费用后，剩余押金将存入您的钱包。`
+    : ''
+}
+
+<strong>• 总价格：</strong> $${
+    newData.billingCycle === 'Hourly' && newData.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      : newData.totalPrice
+  } USD
+
+<strong>✅ 是否确认订单？</strong>`,
+
   upgradeDiskSummary: (newData, vpsDetails) => `<strong>📜 订单摘要：</strong>
 
-<strong>• VPS ID: </strong> ${vpsDetails.name}
-<strong>• 旧磁盘类型: </strong> ${vpsDetails.diskType}
-<strong>• 新磁盘类型: </strong> ${newData.newDisk}
-<strong>• 新账单费率: </strong> $${newData.totalPrice}/月  (按比例调整)
+<strong>• VPS ID：</strong> ${vpsDetails.name}
+<strong>• 旧磁盘类型：</strong> ${newData.upgradeOption.from}
+<strong>• 新磁盘类型：</strong> ${newData.upgradeOption.to}
+<strong>• 计费周期：</strong> ${newData.billingCycle}
+<strong>• 新计费费率：</strong> $${newData.totalPrice} USD（已应用按比例调整）
 
-<strong>✅ 是否继续订单？</strong>`,
-  vpsSubscriptionData: vpsData => `<strong>🗂️ 您的活动订阅：</strong>
+${
+  newData.billingCycle === 'Hourly'
+    ? `注意：您的总费用中已包含 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 的押金。扣除第一小时费用后，剩余押金将存入您的钱包。`
+    : ''
+}
 
-<strong>• VPS ${vpsData.name} </strong>– 到期（自动续订：${vpsData.autoRenewable ? '启用' : '禁用'}）
+<strong>• 总价格：</strong> $${
+    newData.billingCycle === 'Hourly' && newData.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      : newData.totalPrice
+  } USD
+
+<strong>✅ 是否确认订单？</strong>`,
+  vpsSubscriptionData: (vpsData, expireDate) => `<strong>🗂️ 您的活动订阅：</strong>
+
+<strong>• VPS ${vpsData.name} </strong>– 到期: ${expireDate}（自动续订：${vpsData.autoRenewable ? '启用' : '禁用'}）
 <strong>• 控制面板 ${vpsData?.cPanel ? vpsData.cPanel + ' - ' : ': 未选择'} </strong> ${
     vpsData?.cPanel ? '已续订' : ''
   } `,
@@ -1342,11 +1365,11 @@ ${upgrades
   manageVpsSubBtn: '🖥️ 管理VPS订阅',
   manageVpsPanelBtn: '🛠️ 管理控制面板订阅',
 
-  vpsSubDetails: data => `<strong>📅 VPS订阅详情：</strong>
+  vpsSubDetails: (data, date) => `<strong>📅 VPS订阅详情：</strong>
 
 <strong>• VPS ID：</strong> ${data.name}
-<strong>• 计划：</strong> ${data.plan}
-<strong>• 当前到期日期：</strong> [日期]
+<strong>• 计划：</strong> ${data.planDetails.name}
+<strong>• 当前到期日期：</strong> ${date}
 <strong>• 自动续订：</strong> ${data.autoRenewable ? '启用' : '禁用'}`,
 
   vpsEnableRenewalBtn: '🔄 启用自动续订',
@@ -1354,10 +1377,10 @@ ${upgrades
   vpsPlanRenewBtn: '📅 立即续订',
   unlinkVpsPanelBtn: '❌ 取消与VPS的链接',
   bankPayVPSUpgradePlan: (priceNGN, vpsDetails) =>
-    `请通过点击“付款”来支付 ${priceNGN} NGN。交易确认后，您将立即收到通知，您的VPS计划将以配置 ${vpsDetails.newConfig.name} 无缝激活。`,
+    `请点击下方的“付款”按钮支付 ${priceNGN} NGN。一旦交易确认，您将立即收到通知，您的新 ${vpsDetails.upgradeOption.to} VPS 方案将无缝激活。`,
 
   bankPayVPSUpgradeDisk: (priceNGN, vpsDetails) =>
-    `请通过点击“付款”来支付 ${priceNGN} NGN。交易确认后，您将立即收到通知，您的VPS计划将以新磁盘类型 ${vpsDetails.newDisk} 配置无缝激活。`,
+    `请通过点击“付款”来支付 ${priceNGN} NGN。交易确认后，您将立即收到通知，您的VPS计划将以新磁盘类型 ${vpsDetails.upgradeOption.toType} 配置无缝激活。`,
 
   showDepositCryptoInfoVpsUpgrade: (priceCrypto, tickerView, address) =>
     `请将 ${priceCrypto} ${tickerView} 转账到\n\n<code>${address}</code>
@@ -1395,11 +1418,56 @@ ${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
 
 请稍后重试。`,
 
+  selectSSHKeyToDownload: '🗂️ 请选择要下载的 SSH 密钥：',
+
+  disabledAutoRenewal: (data, expiryDate) => `⚠️ 自动续订已禁用。您的 VPS 将于 ${expiryDate} 过期，除非手动续订。
+✅ 自动续订已成功禁用。`,
+
+  enabledAutoRenewal: (data, expiryDate) => `✅ 自动续订已启用。您的 VPS 将于 ${expiryDate} 自动续订。`,
+
+  renewVpsPlanConfirmMsg: (data, vpsDetails) => `<strong>💳 是否继续续订 VPS？</strong>
+
+<strong>📜 账单摘要</strong>
+<strong>• VPS ID：</strong> ${vpsDetails.name}
+<strong>• 计划：</strong> ${vpsDetails.plan}
+<strong>• 续订周期：</strong> 1 个月
+<strong>• 新到期日期：</strong> [新日期]
+<strong>• 应付金额：</strong> ${data.totalPrice}`,
+
   payNowBtn: '✅ 立即支付',
 
-  vpsChangePaymentRecieved: `✅ 付款成功！您的 VPS 正在设置中，详细信息即将发布。`,
+  vpsChangePaymentRecieved: `✅ 付款成功！您的 VPS 正在配置中，详细信息将很快提供。`,
 
-  unlinkCpanelConfirmed: data => `✅ 控制面板 ${data.cPanel} 已成功从 VPS ${data.name} 解绑。`,
+  bankPayVPSRenewPlan: priceNGN =>
+    `请点击下方的“支付”按钮支付 ${priceNGN} NGN。一旦交易确认，您将立即收到通知，您的 VPS 计划将被激活并续订。`,
+
+  renewVpsPanelConfirmMsg: (data, vpsDetails) => `<strong>💳 是否继续续订控制面板？</strong>
+
+<strong>📜 账单摘要</strong>
+<strong>• 关联的 VPS ID：</strong> ${vpsDetails.name}
+<strong>• 控制面板：</strong> ${vpsDetails.cPanel}
+<strong>• 续订周期：</strong> 1 个月
+<strong>• 新到期日期：</strong> [新日期]
+<strong>• 应付金额：</strong> ${data.totalPrice}`,
+
+  bankPayVPSRenewCpanel: (priceNGN, vpsDetails) =>
+    `请点击下方的“支付”按钮支付 ${priceNGN} NGN。一旦交易确认，您将立即收到通知，您的 VPS 计划将被激活，并且 ${vpsDetails.cPanel} 控制面板将被续订。`,
+
+  vpsUnlinkCpanelWarning: vpsDetails =>
+    `⚠️ 警告：取消关联将从 VPS ${vpsDetails.name} 中移除 ${vpsDetails.cPanel} 许可证，您将无法使用其功能。是否继续？`,
+
+  unlinkCpanelConfirmed: data => `✅ 控制面板 ${data.cPanel} 已成功从 VPS ${data.name} 取消关联。`,
+
+  errorUpgradingVPS: vpsName => `升级 VPS 计划 ${vpsName} 时出现错误。
+
+请联系支持 ${SUPPORT_USERNAME}。
+了解更多信息 ${TG_HANDLE}。`,
+
+  vpsUpgradePlanTypeSuccess: vpsDetails => `
+✅ VPS ${vpsDetails.name} 已成功升级至 ${vpsDetails.upgradeOption.to}。您的新资源现已可用。`,
+
+  vpsUpgradeDiskTypeSuccess: vpsDetails =>
+    `✅ VPS ${vpsDetails.name} 的磁盘已成功升级至 ${vpsDetails.upgradeOption.to}。您的新磁盘类型现已激活。`,
 }
 
 const zh = {

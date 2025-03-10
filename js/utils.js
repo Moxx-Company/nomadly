@@ -66,8 +66,8 @@ async function ngnToUsd(ngn) {
 
 // ngnToUsd(1000).then(log);
 const addZero = number => (number < 10 ? '0' + number : number)
-const date = () => {
-  const currentDate = new Date()
+const date = (date) => {
+  const currentDate = date ? new Date(date) : new Date()
   const year = currentDate.getFullYear()
   const month = addZero(currentDate.getMonth() + 1)
   const day = addZero(currentDate.getDate())
