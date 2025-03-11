@@ -1477,14 +1477,27 @@ Veuillez réessayer plus tard.`,
   enabledAutoRenewal: (data, expiryDate) =>
     `✅ Renouvellement automatique activé. Votre VPS sera automatiquement renouvelé le ${expiryDate}.`,
 
-  renewVpsPlanConfirmMsg: (data, vpsDetails) => `<strong>💳 Procéder au renouvellement du VPS ?</strong>
+  renewVpsPlanConfirmMsg: (data, vpsDetails, expiryDate) => `<strong>📜 Résumé de la facture</strong>
 
-<strong>📜 Résumé de la facture</strong>
 <strong>• ID VPS :</strong> ${vpsDetails.name}
-<strong>• Plan :</strong> ${vpsDetails.plan}
-<strong>• Période de renouvellement :</strong> 1 mois
-<strong>• Nouvelle date d'expiration :</strong> [Nouvelle Date]
-<strong>• Montant dû :</strong> ${data.totalPrice}`,
+<strong>• Plan :</strong> ${vpsDetails.planDetails.name}
+<strong>• Cycle de facturation :</strong> ${vpsDetails.billingCycleDetails.type}
+<strong>• Date d'expiration actuelle :</strong> ${expiryDate}
+<strong>• Montant dû :</strong> ${data.totalPrice} USD
+
+${
+  data.billingCycle === 'Hourly'
+    ? `Remarque : Un dépôt de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD est inclus dans votre total. Après la déduction du premier tarif horaire, le reste du dépôt sera crédité sur votre portefeuille.`
+    : ''
+}
+
+<strong>• Prix total :</strong> $${
+    data.billingCycle === 'Hourly' && data.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      : data.totalPrice
+  } USD
+
+<strong>💳 Procéder au renouvellement du VPS ?</strong>`,
 
   payNowBtn: '✅ Payer maintenant',
 
@@ -1523,6 +1536,11 @@ En savoir plus ${TG_HANDLE}.`,
 
   vpsUpgradeDiskTypeSuccess: vpsDetails =>
     `✅ Disque mis à niveau vers ${vpsDetails.upgradeOption.to} pour le VPS ${vpsDetails.name}. Votre nouveau type de disque est maintenant actif.`,
+  vpsRenewPlanSuccess: (vpsDetails, expiryDate) =>
+    `✅ L'abonnement VPS pour ${vpsDetails.name} a été renouvelé avec succès !
+
+• Nouvelle date d'expiration : ${expiryDate}
+`,
 }
 
 const fr = {

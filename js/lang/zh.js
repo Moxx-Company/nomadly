@@ -1425,14 +1425,27 @@ ${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
 
   enabledAutoRenewal: (data, expiryDate) => `✅ 自动续订已启用。您的 VPS 将于 ${expiryDate} 自动续订。`,
 
-  renewVpsPlanConfirmMsg: (data, vpsDetails) => `<strong>💳 是否继续续订 VPS？</strong>
+  renewVpsPlanConfirmMsg: (data, vpsDetails, expiryDate) => `<strong>📜 发票摘要</strong>
 
-<strong>📜 账单摘要</strong>
 <strong>• VPS ID：</strong> ${vpsDetails.name}
-<strong>• 计划：</strong> ${vpsDetails.plan}
-<strong>• 续订周期：</strong> 1 个月
-<strong>• 新到期日期：</strong> [新日期]
-<strong>• 应付金额：</strong> ${data.totalPrice}`,
+<strong>• 计划：</strong> ${vpsDetails.planDetails.name}
+<strong>• 计费周期：</strong> ${vpsDetails.billingCycleDetails.type}
+<strong>• 当前到期日期：</strong> ${expiryDate}
+<strong>• 应付金额：</strong> ${data.totalPrice} USD
+
+${
+  data.billingCycle === 'Hourly'
+    ? `注意：您的总金额中包含 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 的押金。第一小时费用扣除后，剩余押金将退还到您的钱包。`
+    : ''
+}
+
+<strong>• 总价：</strong> $${
+    data.billingCycle === 'Hourly' && data.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      : data.totalPrice
+  } USD
+
+<strong>💳 是否继续续订 VPS？</strong>`,
 
   payNowBtn: '✅ 立即支付',
 
@@ -1468,6 +1481,12 @@ ${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
 
   vpsUpgradeDiskTypeSuccess: vpsDetails =>
     `✅ VPS ${vpsDetails.name} 的磁盘已成功升级至 ${vpsDetails.upgradeOption.to}。您的新磁盘类型现已激活。`,
+
+  vpsRenewPlanSuccess: (vpsDetails, expiryDate) =>
+    `✅ VPS订阅 ${vpsDetails.name} 已成功续订！
+
+• 新到期日期：${expiryDate}
+`,
 }
 
 const zh = {

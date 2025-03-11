@@ -1448,7 +1448,7 @@ ${
 <strong>• VPS ${vpsData.name} </strong>– Expires: ${expireDate}  (Auto-Renew: ${
     vpsData.autoRenewable ? 'Enabled' : 'Disabled'
   })
-<strong>• Control Panel (${vpsData?.cPanel ? vpsData.cPanel : ': Not Selected'}) </strong> ${
+<strong>• Control Panel ${vpsData?.cPanel ? vpsData.cPanel : ': Not Selected'} </strong> ${
     vpsData?.cPanel ? ' - Renews' : ''
   } `,
 
@@ -1514,14 +1514,27 @@ Please Try again after sometime.`,
   enabledAutoRenewal: (data, expiryDate) =>
     `✅ Auto-renewal enabled. Your VPS will automatically renew on ${expiryDate}.`,
 
-  renewVpsPlanConfirmMsg: (data, vpsDetails) => `<strong>💳 Proceed with VPS renewal?</strong>
+  renewVpsPlanConfirmMsg: (data, vpsDetails, expiryDate) => `<strong>📜 Invoice Summary</strong>
 
-<strong>📜 Invoice Summary</strong>
 <strong>• VPS ID:</strong> ${vpsDetails.name}
-<strong>• Plan:</strong> ${vpsDetails.plan}
-<strong>• Renewal Period:</strong> 1 month
-<strong>• New Expiry Date:</strong> [New Date]
-<strong>• Amount Due:</strong> ${data.totalPrice}`,
+<strong>• Plan:</strong> ${vpsDetails.planDetails.name}
+<strong>• Billing Cycle:</strong> ${vpsDetails.billingCycleDetails.type}
+<strong>• Current Expiry Date:</strong> ${expiryDate}
+<strong>• Amount Due:</strong> ${data.totalPrice} USD
+
+${
+  data.billingCycle === 'Hourly'
+    ? `Note: A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD deposit is included in your total. After the first hourly rate is deducted, the remaining deposit will be credited to your wallet.`
+    : ''
+}
+
+<strong>• Total Price: </strong> $${
+    data.billingCycle === 'Hourly' && data.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      : data.totalPrice
+  } USD
+
+<strong>💳 Proceed with VPS renewal?</strong>`,
 
   payNowBtn: '✅ Pay now',
 
@@ -1555,6 +1568,12 @@ Please Try again after sometime.`,
 
   vpsUpgradeDiskTypeSuccess: vpsDetails =>
     `✅ Disk upgraded to ${vpsDetails.upgradeOption.to} for VPS ${vpsDetails.name}. Your updated disk type is now active.`,
+
+  vpsRenewPlanSuccess: (vpsDetails, expiryDate) =>
+    `✅ VPS subscription fpr ${vpsDetails.name} successfully renewed!
+
+• New Expiry Date: ${expiryDate}
+`,
 }
 
 const en = {

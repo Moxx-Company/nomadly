@@ -1461,14 +1461,27 @@ ${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
   enabledAutoRenewal: (data, expiryDate) =>
     `✅ स्वत: नवीनीकरण सक्षम कर दिया गया है। आपका VPS ${expiryDate} को स्वचालित रूप से नवीनीकृत होगा।`,
 
-  renewVpsPlanConfirmMsg: (data, vpsDetails) => `<strong>💳 क्या आप VPS नवीनीकरण जारी रखना चाहते हैं?</strong>
+  renewVpsPlanConfirmMsg: (data, vpsDetails, expiryDate) => `<strong>📜 चालान सारांश</strong>
 
-<strong>📜 चालान सारांश</strong>
-<strong>• VPS आईडी :</strong> ${vpsDetails.name}
-<strong>• प्लान :</strong> ${vpsDetails.plan}
-<strong>• नवीनीकरण अवधि :</strong> 1 महीना
-<strong>• नई समाप्ति तिथि :</strong> [नई तिथि]
-<strong>• देय राशि :</strong> ${data.totalPrice}`,
+<strong>• VPS आईडी:</strong> ${vpsDetails.name}
+<strong>• प्लान:</strong> ${vpsDetails.planDetails.name}
+<strong>• बिलिंग साइकिल:</strong> ${vpsDetails.billingCycleDetails.type}
+<strong>• वर्तमान समाप्ति तिथि:</strong> ${expiryDate}
+<strong>• देय राशि:</strong> ${data.totalPrice} USD
+
+${
+  data.billingCycle === 'Hourly'
+    ? `नोट: आपकी कुल राशि में $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD की जमा राशि शामिल है। पहले घंटे की कटौती के बाद, शेष राशि आपके वॉलेट में क्रेडिट कर दी जाएगी।`
+    : ''
+}
+
+<strong>• कुल मूल्य:</strong> $${
+    data.billingCycle === 'Hourly' && data.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      : data.totalPrice
+  } USD
+
+<strong>💳 क्या आप VPS नवीनीकरण जारी रखना चाहते हैं?</strong>`,
 
   payNowBtn: '✅ अभी भुगतान करें',
 
@@ -1507,6 +1520,11 @@ ${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
 
   vpsUpgradeDiskTypeSuccess: vpsDetails =>
     `✅ VPS ${vpsDetails.name} के लिए डिस्क को ${vpsDetails.upgradeOption.to} में अपग्रेड कर दिया गया है। आपका नया डिस्क प्रकार अब सक्रिय है।`,
+  vpsRenewPlanSuccess: (vpsDetails, expiryDate) =>
+    `✅ ${vpsDetails.name} के लिए VPS सदस्यता सफलतापूर्वक नवीनीकृत हो गई है!
+
+• नई समाप्ति तिथि: ${expiryDate}
+`,
 }
 
 const hi = {

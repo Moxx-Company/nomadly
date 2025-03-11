@@ -112,7 +112,8 @@ const {
   getVpsUpgradePrice,
   upgradeVPSPlanType,
   fetchVpsUpgradeOptions,
-  upgradeVPSDiskType
+  upgradeVPSDiskType,
+  renewVPSPlan
 } = require('./vm-instance-setup.js')
 const { console } = require('inspector')
 
@@ -1415,7 +1416,9 @@ bot?.on('message', async msg => {
 
     vpsSubscription: () => {
       set(state, chatId, 'action', a.vpsSubscription)
-      const availableOptions = info.userVPSDetails.cPanel ? [vp.manageVpsSubBtn, vp.manageVpsPanelBtn] : [vp.manageVpsSubBtn]
+      //@TODO change to show options for cpanel
+      // const availableOptions = info.userVPSDetails.cPanel ? [vp.manageVpsSubBtn, vp.manageVpsPanelBtn] : [vp.manageVpsSubBtn]
+      const availableOptions = [vp.manageVpsSubBtn]
       return send(chatId, vp.vpsSubscriptionData(info.userVPSDetails, date(info.userVPSDetails.subscriptionEnd)), vp.of(availableOptions))
     },
 
@@ -1497,7 +1500,10 @@ bot?.on('message', async msg => {
     confirmVPSRenewDetails: () => {
       set(state, chatId, 'action', a.confirmVPSRenewDetails)
       let vpsDetails = info.vpsDetails
-      return send(chatId, vpsDetails.upgradeType === 'vps-renew' ?  vp.renewVpsPlanConfirmMsg(vpsDetails, info.userVPSDetails) : vp.renewVpsPanelConfirmMsg(vpsDetails, info.userVPSDetails), vp.of([vp.payNowBtn, vp.cancel]))
+      const expiryDate = date(info.userVPSDetails.subscriptionEnd)
+      return send(chatId, vpsDetails.upgradeType === 'vps-renew' 
+        ?  vp.renewVpsPlanConfirmMsg(vpsDetails, info.userVPSDetails, expiryDate) 
+        : vp.renewVpsPanelConfirmMsg(vpsDetails, info.userVPSDetails), vp.of([vp.payNowBtn, vp.cancel]))
     }
   }
 
@@ -2725,8 +2731,8 @@ bot?.on('message', async msg => {
     if (message === vp.vpsPlanRenewBtn) {
       let vpsDetails = info.vpsDetails
       vpsDetails.upgradeType = 'vps-renew'
-      //@TODO calculate actual price
-      vpsDetails.totalPrice = 20
+      vpsDetails.totalPrice = info.userVPSDetails.price
+      vpsDetails.billingCycle = info.userVPSDetails.billingCycleDetails.type
       info.vpsDetails = vpsDetails
       saveInfo('vpsDetails', vpsDetails)
       return goto.confirmVPSRenewDetails()
@@ -3460,7 +3466,7 @@ bot?.on('message', async msg => {
     if (error) return send(chatId, error, trans('o'))
     send(chatId, `Bank ₦aira + Card 🌐︎`, trans('o'))
     console.log('showDepositNgnInfo', url)
-    //@TODO change messages for vps-renew, vps-cpanel-renew
+    //@TODO change messages for vps-cpanel-renew
     if (vpsDetails.upgradeType === 'plan') {
       return send(chatId, vp.bankPayVPSUpgradePlan(priceNGN, vpsDetails), trans('payBank', url))
     } else if (vpsDetails.upgradeType === 'disk') {
@@ -4473,7 +4479,7 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
   }
 }
 
-// @TODO Implement API to renew plan, renew cpanel
+// @TODO Implement API to renew cpanel
 const upgradeVPSDetails = async (chatId, lang, vpsDetails) => {
   try {
     log(vpsDetails)
@@ -4507,12 +4513,25 @@ const upgradeVPSDetails = async (chatId, lang, vpsDetails) => {
           )
         }
         message = translation('vp.vpsUpgradeDiskTypeSuccess', lang, vpsDetails)
-          break;
+        break;
+      case 'vps-renew':
+        vmInstanceUpgrade = await renewVPSPlan(chatId, vmInstanceDetails.subscription_id)
+        if (vmInstanceUpgrade.success) {
+          await vpsPlansOf.updateOne(
+            { vpsId: vpsDetails._id },
+            { $set: { 
+              'end_time': new Date(vmInstanceUpgrade.data.subscriptionEnd), 
+              'status': 'RUNNING'
+            }},
+          )
+          const expiryDate = date(vmInstanceUpgrade.data.subscriptionEnd)
+          message = translation('vp.vpsRenewPlanSuccess', lang, vmInstanceDetails, expiryDate)
+        }
       default:
         break;
     }
-    if (!vmInstanceUpgrade.success) {
-      const m = translation('vp.errorPurchasingVPS', lang, vpsDetails.plan)
+    if (!vmInstanceUpgrade?.success) {
+      const m = translation('vp.errorPurchasingVPS', lang, vpsDetails.name)
       log(m)
       sendMessage(TELEGRAM_DEV_CHAT_ID, m)
       sendMessage(chatId, m)
@@ -4524,7 +4543,7 @@ const upgradeVPSDetails = async (chatId, lang, vpsDetails) => {
     return true
   } catch (error) {
     const errorMessage = `err buyUPgradingVPSProcess ${error?.message} ${JSON.stringify(error?.response?.data, null, 2)}`
-    const m = translation('vp.errorPurchasingVPS', lang, vpsDetails)
+    const m = translation('vp.errorPurchasingVPS', lang, vpsDetails.name)
     sendMessage(chatId, m)
     sendMessage(TELEGRAM_DEV_CHAT_ID, errorMessage)
     console.error(errorMessage)
