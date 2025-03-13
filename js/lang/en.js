@@ -341,38 +341,31 @@ ${CHAT_BOT_NAME}`,
 A Records (Optional, but required for direct IP mapping)
 ${
   records.A && records.A.length
-    ? `${records.A.map(
-        record => `
-<strong>${record.index}.	A Record</strong>
+    ? records.A.map(
+        record => `<strong>${record.index}.	A Record</strong>
   • Host Name: ${record.recordName}
-  •	A Record Value: ${record.recordContent ? record.recordContent : 'None'}
-    `,
-      )}`
-    : '• A Record: NONE'
+  •	A Record Value: ${record.recordContent ? record.recordContent : 'None'}`,
+      ).join('\n')
+    : '  • A Record: NONE'
 }
+
 NS Records (Mandatory – Required for domain resolution)
 ${
   records.NS && records.NS.length
-    ? `${records.NS.map(
-        record => `
-<strong>${record.index}.	NS${record.nsId} ${record.recordContent} </strong>
-    `,
-      )}`
-    : '• NS Record: NONE'
+    ? records.NS.map(record => `<strong>${record.index}.	NS${record.nsId} ${record.recordContent}</strong>`).join('\n\n')
+    : '  • NS Record: NONE'
 }
+
 CNAME Records (Optional, but required if aliasing another domain instead of using an A record)
 ${
   records.CNAME && records.CNAME.length
-    ? `${records.CNAME.map(
-        record => `
-<strong>${record.index}.	CNAME Record</strong>
+    ? records.CNAME.map(
+        record => `<strong>${record.index}.	CNAME Record</strong>
   • Host Name: ${record.recordName}
-  •	CNAME Record Value: ${record.recordContent ? record.recordContent : 'None'}
-    `,
-      ).join('\n')}`
-    : '• CNAME Record: NONE'
-}
-  `,
+  •	A Record Value: ${record.recordContent ? record.recordContent : 'None'}`,
+      ).join('\n')
+    : '  • CNAME Record: NONE'
+}`,
   addDns: 'Add DNS Record',
   updateDns: 'Update DNS Record',
   deleteDns: 'Delete DNS Record',

@@ -314,43 +314,37 @@ ${CHAT_BOT_NAME}`,
   chooseDomainWithShortener: `Veuillez sélectionner ou acheter le nom de domaine que vous souhaitez relier à votre lien raccourci.`,
   viewDnsRecords: (records, domain) => `Voici les enregistrements DNS pour ${domain}
 
-Enregistrements A (Optionnel, mais requis pour le mappage direct d'une IP)
+Enregistrements A (Optionnels, mais requis pour le mappage direct de l'IP)
 ${
   records.A && records.A.length
-    ? `${records.A.map(
-        record => `
-<strong>${record.index}. Enregistrement A</strong>
-  • Nom d'hôte : ${record.recordName}
-  • Valeur de l'enregistrement A : ${record.recordContent ? record.recordContent : 'Aucune'}
-    `,
-      ).join('\n')}`
-    : '• Enregistrement A : AUCUN'
+    ? records.A.map(
+        record => `<strong>${record.index}. Enregistrement A</strong>
+  • Nom d’hôte : ${record.recordName}
+  • Valeur de l’enregistrement A : ${record.recordContent ? record.recordContent : 'Aucune'}`,
+      ).join('\n')
+    : '  • Enregistrement A : AUCUN'
 }
 
-Enregistrements NS (Obligatoire – Requis pour la résolution de domaine)
+Enregistrements NS (Obligatoires – Requis pour la résolution de domaine)
 ${
   records.NS && records.NS.length
-    ? `${records.NS.map(
-        record => `
-<strong>${record.index}. NS${record.nsId} ${record.recordContent} </strong>
-    `,
-      ).join('\n')}`
-    : '• Enregistrement NS : AUCUN'
+    ? records.NS.map(
+        record => `<strong>${record.index}. Enregistrement NS${record.nsId}</strong> ${record.recordContent}`,
+      ).join('\n\n')
+    : '  • Enregistrement NS : AUCUN'
 }
 
-Enregistrements CNAME (Optionnel, mais requis si l'on utilise un alias au lieu d’un enregistrement A)
+Enregistrements CNAME (Optionnels, mais requis pour l’alias d’un autre domaine au lieu d’un enregistrement A)
 ${
   records.CNAME && records.CNAME.length
-    ? `${records.CNAME.map(
-        record => `
-<strong>${record.index}. Enregistrement CNAME</strong>
-  • Nom d'hôte : ${record.recordName}
-  • Valeur de l'enregistrement CNAME : ${record.recordContent ? record.recordContent : 'Aucune'}
-    `,
-      ).join('\n')}`
-    : '• Enregistrement CNAME : AUCUN'
-}
-  `,
+    ? records.CNAME.map(
+        record => `<strong>${record.index}. Enregistrement CNAME</strong>
+  • Nom d’hôte : ${record.recordName}
+  • Valeur de l’enregistrement CNAME : ${record.recordContent ? record.recordContent : 'Aucune'}`,
+      ).join('\n')
+    : '  • Enregistrement CNAME : AUCUN'
+}`,
+
   addDns: `Ajouter un enregistrement DNS`,
   updateDns: `Mettre à jour un enregistrement DNS`,
   deleteDns: `Supprimer un enregistrement DNS`,

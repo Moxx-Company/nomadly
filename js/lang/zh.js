@@ -303,43 +303,37 @@ ${CHAT_BOT_NAME}`,
   chooseDomainWithShortener: `请选择或购买您想要连接到短链接的域名。`,
   viewDnsRecords: (records, domain) => `以下是 ${domain} 的 DNS 记录
 
-  A 记录（可选，但用于直接 IP 映射时必需）
-  ${
-    records.A && records.A.length
-      ? `${records.A.map(
-          record => `
-  <strong>${record.index}. A 记录</strong>
-    • 主机名: ${record.recordName}
-    • A 记录值: ${record.recordContent ? record.recordContent : '无'}
-      `,
-        ).join('\n')}`
-      : '• A 记录: 无'
-  }
-  
-  NS 记录（必需 – 用于域名解析）
-  ${
-    records.NS && records.NS.length
-      ? `${records.NS.map(
-          record => `
-  <strong>${record.index}. NS${record.nsId} ${record.recordContent} </strong>
-      `,
-        ).join('\n')}`
-      : '• NS 记录: 无'
-  }
-  
-  CNAME 记录（可选，但如果使用别名而不是 A 记录，则必需）
-  ${
-    records.CNAME && records.CNAME.length
-      ? `${records.CNAME.map(
-          record => `
-  <strong>${record.index}. CNAME 记录</strong>
-    • 主机名: ${record.recordName}
-    • CNAME 记录值: ${record.recordContent ? record.recordContent : '无'}
-      `,
-        ).join('\n')}`
-      : '• CNAME 记录: 无'
-  }
-    `,
+A 记录（可选，但用于直接 IP 映射是必需的）
+${
+  records.A && records.A.length
+    ? records.A.map(
+        record => `<strong>${record.index}. A 记录</strong>
+  • 主机名：${record.recordName}
+  • A 记录值：${record.recordContent ? record.recordContent : '无'}`,
+      ).join('\n')
+    : '  • A 记录：无'
+}
+
+NS 记录（必需 – 用于域名解析）
+${
+  records.NS && records.NS.length
+    ? records.NS.map(record => `<strong>${record.index}. NS 记录 ${record.nsId}</strong> ${record.recordContent}`).join(
+        '\n\n',
+      )
+    : '  • NS 记录：无'
+}
+
+CNAME 记录（可选，但如果要将另一个域作为别名，而不是使用 A 记录，则必需）
+${
+  records.CNAME && records.CNAME.length
+    ? records.CNAME.map(
+        record => `<strong>${record.index}. CNAME 记录</strong>
+  • 主机名：${record.recordName}
+  • CNAME 记录值：${record.recordContent ? record.recordContent : '无'}`,
+      ).join('\n')
+    : '  • CNAME 记录：无'
+}`,
+
   addDns: `添加 DNS 记录`,
   updateDns: `更新 DNS 记录`,
   deleteDns: `删除 DNS 记录`,

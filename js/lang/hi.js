@@ -307,45 +307,38 @@ ${CHAT_BOT_NAME}`,
   errorSavingDomain: `डोमेन को सर्वर पर सहेजने में त्रुटि, समर्थन ${SUPPORT_USERNAME} से संपर्क करें। ${TG_HANDLE} पर अधिक जानें।`,
   chooseDomainToManage: `कृपया चयन करें यदि आप DNS सेटिंग्स प्रबंधित करना चाहते हैं।`,
   chooseDomainWithShortener: `कृपया वह डोमेन नाम चुनें या खरीदें जिसे आप अपने संक्षेपित लिंक से कनेक्ट करना चाहते हैं।`,
-  viewDnsRecords: (records, domain) => `यह ${domain} के लिए DNS रिकॉर्ड्स हैं
+  viewDnsRecords: (records, domain) => `यह हैं ${domain} के DNS रिकॉर्ड
 
-A रिकॉर्ड्स (वैकल्पिक, लेकिन सीधे IP मैपिंग के लिए आवश्यक)
+A रिकॉर्ड (वैकल्पिक, लेकिन सीधे IP मैपिंग के लिए आवश्यक)
 ${
   records.A && records.A.length
-    ? `${records.A.map(
-        record => `
-<strong>${record.index}. A रिकॉर्ड</strong>
+    ? records.A.map(
+        record => `<strong>${record.index}. A रिकॉर्ड</strong>
   • होस्ट नाम: ${record.recordName}
-  • A रिकॉर्ड मूल्य: ${record.recordContent ? record.recordContent : 'कोई नहीं'}
-    `,
-      ).join('\n')}`
-    : '• A रिकॉर्ड: कोई नहीं'
+  • A रिकॉर्ड मान: ${record.recordContent ? record.recordContent : 'कोई नहीं'}`,
+      ).join('\n')
+    : '  • A रिकॉर्ड: कोई नहीं'
 }
 
-NS रिकॉर्ड्स (अनिवार्य – डोमेन रिज़ॉल्यूशन के लिए आवश्यक)
+NS रिकॉर्ड (अनिवार्य – डोमेन रिज़ॉल्यूशन के लिए आवश्यक)
 ${
   records.NS && records.NS.length
-    ? `${records.NS.map(
-        record => `
-<strong>${record.index}. NS${record.nsId} ${record.recordContent} </strong>
-    `,
-      ).join('\n')}`
-    : '• NS रिकॉर्ड: कोई नहीं'
+    ? records.NS.map(
+        record => `<strong>${record.index}. NS रिकॉर्ड ${record.nsId}</strong> ${record.recordContent}`,
+      ).join('\n\n')
+    : '  • NS रिकॉर्ड: कोई नहीं'
 }
 
-CNAME रिकॉर्ड्स (वैकल्पिक, लेकिन यदि किसी अन्य डोमेन को A रिकॉर्ड के बजाय उपनाम देना हो, तो आवश्यक)
+CNAME रिकॉर्ड (वैकल्पिक, लेकिन किसी अन्य डोमेन को A रिकॉर्ड के बजाय एलिएस करने के लिए आवश्यक)
 ${
   records.CNAME && records.CNAME.length
-    ? `${records.CNAME.map(
-        record => `
-<strong>${record.index}. CNAME रिकॉर्ड</strong>
+    ? records.CNAME.map(
+        record => `<strong>${record.index}. CNAME रिकॉर्ड</strong>
   • होस्ट नाम: ${record.recordName}
-  • CNAME रिकॉर्ड मूल्य: ${record.recordContent ? record.recordContent : 'कोई नहीं'}
-    `,
-      ).join('\n')}`
-    : '• CNAME रिकॉर्ड: कोई नहीं'
-}
-  `,
+  • CNAME रिकॉर्ड मान: ${record.recordContent ? record.recordContent : 'कोई नहीं'}`,
+      ).join('\n')
+    : '  • CNAME रिकॉर्ड: कोई नहीं'
+}`,
 
   addDns: `DNS रिकॉर्ड जोड़ें`,
   updateDns: `DNS रिकॉर्ड अपडेट करें`,
