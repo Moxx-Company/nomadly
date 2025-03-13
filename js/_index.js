@@ -3696,7 +3696,7 @@ bot?.on('message', async msg => {
     let newRecordDetails = null
     if (t[recordType] !== 'NS') {
       newRecordDetails = message.split(" ")
-      if (!newRecordDetails || newRecordDetails.length < 3) return send(chatId, t.selectValidOption)
+      if (!newRecordDetails || newRecordDetails.length < 3 || newRecordDetails.length > 5) return send(chatId, t.selectValidOption)
       if (!['A', 'CNAME'].includes(newRecordDetails[0]))return send(chatId, t.selectValidOption)
     }
     log(newRecordDetails)
