@@ -384,6 +384,9 @@ ${
 	•	A Record (Mandatory for website) / CNAME (Optional, cannot coexist with A Record)
 	•	Host Name: Subdomain (e.g., auth) or @ for root (Optional)
 	•	Value: IP Address for A / Hostname for CNAME
+
+Please enter your record using the format provided below:
+
 Examples:
 ✅ A Record: A pay 192.0.2.1 (or A 192.0.2.1 if no host name)
 ✅ CNAME Record: CNAME pay 0oaawzt7.up.railway.app (or CNAME 0oaawzt7.up.railway.app if no host name)`,
@@ -392,6 +395,9 @@ Examples:
 	•	A Record (Mandatory for website) / CNAME (Optional, cannot coexist with A Record)
 	•	Host Name: Subdomain (e.g., auth) or @ for root (Optional)
 	•	Value: IP Address for A / Hostname for CNAME
+
+Please enter your record using the format provided below:
+
 Examples:
 ✅ A Record: A pay 192.0.2.1 (or A 192.0.2.1 if no host name)
 ✅ CNAME Record: CNAME pay 0oaawzt7.up.railway.app (or CNAME 0oaawzt7.up.railway.app if no host name)`,
@@ -400,6 +406,9 @@ Examples:
 	•	A Record (Mandatory for website) / CNAME (Optional, cannot coexist with A Record)
 	•	Host Name: Subdomain (e.g., auth) or @ for root (Optional)
 	•	Value: IP Address for A / Hostname for CNAME
+
+Please enter your record using the format provided below:
+
 Examples:
 ✅ A Record: A pay 192.0.2.1 (or A 192.0.2.1 if no host name)
 ✅ CNAME Record: CNAME pay 0oaawzt7.up.railway.app (or CNAME 0oaawzt7.up.railway.app if no host name)`,
@@ -407,6 +416,9 @@ Examples:
 	•	A Record (Mandatory for website) / CNAME (Optional, cannot coexist with A Record)
 	•	Host Name: Subdomain (e.g., auth) or @ for root (Optional)
 	•	Value: IP Address for A / Hostname for CNAME
+
+Please enter your record using the format provided below:
+
 Examples:
 ✅ A Record: A pay 192.0.2.1 (or A 192.0.2.1 if no host name)
 ✅ CNAME Record: CNAME pay 0oaawzt7.up.railway.app (or CNAME 0oaawzt7.up.railway.app if no host name)`,

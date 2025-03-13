@@ -363,6 +363,9 @@ ${
 	•	Enregistrement A (Obligatoire pour un site web) / CNAME (Optionnel, ne peut pas coexister avec un enregistrement A)
 	•	Nom d'hôte : Sous-domaine (ex. : auth) ou '@' pour la racine (Optionnel)
 	•	Valeur : Adresse IP pour A / Nom d'hôte pour CNAME
+
+Veuillez saisir votre enregistrement en utilisant le format fourni ci-dessous :
+
 Exemples :
 ✅ Enregistrement A : A pay 192.0.2.1 (ou A 192.0.2.1 si aucun nom d'hôte)
 ✅ Enregistrement CNAME : CNAME pay 0oaawzt7.up.railway.app (ou CNAME 0oaawzt7.up.railway.app si aucun nom d'hôte)`,
@@ -370,6 +373,9 @@ Exemples :
 	•	Enregistrement A (Obligatoire pour un site web) / CNAME (Optionnel, ne peut pas coexister avec un enregistrement A)
 	•	Nom d'hôte : Sous-domaine (ex. : auth) ou '@' pour la racine (Optionnel)
 	•	Valeur : Adresse IP pour A / Nom d'hôte pour CNAME
+
+Veuillez saisir votre enregistrement en utilisant le format fourni ci-dessous :
+
 Exemples :
 ✅ Enregistrement A : A pay 192.0.2.1 (ou A 192.0.2.1 si aucun nom d'hôte)
 ✅ Enregistrement CNAME : CNAME pay 0oaawzt7.up.railway.app (ou CNAME 0oaawzt7.up.railway.app si aucun nom d'hôte)`,
@@ -377,6 +383,9 @@ Exemples :
 	•	Enregistrement A (Obligatoire pour un site web) / CNAME (Optionnel, ne peut pas coexister avec un enregistrement A)
 	•	Nom d'hôte : Sous-domaine (ex. : auth) ou '@' pour la racine (Optionnel)
 	•	Valeur : Adresse IP pour A / Nom d'hôte pour CNAME
+
+Veuillez saisir votre enregistrement en utilisant le format fourni ci-dessous :
+
 Exemples :
 ✅ Enregistrement A : A pay 192.0.2.1 (ou A 192.0.2.1 si aucun nom d'hôte)
 ✅ Enregistrement CNAME : CNAME pay 0oaawzt7.up.railway.app (ou CNAME 0oaawzt7.up.railway.app si aucun nom d'hôte)`,
@@ -384,6 +393,9 @@ Exemples :
 	•	Enregistrement A (Obligatoire pour un site web) / CNAME (Optionnel, ne peut pas coexister avec un enregistrement A)
 	•	Nom d'hôte : Sous-domaine (ex. : auth) ou '@' pour la racine (Optionnel)
 	•	Valeur : Adresse IP pour A / Nom d'hôte pour CNAME
+
+Veuillez saisir votre enregistrement en utilisant le format fourni ci-dessous :
+
 Exemples :
 ✅ Enregistrement A : A pay 192.0.2.1 (ou A 192.0.2.1 si aucun nom d'hôte)
 ✅ Enregistrement CNAME : CNAME pay 0oaawzt7.up.railway.app (ou CNAME 0oaawzt7.up.railway.app si aucun nom d'hôte)`,

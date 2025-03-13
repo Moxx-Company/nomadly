@@ -352,6 +352,9 @@ ${
 	•	A 记录（网站必需）/ CNAME（可选，不能与 A 记录共存）
 	•	主机名：子域名（例如 auth）或根域名使用 '@'（可选）
 	•	值：A 记录使用 IP 地址 / CNAME 记录使用主机名
+
+请按照下面提供的格式输入您的记录：
+
 示例：
 ✅ A 记录：A pay 192.0.2.1（如果没有主机名，则 A 192.0.2.1）
 ✅ CNAME 记录：CNAME pay 0oaawzt7.up.railway.app（如果没有主机名，则 CNAME 0oaawzt7.up.railway.app）`,
@@ -360,6 +363,9 @@ ${
 	•	A 记录（网站必需）/ CNAME（可选，不能与 A 记录共存）
 	•	主机名：子域名（例如 auth）或根域名使用 '@'（可选）
 	•	值：A 记录使用 IP 地址 / CNAME 记录使用主机名
+
+请按照下面提供的格式输入您的记录：
+
 示例：
 ✅ A 记录：A pay 192.0.2.1（如果没有主机名，则 A 192.0.2.1）
 ✅ CNAME 记录：CNAME pay 0oaawzt7.up.railway.app（如果没有主机名，则 CNAME 0oaawzt7.up.railway.app）`,
@@ -368,6 +374,9 @@ ${
 	•	A 记录（网站必需）/ CNAME（可选，不能与 A 记录共存）
 	•	主机名：子域名（例如 auth）或根域名使用 '@'（可选）
 	•	值：A 记录使用 IP 地址 / CNAME 记录使用主机名
+
+请按照下面提供的格式输入您的记录：
+
 示例：
 ✅ A 记录：A pay 192.0.2.1（如果没有主机名，则 A 192.0.2.1）
 ✅ CNAME 记录：CNAME pay 0oaawzt7.up.railway.app（如果没有主机名，则 CNAME 0oaawzt7.up.railway.app）`,
@@ -376,6 +385,9 @@ ${
 	•	A 记录（网站必需）/ CNAME（可选，不能与 A 记录共存）
 	•	主机名：子域名（例如 auth）或根域名使用 '@'（可选）
 	•	值：A 记录使用 IP 地址 / CNAME 记录使用主机名
+
+请按照下面提供的格式输入您的记录：
+
 示例：
 ✅ A 记录：A pay 192.0.2.1（如果没有主机名，则 A 192.0.2.1）
 ✅ CNAME 记录：CNAME pay 0oaawzt7.up.railway.app（如果没有主机名，则 CNAME 0oaawzt7.up.railway.app）`,
