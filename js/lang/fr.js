@@ -312,7 +312,45 @@ ${CHAT_BOT_NAME}`,
   errorSavingDomain: `Erreur lors de l'enregistrement du domaine sur le serveur, veuillez contacter le support ${SUPPORT_USERNAME}. Découvrez plus ${TG_HANDLE}.`,
   chooseDomainToManage: `Veuillez sélectionner un domaine si vous souhaitez gérer ses paramètres DNS.`,
   chooseDomainWithShortener: `Veuillez sélectionner ou acheter le nom de domaine que vous souhaitez relier à votre lien raccourci.`,
-  viewDnsRecords: `Voici les enregistrements DNS pour {{domain}}`,
+  viewDnsRecords: (records, domain) => `Voici les enregistrements DNS pour ${domain}
+
+Enregistrements A (Optionnel, mais requis pour le mappage direct d'une IP)
+${
+  records.A && records.A.length
+    ? `${records.A.map(
+        record => `
+<strong>${record.index}. Enregistrement A</strong>
+  • Nom d'hôte : ${record.recordName}
+  • Valeur de l'enregistrement A : ${record.recordContent ? record.recordContent : 'Aucune'}
+    `,
+      ).join('\n')}`
+    : '• Enregistrement A : AUCUN'
+}
+
+Enregistrements NS (Obligatoire – Requis pour la résolution de domaine)
+${
+  records.NS && records.NS.length
+    ? `${records.NS.map(
+        record => `
+<strong>${record.index}. NS${record.nsId} ${record.recordContent} </strong>
+    `,
+      ).join('\n')}`
+    : '• Enregistrement NS : AUCUN'
+}
+
+Enregistrements CNAME (Optionnel, mais requis si l'on utilise un alias au lieu d’un enregistrement A)
+${
+  records.CNAME && records.CNAME.length
+    ? `${records.CNAME.map(
+        record => `
+<strong>${record.index}. Enregistrement CNAME</strong>
+  • Nom d'hôte : ${record.recordName}
+  • Valeur de l'enregistrement CNAME : ${record.recordContent ? record.recordContent : 'Aucune'}
+    `,
+      ).join('\n')}`
+    : '• Enregistrement CNAME : AUCUN'
+}
+  `,
   addDns: `Ajouter un enregistrement DNS`,
   updateDns: `Mettre à jour un enregistrement DNS`,
   deleteDns: `Supprimer un enregistrement DNS`,
@@ -327,50 +365,34 @@ ${CHAT_BOT_NAME}`,
   'Enregistrement CNAME': `CNAME`,
   'Enregistrement NS': `NS`,
   askDnsContent: {
-    A: `Veuillez fournir les détails de l'enregistrement A au format suivant :
-
-Type d'enregistrement : [A/AAAA/CNAME/MX/TXT/SRV/NS]
-Hôte/Nom : [Sous-domaine ou '@' pour la racine]
-Valeur : [Adresse IP, Nom d'hôte ou Données]
-Priorité : [Uniquement pour MX/SRV, sinon laissez vide]
-TTL : [Temps en secondes]
-
-🔷 Exemple d'entrée :
-
-✅ A www 192.0.2.1 3600`,
-    'Enregistrement A': `Veuillez fournir les détails de l'enregistrement A au format suivant :
-
-Type d'enregistrement : [A/AAAA/CNAME/MX/TXT/SRV/NS]
-Hôte/Nom : [Sous-domaine ou '@' pour la racine]
-Valeur : [Adresse IP, Nom d'hôte ou Données]
-Priorité : [Uniquement pour MX/SRV, sinon laissez vide]
-TTL : [Temps en secondes]
-
-🔷 Exemple d'entrée :
-
-✅ A www 192.0.2.1 3600`,
-    CNAME: `Veuillez fournir les détails de l'enregistrement CNAME au format suivant :
-
-Type d'enregistrement : [A/AAAA/CNAME/MX/TXT/SRV/NS]
-Hôte/Nom : [Sous-domaine ou '@' pour la racine]
-Valeur : [Adresse IP, Nom d'hôte ou Données]
-Priorité : [Uniquement pour MX/SRV, sinon laissez vide]
-TTL : [Temps en secondes]
-
-🔷 Exemple d'entrée :
-
-✅ CNAME www abc.hello.org 3600`,
-    'Enregistrement CNAME': `Veuillez fournir les détails de l'enregistrement CNAME au format suivant :
-
-Type d'enregistrement : [A/AAAA/CNAME/MX/TXT/SRV/NS]
-Hôte/Nom : [Sous-domaine ou '@' pour la racine]
-Valeur : [Adresse IP, Nom d'hôte ou Données]
-Priorité : [Uniquement pour MX/SRV, sinon laissez vide]
-TTL : [Temps en secondes]
-
-🔷 Exemple d'entrée :
-
-✅ CNAME www abc.hello.org 3600`,
+    A: `Format d'enregistrement :
+	•	Enregistrement A (Obligatoire pour un site web) / CNAME (Optionnel, ne peut pas coexister avec un enregistrement A)
+	•	Nom d'hôte : Sous-domaine (ex. : auth) ou '@' pour la racine (Optionnel)
+	•	Valeur : Adresse IP pour A / Nom d'hôte pour CNAME
+Exemples :
+✅ Enregistrement A : A pay 192.0.2.1 (ou A 192.0.2.1 si aucun nom d'hôte)
+✅ Enregistrement CNAME : CNAME pay 0oaawzt7.up.railway.app (ou CNAME 0oaawzt7.up.railway.app si aucun nom d'hôte)`,
+    'Enregistrement A': `Format d'enregistrement :
+	•	Enregistrement A (Obligatoire pour un site web) / CNAME (Optionnel, ne peut pas coexister avec un enregistrement A)
+	•	Nom d'hôte : Sous-domaine (ex. : auth) ou '@' pour la racine (Optionnel)
+	•	Valeur : Adresse IP pour A / Nom d'hôte pour CNAME
+Exemples :
+✅ Enregistrement A : A pay 192.0.2.1 (ou A 192.0.2.1 si aucun nom d'hôte)
+✅ Enregistrement CNAME : CNAME pay 0oaawzt7.up.railway.app (ou CNAME 0oaawzt7.up.railway.app si aucun nom d'hôte)`,
+    CNAME: `Format d'enregistrement :
+	•	Enregistrement A (Obligatoire pour un site web) / CNAME (Optionnel, ne peut pas coexister avec un enregistrement A)
+	•	Nom d'hôte : Sous-domaine (ex. : auth) ou '@' pour la racine (Optionnel)
+	•	Valeur : Adresse IP pour A / Nom d'hôte pour CNAME
+Exemples :
+✅ Enregistrement A : A pay 192.0.2.1 (ou A 192.0.2.1 si aucun nom d'hôte)
+✅ Enregistrement CNAME : CNAME pay 0oaawzt7.up.railway.app (ou CNAME 0oaawzt7.up.railway.app si aucun nom d'hôte)`,
+    'Enregistrement CNAME': `Format d'enregistrement :
+	•	Enregistrement A (Obligatoire pour un site web) / CNAME (Optionnel, ne peut pas coexister avec un enregistrement A)
+	•	Nom d'hôte : Sous-domaine (ex. : auth) ou '@' pour la racine (Optionnel)
+	•	Valeur : Adresse IP pour A / Nom d'hôte pour CNAME
+Exemples :
+✅ Enregistrement A : A pay 192.0.2.1 (ou A 192.0.2.1 si aucun nom d'hôte)
+✅ Enregistrement CNAME : CNAME pay 0oaawzt7.up.railway.app (ou CNAME 0oaawzt7.up.railway.app si aucun nom d'hôte)`,
     NS: `Veuillez entrer votre enregistrement NS. i.e., dell.ns.cloudflare.com. Un nouvel enregistrement NS sera ajouté aux existants.`,
     'Enregistrement NS': `Veuillez entrer votre enregistrement NS. i.e., dell.ns.cloudflare.com .Si les N1-N4 existent déjà, veuillez mettre à jour l'enregistrement à la place`,
   },

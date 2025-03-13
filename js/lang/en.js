@@ -336,7 +336,43 @@ ${CHAT_BOT_NAME}`,
 
   chooseDomainWithShortener: `Please select or buy the domain name you would like to connect with your shortened link.`,
 
-  viewDnsRecords: `Here are DNS Records for {{domain}}`,
+  viewDnsRecords: (records, domain) => `Here are DNS Records for ${domain}
+
+A Records (Optional, but required for direct IP mapping)
+${
+  records.A && records.A.length
+    ? `${records.A.map(
+        record => `
+<strong>${record.index}.	A Record</strong>
+  • Host Name: ${record.recordName}
+  •	A Record Value: ${record.recordContent ? record.recordContent : 'None'}
+    `,
+      )}`
+    : '• A Record: NONE'
+}
+NS Records (Mandatory – Required for domain resolution)
+${
+  records.NS && records.NS.length
+    ? `${records.NS.map(
+        record => `
+<strong>${record.index}.	NS${record.nsId} ${record.recordContent} </strong>
+    `,
+      )}`
+    : '• NS Record: NONE'
+}
+CNAME Records (Optional, but required if aliasing another domain instead of using an A record)
+${
+  records.CNAME && records.CNAME.length
+    ? `${records.A.map(
+        record => `
+<strong>${record.index}.	CNAME Record</strong>
+  • Host Name: ${record.recordName}
+  •	CNAME Record Value: ${record.recordContent ? record.recordContent : 'None'}
+    `,
+      ).join('\n')}`
+    : '• CNAME Record: NONE'
+}
+  `,
   addDns: 'Add DNS Record',
   updateDns: 'Update DNS Record',
   deleteDns: 'Delete DNS Record',
@@ -351,52 +387,36 @@ ${CHAT_BOT_NAME}`,
   'CNAME Record': 'CNAME',
   'NS Record': 'NS',
   askDnsContent: {
-    A: `Please provide A record details in the following format:,
+    A: `Record Format:
+	•	A Record (Mandatory for website) / CNAME (Optional, cannot coexist with A Record)
+	•	Host Name: Subdomain (e.g., auth) or @ for root (Optional)
+	•	Value: IP Address for A / Hostname for CNAME
+Examples:
+✅ A Record: A pay 192.0.2.1 (or A 192.0.2.1 if no host name)
+✅ CNAME Record: CNAME pay 0oaawzt7.up.railway.app (or CNAME 0oaawzt7.up.railway.app if no host name)`,
 
-Record Type: [A/AAAA/CNAME/MX/TXT/SRV/NS]
-Host/Name: [Subdomain or '@' for root]
-Value: [IP Address, Hostname, or Data]
-Priority: [Only for MX/SRV, otherwise leave blank]
-TTL: [Time in seconds]
+    'A Record': `Record Format:
+	•	A Record (Mandatory for website) / CNAME (Optional, cannot coexist with A Record)
+	•	Host Name: Subdomain (e.g., auth) or @ for root (Optional)
+	•	Value: IP Address for A / Hostname for CNAME
+Examples:
+✅ A Record: A pay 192.0.2.1 (or A 192.0.2.1 if no host name)
+✅ CNAME Record: CNAME pay 0oaawzt7.up.railway.app (or CNAME 0oaawzt7.up.railway.app if no host name)`,
 
-🔷 Example Entry:
-
-✅ A www 192.0.2.1 3600`,
-
-    'A Record': `Please provide A record details in the following format:,
-
-Record Type: [A/AAAA/CNAME/MX/TXT/SRV/NS]
-Host/Name: [Subdomain or '@' for root]
-Value: [IP Address, Hostname, or Data]
-Priority: [Only for MX/SRV, otherwise leave blank]
-TTL: [Time in seconds]
-
-🔷 Example Entry:
-
-✅ A www 192.0.2.1 3600`,
-
-    CNAME: `Please provide CNAME record details in the following format:,
-
-Record Type: [A/AAAA/CNAME/MX/TXT/SRV/NS]
-Host/Name: [Subdomain or '@' for root]
-Value: [IP Address, Hostname, or Data]
-Priority: [Only for MX/SRV, otherwise leave blank]
-TTL: [Time in seconds]
-
-🔷 Example Entry:
-
-✅ CNAME www abc.hello.org 3600`,
-    'CNAME Record': `Please provide CNAME record details in the following format:,
-
-Record Type: [A/AAAA/CNAME/MX/TXT/SRV/NS]
-Host/Name: [Subdomain or '@' for root]
-Value: [IP Address, Hostname, or Data]
-Priority: [Only for MX/SRV, otherwise leave blank]
-TTL: [Time in seconds]
-
-🔷 Example Entry:
-
-✅ CNAME www abc.hello.org 3600`,
+    CNAME: `Record Format:
+	•	A Record (Mandatory for website) / CNAME (Optional, cannot coexist with A Record)
+	•	Host Name: Subdomain (e.g., auth) or @ for root (Optional)
+	•	Value: IP Address for A / Hostname for CNAME
+Examples:
+✅ A Record: A pay 192.0.2.1 (or A 192.0.2.1 if no host name)
+✅ CNAME Record: CNAME pay 0oaawzt7.up.railway.app (or CNAME 0oaawzt7.up.railway.app if no host name)`,
+    'CNAME Record': `Record Format:
+	•	A Record (Mandatory for website) / CNAME (Optional, cannot coexist with A Record)
+	•	Host Name: Subdomain (e.g., auth) or @ for root (Optional)
+	•	Value: IP Address for A / Hostname for CNAME
+Examples:
+✅ A Record: A pay 192.0.2.1 (or A 192.0.2.1 if no host name)
+✅ CNAME Record: CNAME pay 0oaawzt7.up.railway.app (or CNAME 0oaawzt7.up.railway.app if no host name)`,
 
     NS: `Please enter your NS record. i.e., dell.ns.cloudflare.com. A new NS record will be added to the current ones.`,
     'NS Record': `Please enter your NS record. i.e., dell.ns.cloudflare.com .If N1-N4 already exists, please update record instead`,

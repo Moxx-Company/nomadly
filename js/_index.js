@@ -660,19 +660,24 @@ bot?.on('message', async msg => {
         nsId,
         recordContent,
       }))
-      const viewDnsRecords = records
-        .map(
-          ({ recordType, recordContent, nsId }, i) =>
-            `${i + 1}.\t${recordType === 'NS' ? recordType + nsId : recordType === 'A' ? 'A Record' : recordType}:\t${recordContent || 'None'
-            }`,
-        )
-        .join('\n')
+
+      const categorizeRecords = (records) => {
+        return records.reduce((acc, record, index) => {
+          const type = record.recordType;
+          if (!acc[type]) {
+            acc[type] = [];
+          }
+          acc[type].push({ index: index+1, ...record });
+          return acc;
+        }, {});
+      };
+      const categorizedRecords = categorizeRecords(records);
 
       set(state, chatId, 'dnsRecords', toSave)
 
       set(state, chatId, 'domainNameId', domainNameId)
       set(state, chatId, 'action', 'choose-dns-action')
-      send(chatId, `${t.viewDnsRecords.replaceAll('{{domain}}', domain)}\n${viewDnsRecords}`, trans('dns'))
+      send(chatId, t.viewDnsRecords(categorizedRecords, domain), trans('dns'))
     },
 
     'type-dns-record-data-to-add': recordType => {
@@ -3696,14 +3701,11 @@ bot?.on('message', async msg => {
     let newRecordDetails = null
     if (t[recordType] !== 'NS') {
       newRecordDetails = message.split(" ")
-      if (!newRecordDetails || newRecordDetails.length < 3 || newRecordDetails.length > 5) return send(chatId, t.selectValidOption)
+      if (!newRecordDetails || newRecordDetails.length < 2 || newRecordDetails.length > 3) return send(chatId, t.selectValidOption)
       if (!['A', 'CNAME'].includes(newRecordDetails[0]))return send(chatId, t.selectValidOption)
     }
-    log(newRecordDetails)
-    const recordContent = newRecordDetails ? newRecordDetails[2] : message
-    const recordPriority = newRecordDetails && newRecordDetails.length === 5 ? newRecordDetails[3] : null
-    const hostName = newRecordDetails ? newRecordDetails[1] : null
-    const recordTTL = newRecordDetails && newRecordDetails.length > 3 ? newRecordDetails[newRecordDetails.length -1] : null
+    const recordContent = newRecordDetails ? newRecordDetails[newRecordDetails.length -1 ] : message
+    const hostName = newRecordDetails && newRecordDetails.length === 3 ? newRecordDetails[1] : null
     const dnsRecords = info?.dnsRecords
     const nsRecords = dnsRecords?.filter(r => r.recordType === 'NS')
     const domainNameId = info?.domainNameId
@@ -3714,7 +3716,7 @@ bot?.on('message', async msg => {
     }
 
     const nextId = nextNumber(nsRecords.map(r => r.nsId))
-    const { error } = await saveServerInDomain(domain, recordContent, t[recordType], domainNameId, nextId, nsRecords, recordPriority, recordTTL, hostName)
+    const { error } = await saveServerInDomain(domain, recordContent, t[recordType], domainNameId, nextId, nsRecords, hostName)
     if (error) {
       const m = t.errorSavingDns(error)
       return send(chatId, m)
