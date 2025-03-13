@@ -2555,7 +2555,7 @@ bot?.on('message', async msg => {
   if (action === a.getUserAllVmIntances) {
     if (message === vp.back) return goto.submenu4()
     if (message === user.buyVpsPlan) return goto.createNewVpsFlow()
-    const list = info?.userVPSDetails?.map((item) => item?.name)
+    const list = info?.userVPSDetails?.map((item) => item?.name) || [];
     if (!list?.includes(message)) return send(chatId, vp.selectCorrectOption, vp.of([...list, user.buyVpsPlan]))
     const selectedVPS = info?.userVPSDetails?.find((item) => item.name ===  message)
     info.vpsDetails = selectedVPS
