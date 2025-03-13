@@ -3696,14 +3696,14 @@ bot?.on('message', async msg => {
     let newRecordDetails = null
     if (t[recordType] !== 'NS') {
       newRecordDetails = message.split(" ")
-      if (!newRecordDetails || newRecordDetails.length < 4) return send(chatId, t.selectValidOption)
+      if (!newRecordDetails || newRecordDetails.length < 3) return send(chatId, t.selectValidOption)
       if (!['A', 'CNAME'].includes(newRecordDetails[0]))return send(chatId, t.selectValidOption)
     }
     log(newRecordDetails)
     const recordContent = newRecordDetails ? newRecordDetails[2] : message
     const recordPriority = newRecordDetails && newRecordDetails.length === 5 ? newRecordDetails[3] : null
     const hostName = newRecordDetails ? newRecordDetails[1] : null
-    const recordTTL = newRecordDetails ? newRecordDetails.length === 5 ? newRecordDetails[4] : newRecordDetails[3] : null
+    const recordTTL = newRecordDetails && newRecordDetails.length > 3 ? newRecordDetails[newRecordDetails.length -1] : null
     const dnsRecords = info?.dnsRecords
     const nsRecords = dnsRecords?.filter(r => r.recordType === 'NS')
     const domainNameId = info?.domainNameId
