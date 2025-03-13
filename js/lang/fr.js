@@ -327,10 +327,50 @@ ${CHAT_BOT_NAME}`,
   'Enregistrement CNAME': `CNAME`,
   'Enregistrement NS': `NS`,
   askDnsContent: {
-    A: `Veuillez fournir l'enregistrement A. i.e, 108.0.56.98`,
-    'Enregistrement A': `Veuillez fournir l'enregistrement A. i.e, 108.0.56.98`,
-    CNAME: `Veuillez fournir l'enregistrement CNAME. i.e, abc.hello.org`,
-    'Enregistrement CNAME': `Veuillez fournir l'enregistrement CNAME. i.e, abc.hello.org`,
+    A: `Veuillez fournir les détails de l'enregistrement A au format suivant :
+
+Type d'enregistrement : [A/AAAA/CNAME/MX/TXT/SRV/NS]
+Hôte/Nom : [Sous-domaine ou '@' pour la racine]
+Valeur : [Adresse IP, Nom d'hôte ou Données]
+Priorité : [Uniquement pour MX/SRV, sinon laissez vide]
+TTL : [Temps en secondes]
+
+🔷 Exemple d'entrée :
+
+✅ A www 192.0.2.1 3600`,
+    'Enregistrement A': `Veuillez fournir les détails de l'enregistrement A au format suivant :
+
+Type d'enregistrement : [A/AAAA/CNAME/MX/TXT/SRV/NS]
+Hôte/Nom : [Sous-domaine ou '@' pour la racine]
+Valeur : [Adresse IP, Nom d'hôte ou Données]
+Priorité : [Uniquement pour MX/SRV, sinon laissez vide]
+TTL : [Temps en secondes]
+
+🔷 Exemple d'entrée :
+
+✅ A www 192.0.2.1 3600`,
+    CNAME: `Veuillez fournir les détails de l'enregistrement CNAME au format suivant :
+
+Type d'enregistrement : [A/AAAA/CNAME/MX/TXT/SRV/NS]
+Hôte/Nom : [Sous-domaine ou '@' pour la racine]
+Valeur : [Adresse IP, Nom d'hôte ou Données]
+Priorité : [Uniquement pour MX/SRV, sinon laissez vide]
+TTL : [Temps en secondes]
+
+🔷 Exemple d'entrée :
+
+✅ CNAME www abc.hello.org 3600`,
+    'Enregistrement CNAME': `Veuillez fournir les détails de l'enregistrement CNAME au format suivant :
+
+Type d'enregistrement : [A/AAAA/CNAME/MX/TXT/SRV/NS]
+Hôte/Nom : [Sous-domaine ou '@' pour la racine]
+Valeur : [Adresse IP, Nom d'hôte ou Données]
+Priorité : [Uniquement pour MX/SRV, sinon laissez vide]
+TTL : [Temps en secondes]
+
+🔷 Exemple d'entrée :
+
+✅ CNAME www abc.hello.org 3600`,
     NS: `Veuillez entrer votre enregistrement NS. i.e., dell.ns.cloudflare.com. Un nouvel enregistrement NS sera ajouté aux existants.`,
     'Enregistrement NS': `Veuillez entrer votre enregistrement NS. i.e., dell.ns.cloudflare.com .Si les N1-N4 existent déjà, veuillez mettre à jour l'enregistrement à la place`,
   },
@@ -1278,7 +1318,9 @@ ${list
   selectedVpsData: data => `<strong>🖥️ ID du VPS :</strong> ${data.name}
 
 <strong>• Plan :</strong> ${data.planDetails.name}
-<strong>• vCPUs :</strong> ${data.planDetails.specs.vCPU} | RAM : ${data.planDetails.specs.RAM} Go | Disque : ${data.planDetails.specs.disk} Go (${data.diskTypeDetails.type})
+<strong>• vCPUs :</strong> ${data.planDetails.specs.vCPU} | RAM : ${data.planDetails.specs.RAM} Go | Disque : ${
+    data.planDetails.specs.disk
+  } Go (${data.diskTypeDetails.type})
 <strong>• OS :</strong> ${data.osDetails.name}
 <strong>• Panneau de contrôle :</strong> ${data.cPanelPlanDetails ? data.cPanelPlanDetails.type : 'Aucun'}
 <strong>• Statut :</strong> ${data.status === 'RUNNING' ? '🟢' : '🔴'} ${data.status}

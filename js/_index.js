@@ -3692,8 +3692,18 @@ bot?.on('message', async msg => {
     if (message === t.back) return goto['select-dns-record-type-to-add']()
 
     const domain = info?.domainToManage
-    const recordType = info?.recordType
-    const recordContent = message
+    let recordType = info?.recordType
+    let newRecordDetails = null
+    if (t[recordType] !== 'NS') {
+      newRecordDetails = message.split(" ")
+      if (!newRecordDetails || newRecordDetails.length < 4) return send(chatId, t.selectValidOption)
+      if (!['A', 'CNAME'].includes(newRecordDetails[0]))return send(chatId, t.selectValidOption)
+    }
+    log(newRecordDetails)
+    const recordContent = newRecordDetails ? newRecordDetails[2] : message
+    const recordPriority = newRecordDetails && newRecordDetails.length === 5 ? newRecordDetails[3] : null
+    const hostName = newRecordDetails ? newRecordDetails[1] : null
+    const recordTTL = newRecordDetails ? newRecordDetails.length === 5 ? newRecordDetails[4] : newRecordDetails[3] : null
     const dnsRecords = info?.dnsRecords
     const nsRecords = dnsRecords?.filter(r => r.recordType === 'NS')
     const domainNameId = info?.domainNameId
@@ -3704,7 +3714,7 @@ bot?.on('message', async msg => {
     }
 
     const nextId = nextNumber(nsRecords.map(r => r.nsId))
-    const { error } = await saveServerInDomain(domain, recordContent, t[recordType], domainNameId, nextId, nsRecords)
+    const { error } = await saveServerInDomain(domain, recordContent, t[recordType], domainNameId, nextId, nsRecords, recordPriority, recordTTL, hostName)
     if (error) {
       const m = t.errorSavingDns(error)
       return send(chatId, m)

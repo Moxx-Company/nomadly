@@ -316,10 +316,50 @@ ${CHAT_BOT_NAME}`,
   'CNAME 记录': `CNAME`,
   'NS 记录': `NS`,
   askDnsContent: {
-    A: `请输入 A 记录。例：108.0.56.98`,
-    'A 记录': `请输入 A 记录。例：108.0.56.98`,
-    CNAME: `请输入 CNAME 记录。例：abc.hello.org`,
-    'CNAME 记录': `请输入 CNAME 记录。例：abc.hello.org`,
+    A: `请按照以下格式提供 A 记录的详细信息：
+
+记录类型: [A/AAAA/CNAME/MX/TXT/SRV/NS]
+主机/名称: [子域名或根域名使用 '@']
+值: [IP 地址、主机名或数据]
+优先级: [仅适用于 MX/SRV，否则留空]
+TTL: [时间（秒）]
+
+🔷 示例输入：
+
+✅ A www 192.0.2.1 3600`,
+    'A 记录': `请按照以下格式提供 A 记录的详细信息：
+
+记录类型: [A/AAAA/CNAME/MX/TXT/SRV/NS]
+主机/名称: [子域名或根域名使用 '@']
+值: [IP 地址、主机名或数据]
+优先级: [仅适用于 MX/SRV，否则留空]
+TTL: [时间（秒）]
+
+🔷 示例输入：
+
+✅ A www 192.0.2.1 3600`,
+    CNAME: `请按照以下格式提供 CNAME 记录的详细信息：
+
+记录类型: [A/AAAA/CNAME/MX/TXT/SRV/NS]
+主机/名称: [子域名或根域名使用 '@']
+值: [IP 地址、主机名或数据]
+优先级: [仅适用于 MX/SRV，否则留空]
+TTL: [时间（秒）]
+
+🔷 示例输入：
+
+✅ CNAME www abc.hello.org 3600`,
+    'CNAME 记录': `请按照以下格式提供 CNAME 记录的详细信息：
+
+记录类型: [A/AAAA/CNAME/MX/TXT/SRV/NS]
+主机/名称: [子域名或根域名使用 '@']
+值: [IP 地址、主机名或数据]
+优先级: [仅适用于 MX/SRV，否则留空]
+TTL: [时间（秒）]
+
+🔷 示例输入：
+
+✅ CNAME www abc.hello.org 3600`,
     NS: `请输入您的 NS 记录。例：dell.ns.cloudflare.com。一个新的 NS 记录将添加到现有记录中。`,
     'NS 记录': `请输入您的 NS 记录。例：dell.ns.cloudflare.com。如果 N1-N4 已存在，请更新记录。`,
   },
@@ -1235,7 +1275,9 @@ ${list
   selectedVpsData: data => `<strong>🖥️ VPS ID：</strong> ${data.name}
 
 <strong>• 计划：</strong> ${data.planDetails.name}
-<strong>• vCPUs：</strong> ${data.planDetails.specs.vCPU} | RAM: ${data.planDetails.specs.RAM} GB | 硬盘：${data.planDetails.specs.disk} GB (${data.diskTypeDetails.type})
+<strong>• vCPUs：</strong> ${data.planDetails.specs.vCPU} | RAM: ${data.planDetails.specs.RAM} GB | 硬盘：${
+    data.planDetails.specs.disk
+  } GB (${data.diskTypeDetails.type})
 <strong>• 操作系统：</strong> ${data.osDetails.name}
 <strong>• 控制面板：</strong> ${data.cPanelPlanDetails ? data.cPanelPlanDetails.type : '无'}
 <strong>• 状态：</strong> ${data.status === 'RUNNING' ? '🟢' : '🔴'} ${data.status}

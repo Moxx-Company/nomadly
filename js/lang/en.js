@@ -351,11 +351,52 @@ ${CHAT_BOT_NAME}`,
   'CNAME Record': 'CNAME',
   'NS Record': 'NS',
   askDnsContent: {
-    A: `Please provide A record. i.e, 108.0.56.98`,
-    'A Record': `Please provide A record. i.e, 108.0.56.98`,
+    A: `Please provide A record details in the following format:,
 
-    CNAME: `Please provide CNAME record. i.e, abc.hello.org`,
-    'CNAME Record': `Please provide CNAME record. i.e, abc.hello.org`,
+Record Type: [A/AAAA/CNAME/MX/TXT/SRV/NS]
+Host/Name: [Subdomain or '@' for root]
+Value: [IP Address, Hostname, or Data]
+Priority: [Only for MX/SRV, otherwise leave blank]
+TTL: [Time in seconds]
+
+🔷 Example Entry:
+
+✅ A www 192.0.2.1 3600`,
+
+    'A Record': `Please provide A record details in the following format:,
+
+Record Type: [A/AAAA/CNAME/MX/TXT/SRV/NS]
+Host/Name: [Subdomain or '@' for root]
+Value: [IP Address, Hostname, or Data]
+Priority: [Only for MX/SRV, otherwise leave blank]
+TTL: [Time in seconds]
+
+🔷 Example Entry:
+
+✅ A www 192.0.2.1 3600`,
+
+    CNAME: `Please provide CNAME record details in the following format:,
+
+Record Type: [A/AAAA/CNAME/MX/TXT/SRV/NS]
+Host/Name: [Subdomain or '@' for root]
+Value: [IP Address, Hostname, or Data]
+Priority: [Only for MX/SRV, otherwise leave blank]
+TTL: [Time in seconds]
+
+🔷 Example Entry:
+
+✅ CNAME www abc.hello.org 3600`,
+    'CNAME Record': `Please provide CNAME record details in the following format:,
+
+Record Type: [A/AAAA/CNAME/MX/TXT/SRV/NS]
+Host/Name: [Subdomain or '@' for root]
+Value: [IP Address, Hostname, or Data]
+Priority: [Only for MX/SRV, otherwise leave blank]
+TTL: [Time in seconds]
+
+🔷 Example Entry:
+
+✅ CNAME www abc.hello.org 3600`,
 
     NS: `Please enter your NS record. i.e., dell.ns.cloudflare.com. A new NS record will be added to the current ones.`,
     'NS Record': `Please enter your NS record. i.e., dell.ns.cloudflare.com .If N1-N4 already exists, please update record instead`,
