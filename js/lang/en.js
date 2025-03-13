@@ -363,7 +363,7 @@ ${
 CNAME Records (Optional, but required if aliasing another domain instead of using an A record)
 ${
   records.CNAME && records.CNAME.length
-    ? `${records.A.map(
+    ? `${records.CNAME.map(
         record => `
 <strong>${record.index}.	CNAME Record</strong>
   • Host Name: ${record.recordName}
