@@ -2394,8 +2394,10 @@ bot?.on('message', async msg => {
   if (action === a.askVpsCpanel) {
     let vpsDetails = info?.vpsDetails
     if (message === vp.back) return vpsDetails.plan != 'Hourly' ? goto.askVPSPlanAutoRenewal() : goto.askUserVpsPlan()
-    const cpanels = trans('vpsCpanelOptional') 
-    if (!cpanels.includes(message)) return send (chatId, vp.validCpanel, vp.cpanelMenu)
+    const cpanels = trans('vpsCpanelOptional')
+    // @TODO revert back
+    // if (!cpanels.includes(message)) return send (chatId, vp.validCpanel, vp.cpanelMenu)
+    if (!cpanels.includes(message)) return send (chatId, vp.validCpanel, vp.of([cpanels[1], cpanels[2]]))
     vpsDetails.panel = message === vp.noControlPanel ? null : {
       name: message === 'WHM' ? 'whm' : 'plesk'
     }
