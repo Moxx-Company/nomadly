@@ -113,7 +113,6 @@ const {
   createPleskResetLink
 } = require('./vm-instance-setup.js')
 const { console } = require('inspector')
-const { hostname } = require('os')
 
 process.env['NTBA_FIX_350'] = 1
 const DB_NAME = process.env.DB_NAME
