@@ -113,6 +113,7 @@ const {
   createPleskResetLink
 } = require('./vm-instance-setup.js')
 const { console } = require('inspector')
+const { hostname } = require('os')
 
 process.env['NTBA_FIX_350'] = 1
 const DB_NAME = process.env.DB_NAME
@@ -3741,13 +3742,21 @@ bot?.on('message', async msg => {
   if (action === 'type-dns-record-data-to-update') {
     if (message === t.back) return goto['select-dns-record-id-to-update']()
 
-    const recordContent = message
     const dnsRecords = info?.dnsRecords
     const domainNameId = info?.domainNameId
     const domain = info?.domainToManage
     const id = info?.dnsRecordIdToUpdate
+    let newRecordDetails = null
 
     const { dnszoneID, dnszoneRecordID, recordType, nsId } = dnsRecords[id]
+
+    if (recordType !== 'NS') {
+      newRecordDetails = message.split(" ")
+      if (!newRecordDetails || newRecordDetails.length < 2 || newRecordDetails.length > 3) return send(chatId, t.selectValidOption)
+      if (!['A', 'CNAME'].includes(newRecordDetails[0]))return send(chatId, t.selectValidOption)
+    }
+    const recordContent = newRecordDetails ? newRecordDetails[newRecordDetails.length -1 ] : message
+    const hostName = newRecordDetails && newRecordDetails.length === 3 ? newRecordDetails[1] : null
 
     const { error } = await updateDNSRecord(
       dnszoneID,
@@ -3758,6 +3767,7 @@ bot?.on('message', async msg => {
       domainNameId,
       nsId,
       dnsRecords.filter(r => r.recordType === 'NS'),
+      hostName
     )
     if (error) {
       const m = `Error update dns record, ${error}, Provide value again`

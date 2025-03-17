@@ -150,6 +150,17 @@ const bal = (usd, ngn) =>
 ₦${view(ngn)}`
     : `$${view(usd)}`
 
+const dnsEntryFormat = `记录格式：
+	•	A 记录（网站必需）/ CNAME（可选，不能与 A 记录共存）
+	•	主机名：子域名（例如 auth）或根域名使用 '@'（可选）
+	•	值：A 记录使用 IP 地址 / CNAME 记录使用主机名
+
+请按照下面提供的格式输入您的记录：
+
+示例：
+✅ A 记录：A pay 192.0.2.1（如果没有主机名，则 A 192.0.2.1）
+✅ CNAME 记录：CNAME pay 0oaawzt7.up.railway.app（如果没有主机名，则 CNAME 0oaawzt7.up.railway.app）`
+
 const t = {
   yes: '是',
   no: '否',
@@ -348,57 +359,20 @@ ${
   'CNAME 记录': `CNAME`,
   'NS 记录': `NS`,
   askDnsContent: {
-    A: `记录格式：
-	•	A 记录（网站必需）/ CNAME（可选，不能与 A 记录共存）
-	•	主机名：子域名（例如 auth）或根域名使用 '@'（可选）
-	•	值：A 记录使用 IP 地址 / CNAME 记录使用主机名
+    A: dnsEntryFormat,
+    'A 记录': dnsEntryFormat,
 
-请按照下面提供的格式输入您的记录：
+    CNAME: dnsEntryFormat,
+    'CNAME 记录': dnsEntryFormat,
 
-示例：
-✅ A 记录：A pay 192.0.2.1（如果没有主机名，则 A 192.0.2.1）
-✅ CNAME 记录：CNAME pay 0oaawzt7.up.railway.app（如果没有主机名，则 CNAME 0oaawzt7.up.railway.app）`,
-
-    'A 记录': `记录格式：
-	•	A 记录（网站必需）/ CNAME（可选，不能与 A 记录共存）
-	•	主机名：子域名（例如 auth）或根域名使用 '@'（可选）
-	•	值：A 记录使用 IP 地址 / CNAME 记录使用主机名
-
-请按照下面提供的格式输入您的记录：
-
-示例：
-✅ A 记录：A pay 192.0.2.1（如果没有主机名，则 A 192.0.2.1）
-✅ CNAME 记录：CNAME pay 0oaawzt7.up.railway.app（如果没有主机名，则 CNAME 0oaawzt7.up.railway.app）`,
-
-    CNAME: `记录格式：
-	•	A 记录（网站必需）/ CNAME（可选，不能与 A 记录共存）
-	•	主机名：子域名（例如 auth）或根域名使用 '@'（可选）
-	•	值：A 记录使用 IP 地址 / CNAME 记录使用主机名
-
-请按照下面提供的格式输入您的记录：
-
-示例：
-✅ A 记录：A pay 192.0.2.1（如果没有主机名，则 A 192.0.2.1）
-✅ CNAME 记录：CNAME pay 0oaawzt7.up.railway.app（如果没有主机名，则 CNAME 0oaawzt7.up.railway.app）`,
-
-    'CNAME 记录': `记录格式：
-	•	A 记录（网站必需）/ CNAME（可选，不能与 A 记录共存）
-	•	主机名：子域名（例如 auth）或根域名使用 '@'（可选）
-	•	值：A 记录使用 IP 地址 / CNAME 记录使用主机名
-
-请按照下面提供的格式输入您的记录：
-
-示例：
-✅ A 记录：A pay 192.0.2.1（如果没有主机名，则 A 192.0.2.1）
-✅ CNAME 记录：CNAME pay 0oaawzt7.up.railway.app（如果没有主机名，则 CNAME 0oaawzt7.up.railway.app）`,
     NS: `请输入您的 NS 记录。例：dell.ns.cloudflare.com。一个新的 NS 记录将添加到现有记录中。`,
     'NS 记录': `请输入您的 NS 记录。例：dell.ns.cloudflare.com。如果 N1-N4 已存在，请更新记录。`,
   },
   askUpdateDnsContent: {
-    A: `请输入 A 记录。例：108.0.56.98`,
-    'A 记录': `请输入 A 记录。例：108.0.56.98`,
-    CNAME: `请输入 CNAME 记录。例：abc.hello.org`,
-    'CNAME 记录': `请输入 CNAME 记录。例：abc.hello.org`,
+    A: dnsEntryFormat,
+    'A 记录': dnsEntryFormat,
+    CNAME: dnsEntryFormat,
+    'CNAME 记录': dnsEntryFormat,
     NS: `一个新的 NS 记录将被更新到选定的 ID。如果要添加新记录，请选择“添加 DNS 记录”`,
     'NS 记录': `一个新的 NS 记录将被更新到选定的 ID。如果要添加新记录，请选择“添加 DNS 记录”`,
   },

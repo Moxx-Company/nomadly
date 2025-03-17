@@ -151,6 +151,17 @@ const bal = (usd, ngn) =>
 ₦${view(ngn)}`
     : `$${view(usd)}`
 
+const dnsEntryFormat = `Format d'enregistrement :
+	•	Enregistrement A (Obligatoire pour un site web) / CNAME (Optionnel, ne peut pas coexister avec un enregistrement A)
+	•	Nom d'hôte : Sous-domaine (ex. : auth) ou '@' pour la racine (Optionnel)
+	•	Valeur : Adresse IP pour A / Nom d'hôte pour CNAME
+
+Veuillez saisir votre enregistrement en utilisant le format fourni ci-dessous :
+
+Exemples :
+✅ Enregistrement A : A pay 192.0.2.1 (ou A 192.0.2.1 si aucun nom d'hôte)
+✅ Enregistrement CNAME : CNAME pay 0oaawzt7.up.railway.app (ou CNAME 0oaawzt7.up.railway.app si aucun nom d'hôte)`
+
 const t = {
   yes: 'Oui',
   no: 'Non',
@@ -359,54 +370,18 @@ ${
   'Enregistrement CNAME': `CNAME`,
   'Enregistrement NS': `NS`,
   askDnsContent: {
-    A: `Format d'enregistrement :
-	•	Enregistrement A (Obligatoire pour un site web) / CNAME (Optionnel, ne peut pas coexister avec un enregistrement A)
-	•	Nom d'hôte : Sous-domaine (ex. : auth) ou '@' pour la racine (Optionnel)
-	•	Valeur : Adresse IP pour A / Nom d'hôte pour CNAME
-
-Veuillez saisir votre enregistrement en utilisant le format fourni ci-dessous :
-
-Exemples :
-✅ Enregistrement A : A pay 192.0.2.1 (ou A 192.0.2.1 si aucun nom d'hôte)
-✅ Enregistrement CNAME : CNAME pay 0oaawzt7.up.railway.app (ou CNAME 0oaawzt7.up.railway.app si aucun nom d'hôte)`,
-    'Enregistrement A': `Format d'enregistrement :
-	•	Enregistrement A (Obligatoire pour un site web) / CNAME (Optionnel, ne peut pas coexister avec un enregistrement A)
-	•	Nom d'hôte : Sous-domaine (ex. : auth) ou '@' pour la racine (Optionnel)
-	•	Valeur : Adresse IP pour A / Nom d'hôte pour CNAME
-
-Veuillez saisir votre enregistrement en utilisant le format fourni ci-dessous :
-
-Exemples :
-✅ Enregistrement A : A pay 192.0.2.1 (ou A 192.0.2.1 si aucun nom d'hôte)
-✅ Enregistrement CNAME : CNAME pay 0oaawzt7.up.railway.app (ou CNAME 0oaawzt7.up.railway.app si aucun nom d'hôte)`,
-    CNAME: `Format d'enregistrement :
-	•	Enregistrement A (Obligatoire pour un site web) / CNAME (Optionnel, ne peut pas coexister avec un enregistrement A)
-	•	Nom d'hôte : Sous-domaine (ex. : auth) ou '@' pour la racine (Optionnel)
-	•	Valeur : Adresse IP pour A / Nom d'hôte pour CNAME
-
-Veuillez saisir votre enregistrement en utilisant le format fourni ci-dessous :
-
-Exemples :
-✅ Enregistrement A : A pay 192.0.2.1 (ou A 192.0.2.1 si aucun nom d'hôte)
-✅ Enregistrement CNAME : CNAME pay 0oaawzt7.up.railway.app (ou CNAME 0oaawzt7.up.railway.app si aucun nom d'hôte)`,
-    'Enregistrement CNAME': `Format d'enregistrement :
-	•	Enregistrement A (Obligatoire pour un site web) / CNAME (Optionnel, ne peut pas coexister avec un enregistrement A)
-	•	Nom d'hôte : Sous-domaine (ex. : auth) ou '@' pour la racine (Optionnel)
-	•	Valeur : Adresse IP pour A / Nom d'hôte pour CNAME
-
-Veuillez saisir votre enregistrement en utilisant le format fourni ci-dessous :
-
-Exemples :
-✅ Enregistrement A : A pay 192.0.2.1 (ou A 192.0.2.1 si aucun nom d'hôte)
-✅ Enregistrement CNAME : CNAME pay 0oaawzt7.up.railway.app (ou CNAME 0oaawzt7.up.railway.app si aucun nom d'hôte)`,
+    A: dnsEntryFormat,
+    'Enregistrement A': dnsEntryFormat,
+    CNAME: dnsEntryFormat,
+    'Enregistrement CNAME': dnsEntryFormat,
     NS: `Veuillez entrer votre enregistrement NS. i.e., dell.ns.cloudflare.com. Un nouvel enregistrement NS sera ajouté aux existants.`,
     'Enregistrement NS': `Veuillez entrer votre enregistrement NS. i.e., dell.ns.cloudflare.com .Si les N1-N4 existent déjà, veuillez mettre à jour l'enregistrement à la place`,
   },
   askUpdateDnsContent: {
-    A: `Veuillez fournir l'enregistrement A. i.e, 108.0.56.98`,
-    'Enregistrement A': `Veuillez fournir l'enregistrement A. i.e, 108.0.56.98`,
-    CNAME: `Veuillez fournir l'enregistrement CNAME. i.e, abc.hello.org`,
-    'Enregistrement CNAME': `Veuillez fournir l'enregistrement CNAME. i.e, abc.hello.org`,
+    A: dnsEntryFormat,
+    'Enregistrement A': dnsEntryFormat,
+    CNAME: dnsEntryFormat,
+    'Enregistrement CNAME': dnsEntryFormat,
     NS: `Un nouvel enregistrement NS sera mis à jour pour l'identifiant sélectionné. Pour ajouter un nouvel enregistrement, veuillez choisir "Ajouter un enregistrement DNS"`,
     'Enregistrement NS': `Un nouvel enregistrement NS sera mis à jour pour l'identifiant sélectionné. Pour ajouter un nouvel enregistrement, veuillez choisir "Ajouter un enregistrement DNS"`,
   },

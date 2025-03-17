@@ -149,6 +149,17 @@ const bal = (usd, ngn) =>
 ₦${view(ngn)}`
     : `$${view(usd)}`
 
+const dnsEntryFormat = `Record Format:
+	•	A Record (Mandatory for website) / CNAME (Optional, cannot coexist with A Record)
+	•	Host Name: Subdomain (e.g., auth) or @ for root (Optional)
+	•	Value: IP Address for A / Hostname for CNAME
+
+Please enter your record using the format provided below:
+
+Examples:
+✅ A Record: A pay 192.0.2.1 (or A 192.0.2.1 if no host name)
+✅ CNAME Record: CNAME pay 0oaawzt7.up.railway.app (or CNAME 0oaawzt7.up.railway.app if no host name)`
+
 const t = {
   yes: 'Yes',
   no: 'No',
@@ -380,58 +391,21 @@ ${
   'CNAME Record': 'CNAME',
   'NS Record': 'NS',
   askDnsContent: {
-    A: `Record Format:
-	•	A Record (Mandatory for website) / CNAME (Optional, cannot coexist with A Record)
-	•	Host Name: Subdomain (e.g., auth) or @ for root (Optional)
-	•	Value: IP Address for A / Hostname for CNAME
+    A: dnsEntryFormat,
+    'A Record': dnsEntryFormat,
 
-Please enter your record using the format provided below:
-
-Examples:
-✅ A Record: A pay 192.0.2.1 (or A 192.0.2.1 if no host name)
-✅ CNAME Record: CNAME pay 0oaawzt7.up.railway.app (or CNAME 0oaawzt7.up.railway.app if no host name)`,
-
-    'A Record': `Record Format:
-	•	A Record (Mandatory for website) / CNAME (Optional, cannot coexist with A Record)
-	•	Host Name: Subdomain (e.g., auth) or @ for root (Optional)
-	•	Value: IP Address for A / Hostname for CNAME
-
-Please enter your record using the format provided below:
-
-Examples:
-✅ A Record: A pay 192.0.2.1 (or A 192.0.2.1 if no host name)
-✅ CNAME Record: CNAME pay 0oaawzt7.up.railway.app (or CNAME 0oaawzt7.up.railway.app if no host name)`,
-
-    CNAME: `Record Format:
-	•	A Record (Mandatory for website) / CNAME (Optional, cannot coexist with A Record)
-	•	Host Name: Subdomain (e.g., auth) or @ for root (Optional)
-	•	Value: IP Address for A / Hostname for CNAME
-
-Please enter your record using the format provided below:
-
-Examples:
-✅ A Record: A pay 192.0.2.1 (or A 192.0.2.1 if no host name)
-✅ CNAME Record: CNAME pay 0oaawzt7.up.railway.app (or CNAME 0oaawzt7.up.railway.app if no host name)`,
-    'CNAME Record': `Record Format:
-	•	A Record (Mandatory for website) / CNAME (Optional, cannot coexist with A Record)
-	•	Host Name: Subdomain (e.g., auth) or @ for root (Optional)
-	•	Value: IP Address for A / Hostname for CNAME
-
-Please enter your record using the format provided below:
-
-Examples:
-✅ A Record: A pay 192.0.2.1 (or A 192.0.2.1 if no host name)
-✅ CNAME Record: CNAME pay 0oaawzt7.up.railway.app (or CNAME 0oaawzt7.up.railway.app if no host name)`,
+    CNAME: dnsEntryFormat,
+    'CNAME Record': dnsEntryFormat,
 
     NS: `Please enter your NS record. i.e., dell.ns.cloudflare.com. A new NS record will be added to the current ones.`,
     'NS Record': `Please enter your NS record. i.e., dell.ns.cloudflare.com .If N1-N4 already exists, please update record instead`,
   },
   askUpdateDnsContent: {
-    A: `Please provide A record. i.e, 108.0.56.98`,
-    'A Record': `Please provide A record. i.e, 108.0.56.98`,
+    A: dnsEntryFormat,
+    'A Record': dnsEntryFormat,
 
-    CNAME: `Please provide CNAME record. i.e, abc.hello.org`,
-    'CNAME Record': `Please provide CNAME record. i.e, abc.hello.org`,
+    CNAME: dnsEntryFormat,
+    'CNAME Record': dnsEntryFormat,
 
     NS: `A new NS record will be updated for the selected id. To Add a new record, please choose “Add DNS Record”`,
     'NS Record': `A new NS record will be updated for the selected id. To Add a new record, please choose “Add DNS Record”`,
