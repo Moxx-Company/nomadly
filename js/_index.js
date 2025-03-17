@@ -1245,6 +1245,7 @@ bot?.on('message', async msg => {
 
     askVpsDiskType: async () => {
       set(state, chatId, 'action', a.askVpsDiskType)
+      send(chatId, vp.vpsWaitingTime)
       const diskTypes = await fetchAvailableDiskTpes(info?.vpsDetails?.zone)
       if (!diskTypes) return send(chatId, vp.failedFetchingData, trans('o'))
       const diskList = diskTypes.map((item) => item.label)
