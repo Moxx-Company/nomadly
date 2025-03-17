@@ -3702,7 +3702,7 @@ bot?.on('message', async msg => {
     if (t[recordType] !== 'NS') {
       newRecordDetails = message.split(" ")
       if (!newRecordDetails || newRecordDetails.length < 2 || newRecordDetails.length > 3) return send(chatId, t.selectValidOption)
-      if (!['A', 'CNAME'].includes(newRecordDetails[0]))return send(chatId, t.selectValidOption)
+      if (!['A', 'CNAME'].includes(newRecordDetails[0].toLocaleUpperCase()))return send(chatId, t.selectValidOption)
     }
     const recordContent = newRecordDetails ? newRecordDetails[newRecordDetails.length -1 ] : message
     const hostName = newRecordDetails && newRecordDetails.length === 3 ? newRecordDetails[1] : null
@@ -3752,7 +3752,7 @@ bot?.on('message', async msg => {
     if (recordType !== 'NS') {
       newRecordDetails = message.split(" ")
       if (!newRecordDetails || newRecordDetails.length < 2 || newRecordDetails.length > 3) return send(chatId, t.selectValidOption)
-      if (!['A', 'CNAME'].includes(newRecordDetails[0]))return send(chatId, t.selectValidOption)
+      if (!['A', 'CNAME'].includes(newRecordDetails[0].toLocaleUpperCase()))return send(chatId, t.selectValidOption)
     }
     const recordContent = newRecordDetails ? newRecordDetails[newRecordDetails.length -1 ] : message
     const hostName = newRecordDetails && newRecordDetails.length === 3 ? newRecordDetails[1] : null

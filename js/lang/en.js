@@ -373,7 +373,7 @@ ${
     ? records.CNAME.map(
         record => `<strong>${record.index}.	CNAME Record</strong>
   • Host Name: ${record.recordName}
-  •	A Record Value: ${record.recordContent ? record.recordContent : 'None'}`,
+  •	CNAME Record Value: ${record.recordContent ? record.recordContent : 'None'}`,
       ).join('\n')
     : '  • CNAME Record: NONE'
 }`,
