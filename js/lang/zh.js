@@ -149,6 +149,17 @@ const bal = (usd, ngn) =>
 ₦${view(ngn)}`
     : `$${view(usd)}`
 
+const dnsEntryFormat = `记录格式：
+	•	A 记录（网站必需）/ CNAME（可选，不能与 A 记录共存）
+	•	主机名：子域名（例如 auth）或根域名使用 '@'（可选）
+	•	值：A 记录使用 IP 地址 / CNAME 记录使用主机名
+
+请按照下面提供的格式输入您的记录：
+
+示例：
+✅ A 记录：A pay 192.0.2.1（如果没有主机名，则 A 192.0.2.1）
+✅ CNAME 记录：CNAME pay 0oaawzt7.up.railway.app（如果没有主机名，则 CNAME 0oaawzt7.up.railway.app）`
+
 const t = {
   yes: '是',
   no: '否',
@@ -300,7 +311,39 @@ ${CHAT_BOT_NAME}`,
   errorSavingDomain: `保存域名时出错，请联系支持 ${SUPPORT_USERNAME}。更多信息请访问 ${TG_HANDLE}。`,
   chooseDomainToManage: `请选择您要管理的域名。`,
   chooseDomainWithShortener: `请选择或购买您想要连接到短链接的域名。`,
-  viewDnsRecords: `以下是 {{domain}} 的 DNS 记录`,
+  viewDnsRecords: (records, domain) => `以下是 ${domain} 的 DNS 记录
+
+A 记录（可选，但用于直接 IP 映射是必需的）
+${
+  records.A && records.A.length
+    ? records.A.map(
+        record => `<strong>${record.index}. A 记录</strong>
+  • 主机名：${record.recordName}
+  • A 记录值：${record.recordContent ? record.recordContent : '无'}`,
+      ).join('\n')
+    : '  • A 记录：无'
+}
+
+NS 记录（必需 – 用于域名解析）
+${
+  records.NS && records.NS.length
+    ? records.NS.map(record => `<strong>${record.index}. NS 记录 ${record.nsId}</strong> ${record.recordContent}`).join(
+        '\n\n',
+      )
+    : '  • NS 记录：无'
+}
+
+CNAME 记录（可选，但如果要将另一个域作为别名，而不是使用 A 记录，则必需）
+${
+  records.CNAME && records.CNAME.length
+    ? records.CNAME.map(
+        record => `<strong>${record.index}. CNAME 记录</strong>
+  • 主机名：${record.recordName}
+  • CNAME 记录值：${record.recordContent ? record.recordContent : '无'}`,
+      ).join('\n')
+    : '  • CNAME 记录：无'
+}`,
+
   addDns: `添加 DNS 记录`,
   updateDns: `更新 DNS 记录`,
   deleteDns: `删除 DNS 记录`,
@@ -315,18 +358,20 @@ ${CHAT_BOT_NAME}`,
   'CNAME 记录': `CNAME`,
   'NS 记录': `NS`,
   askDnsContent: {
-    A: `请输入 A 记录。例：108.0.56.98`,
-    'A 记录': `请输入 A 记录。例：108.0.56.98`,
-    CNAME: `请输入 CNAME 记录。例：abc.hello.org`,
-    'CNAME 记录': `请输入 CNAME 记录。例：abc.hello.org`,
+    A: dnsEntryFormat,
+    'A 记录': dnsEntryFormat,
+
+    CNAME: dnsEntryFormat,
+    'CNAME 记录': dnsEntryFormat,
+
     NS: `请输入您的 NS 记录。例：dell.ns.cloudflare.com。一个新的 NS 记录将添加到现有记录中。`,
     'NS 记录': `请输入您的 NS 记录。例：dell.ns.cloudflare.com。如果 N1-N4 已存在，请更新记录。`,
   },
   askUpdateDnsContent: {
-    A: `请输入 A 记录。例：108.0.56.98`,
-    'A 记录': `请输入 A 记录。例：108.0.56.98`,
-    CNAME: `请输入 CNAME 记录。例：abc.hello.org`,
-    'CNAME 记录': `请输入 CNAME 记录。例：abc.hello.org`,
+    A: dnsEntryFormat,
+    'A 记录': dnsEntryFormat,
+    CNAME: dnsEntryFormat,
+    'CNAME 记录': dnsEntryFormat,
     NS: `一个新的 NS 记录将被更新到选定的 ID。如果要添加新记录，请选择“添加 DNS 记录”`,
     'NS 记录': `一个新的 NS 记录将被更新到选定的 ID。如果要添加新记录，请选择“添加 DNS 记录”`,
   },

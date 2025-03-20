@@ -665,19 +665,24 @@ bot?.on('message', async msg => {
         nsId,
         recordContent,
       }))
-      const viewDnsRecords = records
-        .map(
-          ({ recordType, recordContent, nsId }, i) =>
-            `${i + 1}.\t${recordType === 'NS' ? recordType + nsId : recordType === 'A' ? 'A Record' : recordType}:\t${recordContent || 'None'
-            }`,
-        )
-        .join('\n')
+
+      const categorizeRecords = (records) => {
+        return records.reduce((acc, record, index) => {
+          const type = record.recordType;
+          if (!acc[type]) {
+            acc[type] = [];
+          }
+          acc[type].push({ index: index+1, ...record });
+          return acc;
+        }, {});
+      };
+      const categorizedRecords = categorizeRecords(records);
 
       set(state, chatId, 'dnsRecords', toSave)
 
       set(state, chatId, 'domainNameId', domainNameId)
       set(state, chatId, 'action', 'choose-dns-action')
-      send(chatId, `${t.viewDnsRecords.replaceAll('{{domain}}', domain)}\n${viewDnsRecords}`, trans('dns'))
+      send(chatId, t.viewDnsRecords(categorizedRecords, domain), trans('dns'))
     },
 
     'type-dns-record-data-to-add': recordType => {
@@ -2411,8 +2416,10 @@ bot?.on('message', async msg => {
   if (action === a.askVpsCpanel) {
     let vpsDetails = info?.vpsDetails
     if (message === vp.back) return vpsDetails.plan != 'Hourly' ? goto.askVPSPlanAutoRenewal() : goto.askUserVpsPlan()
-    const cpanels = trans('vpsCpanelOptional') 
-    if (!cpanels.includes(message)) return send (chatId, vp.validCpanel, vp.cpanelMenu)
+    const cpanels = trans('vpsCpanelOptional')
+    // @TODO revert back
+    // if (!cpanels.includes(message)) return send (chatId, vp.validCpanel, vp.cpanelMenu)
+    if (!cpanels.includes(message)) return send (chatId, vp.validCpanel, vp.of([cpanels[1], cpanels[2]]))
     vpsDetails.panel = message === vp.noControlPanel ? null : {
       name: message === 'WHM' ? 'whm' : 'plesk'
     }
@@ -2573,7 +2580,7 @@ bot?.on('message', async msg => {
   if (action === a.getUserAllVmIntances) {
     if (message === vp.back) return goto.submenu4()
     if (message === user.buyVpsPlan) return goto.createNewVpsFlow()
-    const list = info?.userVPSDetails?.map((item) => item?.name)
+    const list = info?.userVPSDetails?.map((item) => item?.name) || [];
     if (!list?.includes(message)) return send(chatId, vp.selectCorrectOption, vp.of([...list, user.buyVpsPlan]))
     const selectedVPS = info?.userVPSDetails?.find((item) => item.name ===  message)
     info.vpsDetails = selectedVPS
@@ -3698,8 +3705,15 @@ bot?.on('message', async msg => {
     if (message === t.back) return goto['select-dns-record-type-to-add']()
 
     const domain = info?.domainToManage
-    const recordType = info?.recordType
-    const recordContent = message
+    let recordType = info?.recordType
+    let newRecordDetails = null
+    if (t[recordType] !== 'NS') {
+      newRecordDetails = message.split(" ")
+      if (!newRecordDetails || newRecordDetails.length < 2 || newRecordDetails.length > 3) return send(chatId, t.selectValidOption)
+      if (!['A', 'CNAME'].includes(newRecordDetails[0].toLocaleUpperCase()))return send(chatId, t.selectValidOption)
+    }
+    const recordContent = newRecordDetails ? newRecordDetails[newRecordDetails.length -1 ] : message
+    const hostName = newRecordDetails && newRecordDetails.length === 3 ? newRecordDetails[1] : null
     const dnsRecords = info?.dnsRecords
     const nsRecords = dnsRecords?.filter(r => r.recordType === 'NS')
     const domainNameId = info?.domainNameId
@@ -3710,7 +3724,7 @@ bot?.on('message', async msg => {
     }
 
     const nextId = nextNumber(nsRecords.map(r => r.nsId))
-    const { error } = await saveServerInDomain(domain, recordContent, t[recordType], domainNameId, nextId, nsRecords)
+    const { error } = await saveServerInDomain(domain, recordContent, t[recordType], domainNameId, nextId, nsRecords, hostName)
     if (error) {
       const m = t.errorSavingDns(error)
       return send(chatId, m)
@@ -3735,13 +3749,21 @@ bot?.on('message', async msg => {
   if (action === 'type-dns-record-data-to-update') {
     if (message === t.back) return goto['select-dns-record-id-to-update']()
 
-    const recordContent = message
     const dnsRecords = info?.dnsRecords
     const domainNameId = info?.domainNameId
     const domain = info?.domainToManage
     const id = info?.dnsRecordIdToUpdate
+    let newRecordDetails = null
 
     const { dnszoneID, dnszoneRecordID, recordType, nsId } = dnsRecords[id]
+
+    if (recordType !== 'NS') {
+      newRecordDetails = message.split(" ")
+      if (!newRecordDetails || newRecordDetails.length < 2 || newRecordDetails.length > 3) return send(chatId, t.selectValidOption)
+      if (!['A', 'CNAME'].includes(newRecordDetails[0].toLocaleUpperCase()))return send(chatId, t.selectValidOption)
+    }
+    const recordContent = newRecordDetails ? newRecordDetails[newRecordDetails.length -1 ] : message
+    const hostName = newRecordDetails && newRecordDetails.length === 3 ? newRecordDetails[1] : null
 
     const { error } = await updateDNSRecord(
       dnszoneID,
@@ -3752,6 +3774,7 @@ bot?.on('message', async msg => {
       domainNameId,
       nsId,
       dnsRecords.filter(r => r.recordType === 'NS'),
+      hostName
     )
     if (error) {
       const m = `Error update dns record, ${error}, Provide value again`

@@ -149,6 +149,17 @@ const bal = (usd, ngn) =>
 ₦${view(ngn)}`
     : `$${view(usd)}`
 
+const dnsEntryFormat = `रिकॉर्ड प्रारूप:
+	•	A रिकॉर्ड (वेबसाइट के लिए अनिवार्य) / CNAME (वैकल्पिक, A रिकॉर्ड के साथ सह-अस्तित्व नहीं रख सकता)
+	•	होस्ट नाम: उपडोमेन (उदा. : auth) या रूट के लिए '@' (वैकल्पिक)
+	•	मान: A के लिए IP पता / CNAME के लिए होस्टनाम
+
+कृपया नीचे दिए गए प्रारूप का उपयोग करके अपना रिकॉर्ड दर्ज करें:
+
+उदाहरण:
+✅ A रिकॉर्ड: A pay 192.0.2.1 (या A 192.0.2.1 यदि कोई होस्ट नाम नहीं है)
+✅ CNAME रिकॉर्ड: CNAME pay 0oaawzt7.up.railway.app (या CNAME 0oaawzt7.up.railway.app यदि कोई होस्ट नाम नहीं है)`
+
 const t = {
   yes: 'हाँ',
   no: 'नहीं',
@@ -306,7 +317,39 @@ ${CHAT_BOT_NAME}`,
   errorSavingDomain: `डोमेन को सर्वर पर सहेजने में त्रुटि, समर्थन ${SUPPORT_USERNAME} से संपर्क करें। ${TG_HANDLE} पर अधिक जानें।`,
   chooseDomainToManage: `कृपया चयन करें यदि आप DNS सेटिंग्स प्रबंधित करना चाहते हैं।`,
   chooseDomainWithShortener: `कृपया वह डोमेन नाम चुनें या खरीदें जिसे आप अपने संक्षेपित लिंक से कनेक्ट करना चाहते हैं।`,
-  viewDnsRecords: `यहां DNS रिकॉर्ड्स हैं {{domain}} के लिए`,
+  viewDnsRecords: (records, domain) => `यह हैं ${domain} के DNS रिकॉर्ड
+
+A रिकॉर्ड (वैकल्पिक, लेकिन सीधे IP मैपिंग के लिए आवश्यक)
+${
+  records.A && records.A.length
+    ? records.A.map(
+        record => `<strong>${record.index}. A रिकॉर्ड</strong>
+  • होस्ट नाम: ${record.recordName}
+  • A रिकॉर्ड मान: ${record.recordContent ? record.recordContent : 'कोई नहीं'}`,
+      ).join('\n')
+    : '  • A रिकॉर्ड: कोई नहीं'
+}
+
+NS रिकॉर्ड (अनिवार्य – डोमेन रिज़ॉल्यूशन के लिए आवश्यक)
+${
+  records.NS && records.NS.length
+    ? records.NS.map(
+        record => `<strong>${record.index}. NS रिकॉर्ड ${record.nsId}</strong> ${record.recordContent}`,
+      ).join('\n\n')
+    : '  • NS रिकॉर्ड: कोई नहीं'
+}
+
+CNAME रिकॉर्ड (वैकल्पिक, लेकिन किसी अन्य डोमेन को A रिकॉर्ड के बजाय एलिएस करने के लिए आवश्यक)
+${
+  records.CNAME && records.CNAME.length
+    ? records.CNAME.map(
+        record => `<strong>${record.index}. CNAME रिकॉर्ड</strong>
+  • होस्ट नाम: ${record.recordName}
+  • CNAME रिकॉर्ड मान: ${record.recordContent ? record.recordContent : 'कोई नहीं'}`,
+      ).join('\n')
+    : '  • CNAME रिकॉर्ड: कोई नहीं'
+}`,
+
   addDns: `DNS रिकॉर्ड जोड़ें`,
   updateDns: `DNS रिकॉर्ड अपडेट करें`,
   deleteDns: `DNS रिकॉर्ड हटाएं`,
@@ -321,18 +364,20 @@ ${CHAT_BOT_NAME}`,
   'CNAME रिकॉर्ड': `CNAME`,
   'NS रिकॉर्ड': `NS`,
   askDnsContent: {
-    A: `कृपया A रिकॉर्ड प्रदान करें। i.e, 108.0.56.98`,
-    'A रिकॉर्ड': `कृपया A रिकॉर्ड प्रदान करें। i.e, 108.0.56.98`,
-    CNAME: `कृपया CNAME रिकॉर्ड प्रदान करें। i.e, abc.hello.org`,
-    'CNAME रिकॉर्ड': `कृपया CNAME रिकॉर्ड प्रदान करें। i.e, abc.hello.org`,
+    A: dnsEntryFormat,
+    'A रिकॉर्ड': dnsEntryFormat,
+
+    CNAME: dnsEntryFormat,
+    'CNAME रिकॉर्ड': dnsEntryFormat,
+
     NS: `कृपया अपना NS रिकॉर्ड दर्ज करें। i.e., dell.ns.cloudflare.com. एक नया NS रिकॉर्ड मौजूदा रिकॉर्ड में जोड़ा जाएगा।`,
     'NS रिकॉर्ड': `कृपया अपना NS रिकॉर्ड दर्ज करें। i.e., dell.ns.cloudflare.com .यदि N1-N4 पहले से मौजूद है, तो कृपया रिकॉर्ड को अपडेट करें`,
   },
   askUpdateDnsContent: {
-    A: `कृपया A रिकॉर्ड प्रदान करें। i.e, 108.0.56.98`,
-    'A रिकॉर्ड': `कृपया A रिकॉर्ड प्रदान करें। i.e, 108.0.56.98`,
-    CNAME: `कृपया CNAME रिकॉर्ड प्रदान करें। i.e, abc.hello.org`,
-    'CNAME रिकॉर्ड': `कृपया CNAME रिकॉर्ड प्रदान करें। i.e, abc.hello.org`,
+    A: dnsEntryFormat,
+    'A रिकॉर्ड': dnsEntryFormat,
+    CNAME: dnsEntryFormat,
+    'CNAME रिकॉर्ड': dnsEntryFormat,
     NS: `चयनित आईडी के लिए नया NS रिकॉर्ड अपडेट किया जाएगा। एक नया रिकॉर्ड जोड़ने के लिए, कृपया "DNS रिकॉर्ड जोड़ें" चुनें`,
     'NS रिकॉर्ड': `चयनित आईडी के लिए नया NS रिकॉर्ड अपडेट किया जाएगा। एक नया रिकॉर्ड जोड़ने के लिए, कृपया "DNS रिकॉर्ड जोड़ें" चुनें`,
   },

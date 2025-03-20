@@ -148,6 +148,17 @@ const bal = (usd, ngn) =>
 ₦${view(ngn)}`
     : `$${view(usd)}`
 
+const dnsEntryFormat = `Record Format:
+	•	A Record (Mandatory for website) / CNAME (Optional, cannot coexist with A Record)
+	•	Host Name: Subdomain (e.g., auth) or @ for root (Optional)
+	•	Value: IP Address for A / Hostname for CNAME
+
+Please enter your record using the format provided below:
+
+Examples:
+✅ A Record: A pay 192.0.2.1 (or A 192.0.2.1 if no host name)
+✅ CNAME Record: CNAME pay 0oaawzt7.up.railway.app (or CNAME 0oaawzt7.up.railway.app if no host name)`
+
 const t = {
   yes: 'Yes',
   no: 'No',
@@ -335,7 +346,36 @@ ${CHAT_BOT_NAME}`,
 
   chooseDomainWithShortener: `Please select or buy the domain name you would like to connect with your shortened link.`,
 
-  viewDnsRecords: `Here are DNS Records for {{domain}}`,
+  viewDnsRecords: (records, domain) => `Here are DNS Records for ${domain}
+
+A Records (Optional, but required for direct IP mapping)
+${
+  records.A && records.A.length
+    ? records.A.map(
+        record => `<strong>${record.index}.	A Record</strong>
+  • Host Name: ${record.recordName}
+  •	A Record Value: ${record.recordContent ? record.recordContent : 'None'}`,
+      ).join('\n')
+    : '  • A Record: NONE'
+}
+
+NS Records (Mandatory – Required for domain resolution)
+${
+  records.NS && records.NS.length
+    ? records.NS.map(record => `<strong>${record.index}.	NS${record.nsId} ${record.recordContent}</strong>`).join('\n\n')
+    : '  • NS Record: NONE'
+}
+
+CNAME Records (Optional, but required if aliasing another domain instead of using an A record)
+${
+  records.CNAME && records.CNAME.length
+    ? records.CNAME.map(
+        record => `<strong>${record.index}.	CNAME Record</strong>
+  • Host Name: ${record.recordName}
+  •	CNAME Record Value: ${record.recordContent ? record.recordContent : 'None'}`,
+      ).join('\n')
+    : '  • CNAME Record: NONE'
+}`,
   addDns: 'Add DNS Record',
   updateDns: 'Update DNS Record',
   deleteDns: 'Delete DNS Record',
@@ -350,21 +390,21 @@ ${CHAT_BOT_NAME}`,
   'CNAME Record': 'CNAME',
   'NS Record': 'NS',
   askDnsContent: {
-    A: `Please provide A record. i.e, 108.0.56.98`,
-    'A Record': `Please provide A record. i.e, 108.0.56.98`,
+    A: dnsEntryFormat,
+    'A Record': dnsEntryFormat,
 
-    CNAME: `Please provide CNAME record. i.e, abc.hello.org`,
-    'CNAME Record': `Please provide CNAME record. i.e, abc.hello.org`,
+    CNAME: dnsEntryFormat,
+    'CNAME Record': dnsEntryFormat,
 
     NS: `Please enter your NS record. i.e., dell.ns.cloudflare.com. A new NS record will be added to the current ones.`,
     'NS Record': `Please enter your NS record. i.e., dell.ns.cloudflare.com .If N1-N4 already exists, please update record instead`,
   },
   askUpdateDnsContent: {
-    A: `Please provide A record. i.e, 108.0.56.98`,
-    'A Record': `Please provide A record. i.e, 108.0.56.98`,
+    A: dnsEntryFormat,
+    'A Record': dnsEntryFormat,
 
-    CNAME: `Please provide CNAME record. i.e, abc.hello.org`,
-    'CNAME Record': `Please provide CNAME record. i.e, abc.hello.org`,
+    CNAME: dnsEntryFormat,
+    'CNAME Record': dnsEntryFormat,
 
     NS: `A new NS record will be updated for the selected id. To Add a new record, please choose “Add DNS Record”`,
     'NS Record': `A new NS record will be updated for the selected id. To Add a new record, please choose “Add DNS Record”`,

@@ -3,7 +3,7 @@ const fs = require('fs')
 require('dotenv').config()
 const axios = require('axios')
 const QRCode = require('qrcode')
-const { timeOf, freeDomainsOf, o } = require('./config')
+const { timeOf, freeDomainsOf } = require('./config')
 const { getAll, get, set } = require('./db')
 const { log } = require('console')
 const resolveDns = require('./resolve-cname.js')
@@ -147,7 +147,7 @@ const sendMessageToAllUsers = async (bot, message, method, nameOf, myChatId) => 
   const chatIds = await getChatIds(nameOf)
   const total = chatIds.length
   bot.sendMessage(myChatId, `Total users: ${total}`)
-  for (let i = 0; i < total; i++) bot[method](chatIds[i], message, o).catch(err => log(err.message, chatIds[i]))
+  for (let i = 0; i < total; i++) bot[method](chatIds[i], message).catch(err => log(err.message, chatIds[i]))
 }
 
 const getChatIds = async nameOf => {

@@ -150,6 +150,17 @@ const bal = (usd, ngn) =>
 ₦${view(ngn)}`
     : `$${view(usd)}`
 
+const dnsEntryFormat = `Format d'enregistrement :
+	•	Enregistrement A (Obligatoire pour un site web) / CNAME (Optionnel, ne peut pas coexister avec un enregistrement A)
+	•	Nom d'hôte : Sous-domaine (ex. : auth) ou '@' pour la racine (Optionnel)
+	•	Valeur : Adresse IP pour A / Nom d'hôte pour CNAME
+
+Veuillez saisir votre enregistrement en utilisant le format fourni ci-dessous :
+
+Exemples :
+✅ Enregistrement A : A pay 192.0.2.1 (ou A 192.0.2.1 si aucun nom d'hôte)
+✅ Enregistrement CNAME : CNAME pay 0oaawzt7.up.railway.app (ou CNAME 0oaawzt7.up.railway.app si aucun nom d'hôte)`
+
 const t = {
   yes: 'Oui',
   no: 'Non',
@@ -311,7 +322,39 @@ ${CHAT_BOT_NAME}`,
   errorSavingDomain: `Erreur lors de l'enregistrement du domaine sur le serveur, veuillez contacter le support ${SUPPORT_USERNAME}. Découvrez plus ${TG_HANDLE}.`,
   chooseDomainToManage: `Veuillez sélectionner un domaine si vous souhaitez gérer ses paramètres DNS.`,
   chooseDomainWithShortener: `Veuillez sélectionner ou acheter le nom de domaine que vous souhaitez relier à votre lien raccourci.`,
-  viewDnsRecords: `Voici les enregistrements DNS pour {{domain}}`,
+  viewDnsRecords: (records, domain) => `Voici les enregistrements DNS pour ${domain}
+
+Enregistrements A (Optionnels, mais requis pour le mappage direct de l'IP)
+${
+  records.A && records.A.length
+    ? records.A.map(
+        record => `<strong>${record.index}. Enregistrement A</strong>
+  • Nom d’hôte : ${record.recordName}
+  • Valeur de l’enregistrement A : ${record.recordContent ? record.recordContent : 'Aucune'}`,
+      ).join('\n')
+    : '  • Enregistrement A : AUCUN'
+}
+
+Enregistrements NS (Obligatoires – Requis pour la résolution de domaine)
+${
+  records.NS && records.NS.length
+    ? records.NS.map(
+        record => `<strong>${record.index}. Enregistrement NS${record.nsId}</strong> ${record.recordContent}`,
+      ).join('\n\n')
+    : '  • Enregistrement NS : AUCUN'
+}
+
+Enregistrements CNAME (Optionnels, mais requis pour l’alias d’un autre domaine au lieu d’un enregistrement A)
+${
+  records.CNAME && records.CNAME.length
+    ? records.CNAME.map(
+        record => `<strong>${record.index}. Enregistrement CNAME</strong>
+  • Nom d’hôte : ${record.recordName}
+  • Valeur de l’enregistrement CNAME : ${record.recordContent ? record.recordContent : 'Aucune'}`,
+      ).join('\n')
+    : '  • Enregistrement CNAME : AUCUN'
+}`,
+
   addDns: `Ajouter un enregistrement DNS`,
   updateDns: `Mettre à jour un enregistrement DNS`,
   deleteDns: `Supprimer un enregistrement DNS`,
@@ -326,18 +369,18 @@ ${CHAT_BOT_NAME}`,
   'Enregistrement CNAME': `CNAME`,
   'Enregistrement NS': `NS`,
   askDnsContent: {
-    A: `Veuillez fournir l'enregistrement A. i.e, 108.0.56.98`,
-    'Enregistrement A': `Veuillez fournir l'enregistrement A. i.e, 108.0.56.98`,
-    CNAME: `Veuillez fournir l'enregistrement CNAME. i.e, abc.hello.org`,
-    'Enregistrement CNAME': `Veuillez fournir l'enregistrement CNAME. i.e, abc.hello.org`,
+    A: dnsEntryFormat,
+    'Enregistrement A': dnsEntryFormat,
+    CNAME: dnsEntryFormat,
+    'Enregistrement CNAME': dnsEntryFormat,
     NS: `Veuillez entrer votre enregistrement NS. i.e., dell.ns.cloudflare.com. Un nouvel enregistrement NS sera ajouté aux existants.`,
     'Enregistrement NS': `Veuillez entrer votre enregistrement NS. i.e., dell.ns.cloudflare.com .Si les N1-N4 existent déjà, veuillez mettre à jour l'enregistrement à la place`,
   },
   askUpdateDnsContent: {
-    A: `Veuillez fournir l'enregistrement A. i.e, 108.0.56.98`,
-    'Enregistrement A': `Veuillez fournir l'enregistrement A. i.e, 108.0.56.98`,
-    CNAME: `Veuillez fournir l'enregistrement CNAME. i.e, abc.hello.org`,
-    'Enregistrement CNAME': `Veuillez fournir l'enregistrement CNAME. i.e, abc.hello.org`,
+    A: dnsEntryFormat,
+    'Enregistrement A': dnsEntryFormat,
+    CNAME: dnsEntryFormat,
+    'Enregistrement CNAME': dnsEntryFormat,
     NS: `Un nouvel enregistrement NS sera mis à jour pour l'identifiant sélectionné. Pour ajouter un nouvel enregistrement, veuillez choisir "Ajouter un enregistrement DNS"`,
     'Enregistrement NS': `Un nouvel enregistrement NS sera mis à jour pour l'identifiant sélectionné. Pour ajouter un nouvel enregistrement, veuillez choisir "Ajouter un enregistrement DNS"`,
   },
