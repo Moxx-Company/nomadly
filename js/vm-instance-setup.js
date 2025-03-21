@@ -638,6 +638,33 @@ async function renewVPSPlan(telegramId, subscriptionId) {
   }
 }
 
+async function renewVPSCPanel(telegramId, subscriptionId) {
+  try {
+    const url = `${NAMEWORD_BASE_URL}/subscription/cpanel/renew`
+    let payload = {
+      subscriptionId: subscriptionId,
+      telegramId: telegramId,
+    }
+    const response = await axios.post(url, payload, { headers })
+    if (response?.data?.data) {
+      console.log(response?.data.data)
+      return { success: true, data: response?.data?.data }
+    } else {
+      let errorMessage = `Issue in Renewing VPS CPanel ${response?.data?.responseMsg?.message}`
+      console.error(errorMessage)
+      return { error: errorMessage }
+    }
+  } catch (error) {
+    const errorMessage = `Error in Renewing VPS CPanel ${error.message} ${JSON.stringify(
+      error?.response?.data,
+      null,
+      2,
+    )}`
+    console.error(errorMessage)
+    return { error: errorMessage }
+  }
+}
+
 const getVpsUpgradePrice = vpsDetails => {
   switch (vpsDetails.billingCycle) {
     case 'Hourly':
@@ -791,5 +818,6 @@ module.exports = {
   getVpsUpgradePrice,
   upgradeVPSPlanType,
   upgradeVPSDiskType,
-  renewVPSPlan
+  renewVPSPlan,
+  renewVPSCPanel
 }

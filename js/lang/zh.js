@@ -1400,11 +1400,15 @@ ${
   } USD
 
 <strong>✅ 是否确认订单？</strong>`,
-  vpsSubscriptionData: (vpsData, expireDate) => `<strong>🗂️ 您的活动订阅：</strong>
+  vpsSubscriptionData: (vpsData, planExpireDate, panelExpireDate) => `<strong>🗂️ 您的有效订阅：</strong>
 
-<strong>• VPS ${vpsData.name} </strong>– 到期: ${expireDate}（自动续订：${vpsData.autoRenewable ? '启用' : '禁用'}）
-<strong>• 控制面板 ${vpsData?.cPanel ? vpsData.cPanel + ' - ' : ': 未选择'} </strong> ${
-    vpsData?.cPanel ? '已续订' : ''
+<strong>• VPS ${vpsData.name} </strong> – 到期日期：${planExpireDate}  (自动续订：${
+    vpsData.autoRenewable ? '已启用' : '已禁用'
+  })
+<strong>• 控制面板 ${vpsData?.cPanelPlanDetails ? vpsData.cPanelPlanDetails.type : '：未选择'} </strong> ${
+    vpsData?.cPanelPlanDetails
+      ? `${vpsData?.cPanelPlanDetails.status === 'active' ? '- 到期日期：' : '- 已过期：'}${panelExpireDate}`
+      : ''
   } `,
 
   manageVpsSubBtn: '🖥️ 管理VPS订阅',
@@ -1416,6 +1420,14 @@ ${
 <strong>• 计划：</strong> ${data.planDetails.name}
 <strong>• 当前到期日期：</strong> ${date}
 <strong>• 自动续订：</strong> ${data.autoRenewable ? '启用' : '禁用'}`,
+
+  vpsCPanelDetails: (data, date) => `<strong>📅 控制面板订阅详情：</strong>
+
+<strong>• 关联的 VPS ID：</strong> ${data.name}
+<strong>• 控制面板类型：</strong> ${data.cPanelPlanDetails.type} (${data.cPanelPlanDetails.name})
+<strong>• 当前到期日期：</strong> ${date}
+<strong>• 自动续订：</strong> ${data.autoRenewable ? '已启用' : '已禁用'}
+`,
 
   vpsEnableRenewalBtn: '🔄 启用自动续订',
   vpsDisableRenewalBtn: '❌ 禁用自动续订',
@@ -1499,17 +1511,17 @@ ${
   bankPayVPSRenewPlan: priceNGN =>
     `请点击下方的“支付”按钮支付 ${priceNGN} NGN。一旦交易确认，您将立即收到通知，您的 VPS 计划将被激活并续订。`,
 
-  renewVpsPanelConfirmMsg: (data, vpsDetails) => `<strong>💳 是否继续续订控制面板？</strong>
+  renewVpsPanelConfirmMsg: (data, panelDetails, date) => `<strong>💳 是否继续续订控制面板？</strong>
 
-<strong>📜 账单摘要</strong>
-<strong>• 关联的 VPS ID：</strong> ${vpsDetails.name}
-<strong>• 控制面板：</strong> ${vpsDetails.cPanel}
-<strong>• 续订周期：</strong> 1 个月
-<strong>• 新到期日期：</strong> [新日期]
-<strong>• 应付金额：</strong> ${data.totalPrice}`,
+<strong>📜 发票摘要</strong>
+  <strong>• 关联的 VPS ID：</strong> ${data.name}
+  <strong>• 控制面板：</strong> ${panelDetails.type}
+  <strong>• 续订周期：</strong> ${panelDetails.durationValue}${' '}个月
+  <strong>• 当前到期日期：</strong> ${date}
+  <strong>• 应付金额：</strong> ${data.totalPrice} USD`,
 
   bankPayVPSRenewCpanel: (priceNGN, vpsDetails) =>
-    `请点击下方的“支付”按钮支付 ${priceNGN} NGN。一旦交易确认，您将立即收到通知，您的 VPS 计划将被激活，并且 ${vpsDetails.cPanel} 控制面板将被续订。`,
+    `请点击下方的“支付”按钮支付 ${priceNGN} NGN。一旦交易确认，您将立即收到通知，您的 VPS 计划将被激活，并且 ${vpsDetails.cPanelPlanDetails.type} 控制面板将被续订。`,
 
   vpsUnlinkCpanelWarning: vpsDetails =>
     `⚠️ 警告：取消关联将从 VPS ${vpsDetails.name} 中移除 ${vpsDetails.cPanel} 许可证，您将无法使用其功能。是否继续？`,
@@ -1529,6 +1541,11 @@ ${
 
   vpsRenewPlanSuccess: (vpsDetails, expiryDate) =>
     `✅ VPS订阅 ${vpsDetails.name} 已成功续订！
+
+• 新到期日期：${expiryDate}
+`,
+  vpsRenewCPanelSuccess: (vpsDetails, expiryDate) =>
+    `✅ ${vpsDetails.name} 的控制面板订阅已成功续订！
 
 • 新到期日期：${expiryDate}
 `,

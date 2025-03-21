@@ -1445,13 +1445,17 @@ ${
 
 <strong>✅ Confirmez-vous la commande ?</strong>`,
 
-  vpsSubscriptionData: (vpsData, expireDate) => `<strong>🗂️ Vos abonnements actifs :</strong>
+  vpsSubscriptionData: (vpsData, planExpireDate, panelExpireDate) => `<strong>🗂️ Vos abonnements actifs :</strong>
 
-<strong>• VPS ${vpsData.name} </strong>– Expire: ${expireDate}  (Renouvellement automatique : ${
+<strong>• VPS ${vpsData.name} </strong> – Expire le : ${planExpireDate}  (Renouvellement automatique : ${
     vpsData.autoRenewable ? 'Activé' : 'Désactivé'
   })
-<strong>• Panneau de contrôle ${vpsData?.cPanel ? vpsData.cPanel + ' - ' : ': Non sélectionné'} </strong> ${
-    vpsData?.cPanel ? 'Renouvelé' : ''
+<strong>• Panneau de contrôle ${
+    vpsData?.cPanelPlanDetails ? vpsData.cPanelPlanDetails.type : ': Non sélectionné'
+  } </strong> ${
+    vpsData?.cPanelPlanDetails
+      ? `${vpsData?.cPanelPlanDetails.status === 'active' ? '- Expire le : ' : '- Expiré le : '}${panelExpireDate}`
+      : ''
   } `,
 
   manageVpsSubBtn: "🖥️ Gérer l'abonnement VPS",
@@ -1463,6 +1467,14 @@ ${
 <strong>• Plan :</strong> ${data.planDetails.name}
 <strong>• Date d\'expiration actuelle :</strong> ${date}
 <strong>• Renouvellement automatique :</strong> ${data.autoRenewable ? 'Activé' : 'Désactivé'}`,
+
+  vpsCPanelDetails: (data, date) => `<strong>📅 Détails de l'abonnement au panneau de contrôle :</strong>
+
+<strong>• ID VPS lié :</strong> ${data.name}
+<strong>• Type de panneau de contrôle :</strong> ${data.cPanelPlanDetails.type} (${data.cPanelPlanDetails.name})
+<strong>• Date d'expiration actuelle :</strong> ${date}
+<strong>• Renouvellement automatique :</strong> ${data.autoRenewable ? 'Activé' : 'Désactivé'}
+`,
 
   vpsEnableRenewalBtn: '🔄 Activer le renouvellement automatique',
   vpsDisableRenewalBtn: '❌ Désactiver le renouvellement automatique',
@@ -1551,18 +1563,19 @@ ${
 
   renewVpsPanelConfirmMsg: (
     data,
-    vpsDetails,
+    panelDetails,
+    date,
   ) => `<strong>💳 Procéder au renouvellement du panneau de contrôle ?</strong>
 
 <strong>📜 Résumé de la facture</strong>
-<strong>• ID VPS lié :</strong> ${vpsDetails.name}
-<strong>• Panneau de contrôle :</strong> ${vpsDetails.cPanel}
-<strong>• Période de renouvellement :</strong> 1 mois
-<strong>• Nouvelle date d'expiration :</strong> [Nouvelle Date]
-<strong>• Montant dû :</strong> ${data.totalPrice}`,
+  <strong>• ID VPS lié :</strong> ${data.name}
+  <strong>• Panneau de contrôle :</strong> ${panelDetails.type}
+  <strong>• Période de renouvellement :</strong> ${panelDetails.durationValue}${' '}Mois
+  <strong>• Date d'expiration actuelle :</strong> ${date}
+  <strong>• Montant dû :</strong> ${data.totalPrice} USD`,
 
   bankPayVPSRenewCpanel: (priceNGN, vpsDetails) =>
-    `Veuillez envoyer ${priceNGN} NGN en cliquant sur "Effectuer le paiement" ci-dessous. Une fois la transaction confirmée, vous serez immédiatement notifié et votre plan VPS sera activé et le panneau de contrôle ${vpsDetails.cPanel} sera renouvelé.`,
+    `Veuillez envoyer ${priceNGN} NGN en cliquant sur "Effectuer le paiement" ci-dessous. Une fois la transaction confirmée, vous serez immédiatement notifié et votre plan VPS sera activé et le panneau de contrôle ${vpsDetails.cPanelPlanDetails.type} sera renouvelé.`,
 
   vpsUnlinkCpanelWarning: vpsDetails =>
     `⚠️ Avertissement : Dissocier supprimera la licence ${vpsDetails.cPanel} du VPS ${vpsDetails.name}, et vous perdrez l'accès à ses fonctionnalités. Voulez-vous continuer ?`,
@@ -1581,6 +1594,11 @@ En savoir plus ${TG_HANDLE}.`,
     `✅ Disque mis à niveau vers ${vpsDetails.upgradeOption.to} pour le VPS ${vpsDetails.name}. Votre nouveau type de disque est maintenant actif.`,
   vpsRenewPlanSuccess: (vpsDetails, expiryDate) =>
     `✅ L'abonnement VPS pour ${vpsDetails.name} a été renouvelé avec succès !
+
+• Nouvelle date d'expiration : ${expiryDate}
+`,
+  vpsRenewCPanelSuccess: (vpsDetails, expiryDate) =>
+    `✅ Abonnement au panneau de contrôle pour ${vpsDetails.name} renouvelé avec succès !
 
 • Nouvelle date d'expiration : ${expiryDate}
 `,

@@ -113,7 +113,8 @@ const {
   upgradeVPSPlanType,
   fetchVpsUpgradeOptions,
   upgradeVPSDiskType,
-  renewVPSPlan
+  renewVPSPlan,
+  renewVPSCPanel
 } = require('./vm-instance-setup.js')
 const { console } = require('inspector')
 
@@ -533,7 +534,6 @@ bot?.on('message', async msg => {
     uploadSShKeyToAttach : 'uploadSShKeyToAttach',
     downloadSSHKey: 'downloadSSHKey',
     confirmVPSRenewDetails: 'confirmVPSRenewDetails',
-    confirmVpsCpanelUnlink: 'confirmVpsCpanelUnlink'
   }
 
   const firstSteps = [
@@ -1290,10 +1290,7 @@ bot?.on('message', async msg => {
 
     askVpsCpanel: () => {
       set(state, chatId, 'action', a.askVpsCpanel)
-      //@TODO revert to add WHM too
-      // return send(chatId, vp.askVpsCpanel, vp.cpanelMenu)
-      const cpanels = trans('vpsCpanelOptional')
-      return send(chatId, vp.askVpsCpanel, vp.of([cpanels[1], cpanels[2]]))
+      return send(chatId, vp.askVpsCpanel, vp.cpanelMenu)
     },
 
     askVpsCpanelLicense: async () => {
@@ -1373,9 +1370,7 @@ bot?.on('message', async msg => {
       if (!vpsData) return send(chatId, vp.failedFetchingData, trans('o'))
       saveInfo('userVPSDetails', vpsData)
       let action = vpsData.status === 'RUNNING' ? [vp.stopVpsBtn, vp.restartVpsBtn] : [vp.startVpsBtn]
-      // @TODO
       return send(chatId, vp.selectedVpsData(vpsData), vp.of([ ...action, vp.subscriptionBtn, vp.VpsLinkedKeysBtn, vp.upgradeVpsBtn,  vp.deleteVpsBtn]))
-      // return send(chatId, vp.selectedVpsData(vpsData), vp.of([ ...action, vp.VpsLinkedKeysBtn,  vp.deleteVpsBtn]))
     },
 
     confirmStopVps : () => {
@@ -1421,10 +1416,10 @@ bot?.on('message', async msg => {
 
     vpsSubscription: () => {
       set(state, chatId, 'action', a.vpsSubscription)
-      //@TODO change to show options for cpanel
-      // const availableOptions = info.userVPSDetails.cPanel ? [vp.manageVpsSubBtn, vp.manageVpsPanelBtn] : [vp.manageVpsSubBtn]
-      const availableOptions = [vp.manageVpsSubBtn]
-      return send(chatId, vp.vpsSubscriptionData(info.userVPSDetails, date(info.userVPSDetails.subscriptionEnd)), vp.of(availableOptions))
+      const vpsDetails = info.userVPSDetails
+      const availableOptions = vpsDetails.cPanelPlanDetails?.id ? [vp.manageVpsSubBtn, vp.manageVpsPanelBtn] : [vp.manageVpsSubBtn]
+      const cPanelRenewDate = vpsDetails.cPanelPlanDetails?.id ? date(vpsDetails.cPanelPlanDetails.expiryDate) : ''
+      return send(chatId, vp.vpsSubscriptionData(vpsDetails, date(vpsDetails.subscriptionEnd), cPanelRenewDate), vp.of(availableOptions))
     },
 
     manageVpsSub: () => {
@@ -1436,15 +1431,9 @@ bot?.on('message', async msg => {
 
     manageVpsPanel: () => {
       set(state, chatId, 'action', a.manageVpsPanel)
-      // @TODO change condition and text
-      const btn = info.userVPSDetails.cPanel ? vp.vpsDisableRenewalBtn : vp.vpsEnableRenewalBtn
-      const expiryDate = date(info.userVPSDetails.subscriptionEnd)
-      return send(chatId, vp.vpsSubDetails(info.userVPSDetails, expiryDate), vp.of([btn, vp.vpsPlanRenewBtn, vp.unlinkVpsPanelBtn]))
-    },
-
-    confirmVpsCpanelUnlink: () => {
-      set(state, chatId, 'action', a.confirmVpsCpanelUnlink)
-      return send(chatId, vp.vpsUnlinkCpanelWarning(info.userVPSDetails), vp.of([vp.confirmUnlinkBtn, vp.cancel]))
+      const vpsDetails = info.userVPSDetails
+      const expiryDate = date(vpsDetails.cPanelPlanDetails.expiryDate)
+      return send(chatId, vp.vpsCPanelDetails(info.userVPSDetails, expiryDate), vp.of([vp.vpsPlanRenewBtn]))
     },
 
     vpsLinkedSSHkeys : async () => {
@@ -1505,10 +1494,11 @@ bot?.on('message', async msg => {
     confirmVPSRenewDetails: () => {
       set(state, chatId, 'action', a.confirmVPSRenewDetails)
       let vpsDetails = info.vpsDetails
-      const expiryDate = date(info.userVPSDetails.subscriptionEnd)
+      const vpsData = info.userVPSDetails
+      const expiryDate = vpsData?.cPanelPlanDetails?.id ? date(vpsData.cPanelPlanDetails?.expiryDate ) : date(vpsData.subscriptionEnd)
       return send(chatId, vpsDetails.upgradeType === 'vps-renew' 
-        ?  vp.renewVpsPlanConfirmMsg(vpsDetails, info.userVPSDetails, expiryDate) 
-        : vp.renewVpsPanelConfirmMsg(vpsDetails, info.userVPSDetails), vp.of([vp.payNowBtn, vp.cancel]))
+        ?  vp.renewVpsPlanConfirmMsg(vpsDetails, vpsData, expiryDate) 
+        : vp.renewVpsPanelConfirmMsg(vpsDetails, vpsData.cPanelPlanDetails, expiryDate), vp.of([vp.payNowBtn, vp.cancel]))
     }
   }
 
@@ -2417,9 +2407,7 @@ bot?.on('message', async msg => {
     let vpsDetails = info?.vpsDetails
     if (message === vp.back) return vpsDetails.plan != 'Hourly' ? goto.askVPSPlanAutoRenewal() : goto.askUserVpsPlan()
     const cpanels = trans('vpsCpanelOptional')
-    // @TODO revert back
-    // if (!cpanels.includes(message)) return send (chatId, vp.validCpanel, vp.cpanelMenu)
-    if (!cpanels.includes(message)) return send (chatId, vp.validCpanel, vp.of([cpanels[1], cpanels[2]]))
+    if (!cpanels.includes(message)) return send (chatId, vp.validCpanel, vp.cpanelMenu)
     vpsDetails.panel = message === vp.noControlPanel ? null : {
       name: message === 'WHM' ? 'whm' : 'plesk'
     }
@@ -2749,34 +2737,16 @@ bot?.on('message', async msg => {
 
   if (action === a.manageVpsPanel) {
     if (message === vp.back) return goto.vpsSubscription()
-    if (message === vp.vpsDisableRenewalBtn || message === vp.vpsEnableRenewalBtn) {
-      let vpsDetails = info.userVPSDetails
-      //@TODO add API for enable and disable auto renewal for capnel and show message
-      return goto.vpsSubscription()
-    }
     if (message === vp.vpsPlanRenewBtn) {
       let vpsDetails = info.vpsDetails
       vpsDetails.upgradeType = 'vps-cPanel-renew'
-      //@TODO calculate actual price
-      vpsDetails.totalPrice = 20
-      vpsDetails.cPanel = info.userVPSDetails.cPanel
+      vpsDetails.totalPrice = info.userVPSDetails.cPanelPlanDetails.price
+      vpsDetails.billingCycle = null
       info.vpsDetails = vpsDetails
       saveInfo('vpsDetails', vpsDetails)
       return goto.confirmVPSRenewDetails()
     }
-    if (message === vp.unlinkVpsPanelBtn) return goto.confirmVpsCpanelUnlink()
     return send(chatId, vp.selectCorrectOption)
-  }
-
-  if (action === a.confirmVpsCpanelUnlink) {
-    if (message === vp.back) return goto.manageVpsPanel()
-    if (message === vp.cancel) return goto.vpsSubscription()
-    if (message === vp.confirmUnlinkBtn) {
-      //@TODO Add API to unlink cpanel
-      send(chatId, vp.unlinkCpanelConfirmed(info.userVPSDetails))
-      return goto.vpsSubscription()
-    }
-    return send(chatId, vp.selectCorrectOption, vp.of([vp.confirmUnlinkBtn, vp.cancel]))
   }
 
   if (action === a.confirmVPSRenewDetails) {
@@ -3473,7 +3443,6 @@ bot?.on('message', async msg => {
     if (error) return send(chatId, error, trans('o'))
     send(chatId, `Bank ₦aira + Card 🌐︎`, trans('o'))
     console.log('showDepositNgnInfo', url)
-    //@TODO change messages for vps-cpanel-renew
     if (vpsDetails.upgradeType === 'plan') {
       return send(chatId, vp.bankPayVPSUpgradePlan(priceNGN, vpsDetails), trans('payBank', url))
     } else if (vpsDetails.upgradeType === 'disk') {
@@ -4502,7 +4471,6 @@ const buyVPSPlanFullProcess = async (chatId, lang, vpsDetails) => {
   }
 }
 
-// @TODO Implement API to renew cpanel
 const upgradeVPSDetails = async (chatId, lang, vpsDetails) => {
   try {
     log(vpsDetails)
@@ -4549,6 +4517,12 @@ const upgradeVPSDetails = async (chatId, lang, vpsDetails) => {
           )
           const expiryDate = date(vmInstanceUpgrade.data.subscriptionEnd)
           message = translation('vp.vpsRenewPlanSuccess', lang, vmInstanceDetails, expiryDate)
+        }
+      case 'vps-cPanel-renew':
+        vmInstanceUpgrade = await renewVPSCPanel(chatId, vmInstanceDetails.subscription_id)
+        if (vmInstanceUpgrade.success) {
+          const expiryDate = date(vmInstanceUpgrade.data.cPanel.expiryDate)
+          message = translation('vp.vpsRenewCPanelSuccess', lang, vmInstanceDetails, expiryDate)
         }
       default:
         break;

@@ -1483,13 +1483,15 @@ ${
 
 <strong>✅ Proceed with the order?</strong>`,
 
-  vpsSubscriptionData: (vpsData, expireDate) => `<strong>🗂️ Your Active Subscriptions:</strong>
+  vpsSubscriptionData: (vpsData, planExpireDate, panelExpireDate) => `<strong>🗂️ Your Active Subscriptions:</strong>
 
-<strong>• VPS ${vpsData.name} </strong>– Expires: ${expireDate}  (Auto-Renew: ${
+<strong>• VPS ${vpsData.name} </strong>– Expires: ${planExpireDate}  (Auto-Renew: ${
     vpsData.autoRenewable ? 'Enabled' : 'Disabled'
   })
-<strong>• Control Panel ${vpsData?.cPanel ? vpsData.cPanel : ': Not Selected'} </strong> ${
-    vpsData?.cPanel ? ' - Renews' : ''
+<strong>• Control Panel ${vpsData?.cPanelPlanDetails ? vpsData.cPanelPlanDetails.type : ': Not Selected'} </strong> ${
+    vpsData?.cPanelPlanDetails
+      ? `${vpsData?.cPanelPlanDetails.status === 'active' ? '- Expires: ' : '- Expired: '}${panelExpireDate}`
+      : ''
   } `,
 
   manageVpsSubBtn: '🖥️ Manage VPS Subscription',
@@ -1501,6 +1503,14 @@ ${
 <strong>• Plan:</strong> ${data.planDetails.name}
 <strong>• Current Expiry Date:</strong> ${date}
 <strong>• Auto-Renewal:</strong> ${data.autoRenewable ? 'Enabled' : 'Disabled'}`,
+
+  vpsCPanelDetails: (data, date) => `<strong>📅 Control Panel Subscription Details:</strong>
+
+<strong>• Linked VPS ID:</strong> ${data.name}
+<strong>• Control Panel Type:</strong> ${data.cPanelPlanDetails.type} (${data.cPanelPlanDetails.name})
+<strong>• Current Expiry Date:</strong> ${date}
+<strong>• Auto-Renewal:</strong> ${data.autoRenewable ? 'Enabled' : 'Disabled'}
+`,
 
   vpsEnableRenewalBtn: '🔄 Enable Auto-Renew',
   vpsDisableRenewalBtn: '❌ Disable Auto-Renew',
@@ -1583,17 +1593,17 @@ ${
   bankPayVPSRenewPlan: priceNGN =>
     `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan be seamlessly activated and renewed.`,
 
-  renewVpsPanelConfirmMsg: (data, vpsDetails) => `<strong>💳 Proceed with Control Panel renewal?</strong>
+  renewVpsPanelConfirmMsg: (data, panelDetails, date) => `<strong>💳 Proceed with Control Panel renewal?</strong>
 
-  <strong>📜 Invoice Summary</strong>
-  <strong>• Linked VPS ID:</strong> ${vpsDetails.name}
-  <strong>• Control Panel:</strong> ${vpsDetails.cPanel}
-  <strong>• Renewal Period:</strong> 1 month
-  <strong>• New Expiry Date:</strong> [New Date]
-  <strong>• Amount Due:</strong> ${data.totalPrice}`,
+<strong>📜 Invoice Summary</strong>
+  <strong>• Linked VPS ID:</strong> ${data.name}
+  <strong>• Control Panel:</strong> ${panelDetails.type}
+  <strong>• Renewal Period:</strong> ${panelDetails.durationValue}${' '}Month
+  <strong>• Current Expiry Date:</strong> ${date}
+  <strong>• Amount Due:</strong> ${data.totalPrice} USD`,
 
   bankPayVPSRenewCpanel: (priceNGN, vpsDetails) =>
-    `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan be seamlessly activated and ${vpsDetails.cPanel} Control Panel will be renewed.`,
+    `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan be seamlessly activated and ${vpsDetails.cPanelPlanDetails.type} Control Panel will be renewed.`,
   vpsUnlinkCpanelWarning: vpsDetails =>
     `⚠️ Warning: Unlinking will remove the ${vpsDetails.cPanel} license from VPS ${vpsDetails.name}, and you will lose access to its features. Do you want to proceed?`,
   unlinkCpanelConfirmed: data => `✅ Control Panel ${data.cPanel} successfully unlinked from VPS ${data.name}.`,
@@ -1610,7 +1620,12 @@ ${
     `✅ Disk upgraded to ${vpsDetails.upgradeOption.to} for VPS ${vpsDetails.name}. Your updated disk type is now active.`,
 
   vpsRenewPlanSuccess: (vpsDetails, expiryDate) =>
-    `✅ VPS subscription fpr ${vpsDetails.name} successfully renewed!
+    `✅ VPS subscription for ${vpsDetails.name} successfully renewed!
+
+• New Expiry Date: ${expiryDate}
+`,
+  vpsRenewCPanelSuccess: (vpsDetails, expiryDate) =>
+    `✅ Control Panel subscription for ${vpsDetails.name} successfully renewed!
 
 • New Expiry Date: ${expiryDate}
 `,
