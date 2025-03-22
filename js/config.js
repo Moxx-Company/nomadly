@@ -68,8 +68,8 @@ const admin = {
 }
 const user = {
   // main keyboards
-  cPanelWebHostingPlans: 'Private cPanel Hosting Plans 🔒',
-  pleskWebHostingPlans: 'Private Plesk Hosting Plans 🔒',
+  cPanelWebHostingPlans: 'Russia cPanel Hosting Plans 🔒',
+  pleskWebHostingPlans: 'Russia Plesk Hosting Plans 🔒',
   joinChannel: '📢 Join Channel',
   phoneNumberLeads: '📲 HQ SMS Lead',
   wallet: '👛 My Wallet',

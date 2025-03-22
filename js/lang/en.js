@@ -68,8 +68,8 @@ const admin = {
 }
 const user = {
   // main keyboards
-  cPanelWebHostingPlans: 'Private cPanel Hosting Plans 🔒',
-  pleskWebHostingPlans: 'Private Plesk Hosting Plans 🔒',
+  cPanelWebHostingPlans: 'Russia cPanel Hosting Plans 🔒',
+  pleskWebHostingPlans: 'Russia Plesk Hosting Plans 🔒',
   joinChannel: '📢 Join Channel',
   phoneNumberLeads: '📲 HQ SMS Lead',
   wallet: '👛 My Wallet',
@@ -954,7 +954,7 @@ const plans = hostingType => {
       duration: '30 days',
       storage: '10 GB SSD',
       bandwidth: '100 GB',
-      domains: '1 domain',
+      domains: 'Unlimited domains',
       emailAccounts: '5 email accounts',
       databases: '1 MySQL database',
       features: `Full access to ${hostingType} for managing files, databases, emails, etc.`,
@@ -966,7 +966,7 @@ const plans = hostingType => {
       duration: '30 days',
       storage: '50 GB SSD',
       bandwidth: '500 GB',
-      domains: '5 domains',
+      domains: 'Unlimited domains',
       emailAccounts: '25 email accounts',
       databases: '10 MySQL databases',
       features: `Full access to ${hostingType} with advanced tools for backups, security, and analytics.`,

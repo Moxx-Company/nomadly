@@ -68,8 +68,8 @@ const admin = {
 }
 const user = {
   // main keyboards
-  cPanelWebHostingPlans: '私人 cPanel 主机计划 🔒',
-  pleskWebHostingPlans: '私人 Plesk 主机计划 🔒',
+  cPanelWebHostingPlans: '俄罗斯 cPanel 托管计划 🔒',
+  pleskWebHostingPlans: '俄罗斯 Plesk 托管计划 🔒',
   joinChannel: '📢 加入频道',
   phoneNumberLeads: '📲 HQ 短信线索',
   wallet: '👛 我的钱包',
@@ -886,7 +886,7 @@ const plans = hostingType => {
       duration: '30 天',
       storage: '10 GB SSD',
       bandwidth: '100 GB',
-      domains: '1 个域名',
+      domains: '无限制域名',
       emailAccounts: '5 个邮箱账户',
       databases: '1 个 MySQL 数据库',
       features: `完全访问 ${hostingType} 用于管理文件、数据库、电子邮件等。`,
@@ -898,7 +898,7 @@ const plans = hostingType => {
       duration: '30 天',
       storage: '50 GB SSD',
       bandwidth: '500 GB',
-      domains: '5 个域名',
+      domains: '无限制域名',
       emailAccounts: '25 个邮箱账户',
       databases: '10 个 MySQL 数据库',
       features: `完全访问 ${hostingType}，配备高级工具用于备份、安全和分析。`,
