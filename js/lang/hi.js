@@ -1383,50 +1383,26 @@ ${options
 ${upgrades.map(val => `<strong>• ${val.from} ➡ ${val.to} –</strong> +$${val.price}/${val.duration}`).join('\n')}
 
 💰 बिलिंग नोटिस: यदि उन्नयन मध्य चक्र में लागू किया जाता है, तो आपके वर्तमान बिलिंग अवधि के अप्रयुक्त भाग के लिए प्रोरेटेड समायोजन लागू किया जाएगा।`,
-  upgradePlanSummary: (newData, vpsDetails) => `<strong>📜 ऑर्डर सारांश:</strong>
+  upgradePlanSummary: (newData, vpsDetails, lowBal) => `<strong>📜 ऑर्डर सारांश:</strong>
 
-<strong>• VPS आईडी: </strong> ${vpsDetails.name}
-<strong>• पुरानी योजना: </strong> ${newData.upgradeOption.from}
-<strong>• नई योजना: </strong> ${newData.upgradeOption.to}
-<strong>• बिलिंग चक्र: </strong> ${newData.billingCycle}
-<strong>• नई बिलिंग दर: </strong> $${newData.totalPrice} USD (आंशिक समायोजन लागू)
-<strong>• प्रभावी तिथि: </strong> तुरंत
-
+<strong>• VPS ID:</strong> ${vpsDetails.name}
+<strong>• पुरानी योजना:</strong> ${newData.upgradeOption.from}
+<strong>• नई योजना:</strong> ${newData.upgradeOption.to}
+<strong>• बिलिंग चक्र:</strong> ${newData.billingCycle}
+<strong>• नई बिलिंग दर:</strong> $${newData.totalPrice} USD${
+    newData.billingCycle === 'Hourly' ? '/घंटा' : ' (प्रोरेटेड समायोजन लागू किया गया)'
+  }
+<strong>• प्रभावी तिथि:</strong> तुरंत लागू
 ${
-  newData.billingCycle === 'Hourly'
-    ? `नोट: आपकी कुल राशि में $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD जमा शामिल है। पहली घंटा दर कटौती के बाद, शेष जमा आपके वॉलेट में क्रेडिट कर दिया जाएगा।`
+  lowBal
+    ? `
+💡 नोट: आपके कुल शुल्क में $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD की अग्रिम जमा राशि शामिल है। पहले घंटे की कटौती के बाद, शेष जमा राशि आपके वॉलेट में जमा कर दी जाएगी।
+`
     : ''
 }
+<strong>• कुल मूल्य:</strong> $${lowBal ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE : newData.totalPrice} USD
 
-<strong>• कुल मूल्य: </strong> $${
-    newData.billingCycle === 'Hourly' && newData.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      : newData.totalPrice
-  } USD
-
-<strong>✅ क्या आप आदेश को आगे बढ़ाना चाहते हैं?</strong>`,
-
-  upgradeDiskSummary: (newData, vpsDetails) => `<strong>📜 ऑर्डर सारांश:</strong>
-
-<strong>• VPS आईडी: </strong> ${vpsDetails.name}
-<strong>• पुराना डिस्क प्रकार: </strong> ${newData.upgradeOption.from}
-<strong>• नया डिस्क प्रकार: </strong> ${newData.upgradeOption.to}
-<strong>• बिलिंग चक्र: </strong> ${newData.billingCycle}
-<strong>• नई बिलिंग दर: </strong> $${newData.totalPrice} USD (आंशिक समायोजन लागू)
-
-${
-  newData.billingCycle === 'Hourly'
-    ? `नोट: आपकी कुल राशि में $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD जमा शामिल है। पहली घंटा दर कटौती के बाद, शेष जमा आपके वॉलेट में क्रेडिट कर दिया जाएगा।`
-    : ''
-}
-
-<strong>• कुल मूल्य: </strong> $${
-    newData.billingCycle === 'Hourly' && newData.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      : newData.totalPrice
-  } USD
-
-<strong>✅ क्या आप आदेश को आगे बढ़ाना चाहते हैं?</strong>`,
+<strong>✅ क्या आप ऑर्डर जारी रखना चाहते हैं?</strong>`,
 
   vpsSubscriptionData: (vpsData, planExpireDate, panelExpireDate) => `<strong>🗂️ आपकी सक्रिय सदस्यताएँ:</strong>
 
@@ -1518,7 +1494,7 @@ ${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
   enabledAutoRenewal: (data, expiryDate) =>
     `✅ स्वत: नवीनीकरण सक्षम कर दिया गया है। आपका VPS ${expiryDate} को स्वचालित रूप से नवीनीकृत होगा।`,
 
-  renewVpsPlanConfirmMsg: (data, vpsDetails, expiryDate) => `<strong>📜 चालान सारांश</strong>
+  renewVpsPlanConfirmMsg: (data, vpsDetails, expiryDate, low) => `<strong>📜 चालान सारांश</strong>
 
 <strong>• VPS आईडी:</strong> ${vpsDetails.name}
 <strong>• प्लान:</strong> ${vpsDetails.planDetails.name}
@@ -1527,13 +1503,13 @@ ${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
 <strong>• देय राशि:</strong> ${data.totalPrice} USD
 
 ${
-  data.billingCycle === 'Hourly'
+  lowBal
     ? `नोट: आपकी कुल राशि में $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD की जमा राशि शामिल है। पहले घंटे की कटौती के बाद, शेष राशि आपके वॉलेट में क्रेडिट कर दी जाएगी।`
     : ''
 }
 
 <strong>• कुल मूल्य:</strong> $${
-    data.billingCycle === 'Hourly' && data.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+    lowBal
       ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
       : data.totalPrice
   } USD

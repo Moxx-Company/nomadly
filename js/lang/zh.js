@@ -1356,50 +1356,27 @@ ${options
 ${upgrades.map(val => `<strong>• ${val.from} ➡ ${val.to} –</strong> +$${val.price}/${val.duration}`).join('\n')}
 
 💰 账单通知：如果在账单周期中途应用升级，将按比例调整当前账单周期未使用的部分。`,
-  upgradePlanSummary: (newData, vpsDetails) => `<strong>📜 订单摘要：</strong>
+  upgradePlanSummary: (newData, vpsDetails, lowBal) => `<strong>📜 订单摘要：</strong>
 
 <strong>• VPS ID：</strong> ${vpsDetails.name}
-<strong>• 旧方案：</strong> ${newData.upgradeOption.from}
-<strong>• 新方案：</strong> ${newData.upgradeOption.to}
+<strong>• 旧计划：</strong> ${newData.upgradeOption.from}
+<strong>• 新计划：</strong> ${newData.upgradeOption.to}
 <strong>• 计费周期：</strong> ${newData.billingCycle}
-<strong>• 新计费费率：</strong> $${newData.totalPrice} USD（已应用按比例调整）
+<strong>• 新计费费率：</strong> $${newData.totalPrice} USD${
+    newData.billingCycle === 'Hourly' ? '/小时' : '（已应用按比例调整）'
+  }
 <strong>• 生效日期：</strong> 立即生效
-
 ${
-  newData.billingCycle === 'Hourly'
-    ? `注意：您的总费用中已包含 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 的押金。扣除第一小时费用后，剩余押金将存入您的钱包。`
+  lowBal
+    ? `
+💡 注意：您的总费用中包含 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 预存款。在扣除首小时费用后，剩余的预存款将存入您的钱包。
+`
     : ''
 }
+<strong>• 总价格：</strong> $${lowBal ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE : newData.totalPrice} USD
 
-<strong>• 总价格：</strong> $${
-    newData.billingCycle === 'Hourly' && newData.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      : newData.totalPrice
-  } USD
+<strong>✅ 是否继续下单？</strong>`,
 
-<strong>✅ 是否确认订单？</strong>`,
-
-  upgradeDiskSummary: (newData, vpsDetails) => `<strong>📜 订单摘要：</strong>
-
-<strong>• VPS ID：</strong> ${vpsDetails.name}
-<strong>• 旧磁盘类型：</strong> ${newData.upgradeOption.from}
-<strong>• 新磁盘类型：</strong> ${newData.upgradeOption.to}
-<strong>• 计费周期：</strong> ${newData.billingCycle}
-<strong>• 新计费费率：</strong> $${newData.totalPrice} USD（已应用按比例调整）
-
-${
-  newData.billingCycle === 'Hourly'
-    ? `注意：您的总费用中已包含 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 的押金。扣除第一小时费用后，剩余押金将存入您的钱包。`
-    : ''
-}
-
-<strong>• 总价格：</strong> $${
-    newData.billingCycle === 'Hourly' && newData.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      : newData.totalPrice
-  } USD
-
-<strong>✅ 是否确认订单？</strong>`,
   vpsSubscriptionData: (vpsData, planExpireDate, panelExpireDate) => `<strong>🗂️ 您的有效订阅：</strong>
 
 <strong>• VPS ${vpsData.name} </strong> – 到期日期：${planExpireDate}  (自动续订：${
@@ -1482,7 +1459,7 @@ ${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
 
   enabledAutoRenewal: (data, expiryDate) => `✅ 自动续订已启用。您的 VPS 将于 ${expiryDate} 自动续订。`,
 
-  renewVpsPlanConfirmMsg: (data, vpsDetails, expiryDate) => `<strong>📜 发票摘要</strong>
+  renewVpsPlanConfirmMsg: (data, vpsDetails, expiryDate, lowBal) => `<strong>📜 发票摘要</strong>
 
 <strong>• VPS ID：</strong> ${vpsDetails.name}
 <strong>• 计划：</strong> ${vpsDetails.planDetails.name}
@@ -1491,13 +1468,13 @@ ${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
 <strong>• 应付金额：</strong> ${data.totalPrice} USD
 
 ${
-  data.billingCycle === 'Hourly'
+  lowBal
     ? `注意：您的总金额中包含 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 的押金。第一小时费用扣除后，剩余押金将退还到您的钱包。`
     : ''
 }
 
 <strong>• 总价：</strong> $${
-    data.billingCycle === 'Hourly' && data.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+    lowBal
       ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
       : data.totalPrice
   } USD

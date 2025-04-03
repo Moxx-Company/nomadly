@@ -1400,50 +1400,26 @@ ${options
 ${upgrades.map(val => `<strong>• ${val.from} ➡ ${val.to} –</strong> +$${val.price}/${val.duration}`).join('\n')}
 
 💰 Avis de facturation : Si la mise à niveau est appliquée en cours de cycle, un ajustement au prorata sera appliqué pour la portion inutilisée de votre période de facturation actuelle.`,
-  upgradePlanSummary: (newData, vpsDetails) => `<strong>📜 Résumé de la commande :</strong>
+  upgradePlanSummary: (newData, vpsDetails, lowBal) => `<strong>📜 Résumé de la commande :</strong>
 
 <strong>• ID VPS : </strong> ${vpsDetails.name}
 <strong>• Ancien plan : </strong> ${newData.upgradeOption.from}
 <strong>• Nouveau plan : </strong> ${newData.upgradeOption.to}
 <strong>• Cycle de facturation : </strong> ${newData.billingCycle}
-<strong>• Nouveau tarif : </strong> $${newData.totalPrice} USD (ajustement au prorata appliqué)
+<strong>• Nouveau tarif de facturation : </strong> $${newData.totalPrice} USD${
+    newData.billingCycle === 'Hourly' ? '/heure' : ' (ajustement proratisé appliqué)'
+  }
 <strong>• Date d'effet : </strong> Immédiatement
-
 ${
-  newData.billingCycle === 'Hourly'
-    ? `Remarque : Un dépôt de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD est inclus dans votre total. Après la déduction du premier tarif horaire, le dépôt restant sera crédité sur votre portefeuille.`
+  lowBal
+    ? `
+💡 Remarque : Un dépôt de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD est inclus dans votre total. Après la première déduction du tarif horaire, le dépôt restant sera crédité sur votre portefeuille.
+`
     : ''
 }
+<strong>• Prix total : </strong> $${lowBal ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE : newData.totalPrice} USD
 
-<strong>• Prix total : </strong> $${
-    newData.billingCycle === 'Hourly' && newData.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      : newData.totalPrice
-  } USD
-
-<strong>✅ Confirmez-vous la commande ?</strong>`,
-
-  upgradeDiskSummary: (newData, vpsDetails) => `<strong>📜 Résumé de la commande :</strong>
-
-<strong>• ID VPS : </strong> ${vpsDetails.name}
-<strong>• Ancien type de disque : </strong> ${newData.upgradeOption.from}
-<strong>• Nouveau type de disque : </strong> ${newData.upgradeOption.to}
-<strong>• Cycle de facturation : </strong> ${newData.billingCycle}
-<strong>• Nouveau tarif : </strong> $${newData.totalPrice} USD (ajustement au prorata appliqué)
-
-${
-  newData.billingCycle === 'Hourly'
-    ? `Remarque : Un dépôt de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD est inclus dans votre total. Après la déduction du premier tarif horaire, le dépôt restant sera crédité sur votre portefeuille.`
-    : ''
-}
-
-<strong>• Prix total : </strong> $${
-    newData.billingCycle === 'Hourly' && newData.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      : newData.totalPrice
-  } USD
-
-<strong>✅ Confirmez-vous la commande ?</strong>`,
+<strong>✅ Confirmer la commande ?</strong>`,
 
   vpsSubscriptionData: (vpsData, planExpireDate, panelExpireDate) => `<strong>🗂️ Vos abonnements actifs :</strong>
 
@@ -1532,7 +1508,7 @@ Veuillez réessayer plus tard.`,
   enabledAutoRenewal: (data, expiryDate) =>
     `✅ Renouvellement automatique activé. Votre VPS sera automatiquement renouvelé le ${expiryDate}.`,
 
-  renewVpsPlanConfirmMsg: (data, vpsDetails, expiryDate) => `<strong>📜 Résumé de la facture</strong>
+  renewVpsPlanConfirmMsg: (data, vpsDetails, expiryDate, lowBal) => `<strong>📜 Résumé de la facture</strong>
 
 <strong>• ID VPS :</strong> ${vpsDetails.name}
 <strong>• Plan :</strong> ${vpsDetails.planDetails.name}
@@ -1541,13 +1517,13 @@ Veuillez réessayer plus tard.`,
 <strong>• Montant dû :</strong> ${data.totalPrice} USD
 
 ${
-  data.billingCycle === 'Hourly'
+  lowBal
     ? `Remarque : Un dépôt de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD est inclus dans votre total. Après la déduction du premier tarif horaire, le reste du dépôt sera crédité sur votre portefeuille.`
     : ''
 }
 
 <strong>• Prix total :</strong> $${
-    data.billingCycle === 'Hourly' && data.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+    lowBal
       ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
       : data.totalPrice
   } USD

@@ -588,8 +588,9 @@ bot?.on('message', async msg => {
     'vps-upgrade-plan-pay' : async () => {
       set(state, chatId, 'action', 'vps-upgrade-plan-pay')
       const { usdBal, ngnBal } = await getBalance(walletOf, chatId)
+      const lowBalance = info.vpsDetails?.billingCycle === 'Hourly' && usdBal < info.vpsDetails.totalPrice
       send(chatId, t.showWallet(usdBal, ngnBal))
-      send(chatId, vp.askPaymentMethod, k.pay)
+      send(chatId, vp.askPaymentMethod, info.vpsDetails?.billingCycle === 'Hourly' && !lowBalance ? k.of([payIn.wallet]) : k.pay)
     },
     'choose-domain-to-buy': async () => {
       let text = ``
@@ -1409,9 +1410,11 @@ bot?.on('message', async msg => {
       }
     },
 
-    askVpsUpgradePayment : () => {
+    askVpsUpgradePayment : async () => {
       set(state, chatId, 'action', a.askVpsUpgradePayment)
-      return send(chatId, info.vpsDetails.upgradeType === 'plan' ? vp.upgradePlanSummary(info.vpsDetails, info.userVPSDetails) : vp.upgradeDiskSummary(info.vpsDetails, info.userVPSDetails), vp.of([vp.yes, vp.no]))
+      const { usdBal } = await getBalance(walletOf, chatId)
+      const lowBalance = info.vpsDetails.billingCycle === 'Hourly' && usdBal < info.vpsDetails.totalPrice
+      return send(chatId, info.vpsDetails.upgradeType === 'plan' ? vp.upgradePlanSummary(info.vpsDetails, info.userVPSDetails, lowBalance) : vp.upgradeDiskSummary(info.vpsDetails, info.userVPSDetails, lowBalance), vp.of([vp.yes, vp.no]))
     },
 
     vpsSubscription: () => {
@@ -1491,13 +1494,15 @@ bot?.on('message', async msg => {
       return send(chatId, vp.selectSSHKeyToDownload, vp.of([...list, vp.cancel]))
     },
 
-    confirmVPSRenewDetails: () => {
+    confirmVPSRenewDetails: async () => {
       set(state, chatId, 'action', a.confirmVPSRenewDetails)
       let vpsDetails = info.vpsDetails
       const vpsData = info.userVPSDetails
       const expiryDate = vpsData?.cPanelPlanDetails?.id ? date(vpsData.cPanelPlanDetails?.expiryDate ) : date(vpsData.subscriptionEnd)
+      const { usdBal } = await getBalance(walletOf, chatId)
+      const lowBalance = info.vpsDetails?.billingCycle === 'Hourly' && usdBal < info.vpsDetails.totalPrice
       return send(chatId, vpsDetails.upgradeType === 'vps-renew' 
-        ?  vp.renewVpsPlanConfirmMsg(vpsDetails, vpsData, expiryDate) 
+        ?  vp.renewVpsPlanConfirmMsg(vpsDetails, vpsData, expiryDate, lowBalance) 
         : vp.renewVpsPanelConfirmMsg(vpsDetails, vpsData.cPanelPlanDetails, expiryDate), vp.of([vp.payNowBtn, vp.cancel]))
     }
   }
@@ -2681,7 +2686,11 @@ bot?.on('message', async msg => {
     if (vpsDetails.upgradeType === 'plan') {
       vpsDetails.totalPrice = getVpsUpgradePrice(vpsDetails)
     } else if ( vpsDetails.upgradeType === 'disk') {
-      vpsDetails.totalPrice = selectedUpgrade.price
+      if (vpsDetails.billingCycle === 'Hourly') {
+        vpsDetails.totalPrice = (Number(info.userVPSDetails.price) + Number(selectedUpgrade.price)).toFixed(2)
+      } else {
+        vpsDetails.totalPrice = selectedUpgrade.price
+      }
     }
     info.vpsDetails = vpsDetails
     saveInfo('vpsDetails', vpsDetails)

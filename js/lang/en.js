@@ -1439,47 +1439,43 @@ ${options
 ${upgrades.map(val => `<strong>• ${val.from} ➡ ${val.to} –</strong> +$${val.price}/${val.duration}`).join('\n')}
   
 💰 Billing Notice: If the upgrade is applied mid-cycle, a prorated adjustment will be applied for the unused portion of your current billing period.`,
-  upgradePlanSummary: (newData, vpsDetails) => `<strong>📜 Order Summary:</strong>
+  upgradePlanSummary: (newData, vpsDetails, lowBal) => `<strong>📜 Order Summary:</strong>
 
 <strong>• VPS ID: </strong> ${vpsDetails.name}
 <strong>• Old Plan: </strong> ${newData.upgradeOption.from}
 <strong>• New Plan: </strong> ${newData.upgradeOption.to}
 <strong>• Billing Cycle: </strong> ${newData.billingCycle}
-<strong>• New Billing Rate: </strong> $${newData.totalPrice} USD  (prorated adjustment applied)
+<strong>• New Billing Rate: </strong> $${newData.totalPrice} USD${
+    newData.billingCycle === 'Hourly' ? '/hour' : ' (prorated adjustment applied)'
+  }
 <strong>• Effective Date: </strong> Immediately
-
 ${
-  newData.billingCycle === 'Hourly'
-    ? `Note: A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD deposit is included in your total. After the first hourly rate is deducted, the remaining deposit will be credited to your wallet.`
+  lowBal
+    ? `
+Note: A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD deposit is included in your total. After the first hourly rate is deducted, the remaining deposit will be credited to your wallet.
+`
     : ''
 }
-
-<strong>• Total Price: </strong> $${
-    newData.billingCycle === 'Hourly' && newData.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      : newData.totalPrice
-  } USD
+<strong>• Total Price: </strong> $${lowBal ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE : newData.totalPrice} USD
 
 <strong>✅ Proceed with the order?</strong>`,
-  upgradeDiskSummary: (newData, vpsDetails) => `<strong>📜 Order Summary:</strong>
+  upgradeDiskSummary: (newData, vpsDetails, lowBal) => `<strong>📜 Order Summary:</strong>
 
 <strong>• VPS ID: </strong> ${vpsDetails.name}
 <strong>• Old Disk Type: </strong> ${newData.upgradeOption.from}
 <strong>• New Disk type: </strong> ${newData.upgradeOption.to}
 <strong>• Billing Cycle: </strong> ${newData.billingCycle}
-<strong>• New Billing Rate: </strong> $${newData.totalPrice} USD  (prorated adjustment applied)
-
+<strong>• New Billing Rate: </strong> $${newData.totalPrice} USD${
+    newData.billingCycle === 'Hourly' ? '/hour' : ' (prorated adjustment applied)'
+  }
 ${
-  newData.billingCycle === 'Hourly'
-    ? `Note: A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD deposit is included in your total. After the first hourly rate is deducted, the remaining deposit will be credited to your wallet.`
+  lowBal
+    ? `
+Note: A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD deposit is included in your total. After the first hourly rate is deducted, the remaining deposit will be credited to your wallet.
+`
     : ''
 }
-
-<strong>• Total Price: </strong> $${
-    newData.billingCycle === 'Hourly' && newData.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      : newData.totalPrice
-  } USD
+<strong>• Total Price: </strong> $${lowBal ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE : newData.totalPrice} USD
 
 <strong>✅ Proceed with the order?</strong>`,
 
@@ -1564,7 +1560,7 @@ Please Try again after sometime.`,
   enabledAutoRenewal: (data, expiryDate) =>
     `✅ Auto-renewal enabled. Your VPS will automatically renew on ${expiryDate}.`,
 
-  renewVpsPlanConfirmMsg: (data, vpsDetails, expiryDate) => `<strong>📜 Invoice Summary</strong>
+  renewVpsPlanConfirmMsg: (data, vpsDetails, expiryDate, lowBal) => `<strong>📜 Invoice Summary</strong>
 
 <strong>• VPS ID:</strong> ${vpsDetails.name}
 <strong>• Plan:</strong> ${vpsDetails.planDetails.name}
@@ -1573,16 +1569,12 @@ Please Try again after sometime.`,
 <strong>• Amount Due:</strong> ${data.totalPrice} USD
 
 ${
-  data.billingCycle === 'Hourly'
+  lowBal
     ? `Note: A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD deposit is included in your total. After the first hourly rate is deducted, the remaining deposit will be credited to your wallet.`
     : ''
 }
 
-<strong>• Total Price: </strong> $${
-    data.billingCycle === 'Hourly' && data.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
-      : data.totalPrice
-  } USD
+<strong>• Total Price: </strong> $${lowBal ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE : data.totalPrice} USD
 
 <strong>💳 Proceed with VPS renewal?</strong>`,
 
