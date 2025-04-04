@@ -409,7 +409,7 @@ async function setVpsSshCredentials(host) {
     const url = `${NAMEWORD_BASE_URL}/ssh/set-password`
     let newPayload = {
       host: host,
-      targetUsername: generateRandomName('user'),
+      targetUsername: 'root',
       targetPassword: generateRandomPassword(),
     }
     console.log(newPayload)
