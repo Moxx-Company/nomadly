@@ -2320,7 +2320,7 @@ bot?.on('message', async msg => {
     if (message === vp.back) return goto.askZoneForVps()
     const options = info?.vpsDiskTypes
     const diskList = options?.map((item) => item?.label) || [];
-    if (!diskList.includes(message)) return send (chatId, vp.chooseValidDiskType, vp.of(options))
+    if (!diskList.includes(message)) return send (chatId, vp.chooseValidDiskType, vp.of(diskList))
     let vpsDetails = info?.vpsDetails
     const diskDetails = options.find((op) => op.label === message)
     vpsDetails.diskType = diskDetails.value
