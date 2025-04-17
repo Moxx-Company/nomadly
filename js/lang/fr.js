@@ -1103,7 +1103,7 @@ const vp = {
 
   askVpsDiskType: list => `💾 Choisissez votre type de stockage en fonction des performances et du budget :
 
-${list.map(item => `• ${item.description}`).join('\n')}`,
+${list?.map(item => `• ${item.description}`).join('\n')}`,
 
   chooseValidDiskType: 'Veuillez choisir un type de disque valide',
 

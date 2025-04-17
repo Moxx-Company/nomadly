@@ -1253,8 +1253,9 @@ bot?.on('message', async msg => {
       set(state, chatId, 'action', a.askVpsDiskType)
       send(chatId, vp.vpsWaitingTime)
       const diskTypes = await fetchAvailableDiskTpes(info?.vpsDetails?.zone)
-      if (!diskTypes) return send(chatId, vp.failedFetchingData, trans('o'))
-      const diskList = diskTypes.map((item) => item.label)
+      log(diskTypes)
+      if (!diskTypes || !diskTypes.length) return send(chatId, vp.failedFetchingData, trans('o'))
+      const diskList = diskTypes?.map((item) => item.label) || []
       saveInfo('vpsDiskTypes', diskTypes)
       return send(chatId, vp.askVpsDiskType(diskTypes), vp.of(diskList))
     },
@@ -2319,7 +2320,8 @@ bot?.on('message', async msg => {
     if (message === vp.back) return goto.askZoneForVps()
     const options = info?.vpsDiskTypes
     const diskList = options?.map((item) => item?.label) || [];
-    if (!diskList.includes(message)) return send (chatId, vp.chooseValidDiskType, vp.of(options))
+    if (!diskList || !diskList.length) return send(chatId, vp.failedFetchingData, trans('o'))
+    if (!diskList.includes(message)) return send (chatId, vp.chooseValidDiskType, vp.of(diskList))
     let vpsDetails = info?.vpsDetails
     const diskDetails = options.find((op) => op.label === message)
     vpsDetails.diskType = diskDetails.value

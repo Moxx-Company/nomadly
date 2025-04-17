@@ -1072,7 +1072,7 @@ const vp = {
 
   askVpsDiskType: list => `💾 根据性能和预算选择您的存储类型：
 
-${list.map(item => `• ${item.description}`).join('\n')}`,
+${list?.map(item => `• ${item.description}`).join('\n')}`,
 
   chooseValidDiskType: '请选择有效的磁盘类型',
 
