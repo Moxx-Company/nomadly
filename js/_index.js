@@ -659,7 +659,7 @@ bot?.on('message', async msg => {
       const domain = info?.domainToManage
       const { records, domainNameId } = await viewDNSRecords(domain)
 
-      const toSave = records.map(({ dnszoneID, dnszoneRecordID, recordType, nsId, recordContent }) => ({
+      const toSave = records?.map(({ dnszoneID, dnszoneRecordID, recordType, nsId, recordContent }) => ({
         dnszoneID,
         dnszoneRecordID,
         recordType,
