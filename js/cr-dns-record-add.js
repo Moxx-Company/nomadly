@@ -58,8 +58,7 @@ const saveServerInDomain = async (
   }
   if (RecordType === 'NS') return await updateDNSRecordNs(domainNameId, domainName, server, nsId, dnsRecords,provider)
   
-  {
-
+  try {
     const URL = `${NAMEWORD_BASE_URL}/domain/manage-dns-records`
 
     const params = {
@@ -74,6 +73,10 @@ const saveServerInDomain = async (
 
     const dnsMgmtRes = await axios.get(URL, config)// Enable DNS Management
     console.log({ dnsMgmtRes: dnsMgmtRes?.data })
+  } catch (error) {
+    // let e = `${error?.message} ${JSON.stringify(error?.response?.data)}`
+    console.error('Error managing DNS records', e)
+    
   }
 
   try {
