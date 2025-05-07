@@ -3,16 +3,27 @@ require('dotenv').config()
 const axios = require('axios')
 const { log } = require('console')
 const APIKey = process.env.API_KEY_CONNECT_RESELLER
+const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL;
 
-const updateDNSRecordNs = async (domainNameId, websiteName, RecordValue, nsId, dnsRecords) => {
+const updateDNSRecordNs = async (domainNameId, websiteName, RecordValue, nsId, dnsRecords,provider) => {
   try {
-    const apiUrl = 'https://api.connectreseller.com/ConnectReseller/ESHOP/UpdateNameServer'
+
+    const URL = `${NAMEWORD_BASE_URL}/domain/modiify-nameserver`
+
+
+    const headers = {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'x-api-key': process.env.NAMEWORD_API_KEY,
+    }
+  
 
     const requestData = {
-      APIKey,
       domainNameId,
       websiteName,
+      provider:provider
     }
+
 
     for (let i = 0; i < dnsRecords.length; i++) {
       const r = dnsRecords[i]
@@ -21,8 +32,13 @@ const updateDNSRecordNs = async (domainNameId, websiteName, RecordValue, nsId, d
     // nsId = 1,2,3 or 4
     requestData['nameServer' + nsId] = RecordValue
 
+    const config = {
+      headers,
+      params: requestData,
+    }
+
     log('updateDNSRecordNs', { requestData })
-    const response = await axios.get(apiUrl, { params: requestData })
+    const response = await axios.get(URL, config)
     log(
       'update DNS Record Ns ',
       { domainNameId, websiteName, RecordValue, nsId },

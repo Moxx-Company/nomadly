@@ -2,17 +2,27 @@
 require('dotenv').config()
 const axios = require('axios')
 
+const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL;
+
 const getDomainDetails = async websiteName => {
   try {
-    const API_KEY = process.env.API_KEY_CONNECT_RESELLER
-    const URL = 'https://api.connectreseller.com/ConnectReseller/ESHOP/ViewDomain'
+    const URL = `${NAMEWORD_BASE_URL}/domain/appview-domain`
 
     const params = {
-      APIKey: API_KEY,
-      websiteName: websiteName,
+      domain: websiteName,
+    }
+    const headers = {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'x-api-key': process.env.NAMEWORD_API_KEY,
     }
 
-    const response = await axios.get(URL, { params })
+    const config = {
+      headers,
+      params: params
+    }
+
+    const response = await axios.get(URL, config)
 
     if (response?.status === 200) {
       const domainDetails = response.data

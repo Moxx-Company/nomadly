@@ -249,6 +249,8 @@ const loadData = async () => {
 
   log(`DB Connected lala. May peace be with you and Lord's mercy and blessings.`)
 
+  // await set(walletOf, 590716835, 'usdIn', 100)
+
   //
   // sendMessage(6687923716, 'bot started')
   // buyDomainFullProcess(6687923716, 'ehtesham.sbs')
@@ -559,7 +561,7 @@ bot?.on('message', async msg => {
       set(state, chatId, 'action', a.askCoupon + action)
     },
     'domain-pay': () => {
-      const { domain, price, couponApplied, newPrice } = info
+      const { domain, price, couponApplied, newPrice,provider } = info
       couponApplied
         ? send(chatId, t.domainNewPrice(domain, price, newPrice), k.pay)
         : send(chatId, t.domainPrice(domain, price), k.pay)
@@ -657,14 +659,15 @@ bot?.on('message', async msg => {
 
     'choose-dns-action': async () => {
       const domain = info?.domainToManage
-      const { records, domainNameId } = await viewDNSRecords(domain)
+      const { records, domainNameId,provider } = await viewDNSRecords(domain)
 
-      const toSave = records?.map(({ dnszoneID, dnszoneRecordID, recordType, nsId, recordContent }) => ({
+      const toSave = records?.map(({ dnszoneID, dnszoneRecordID,recordName, recordType, nsId, recordContent }) => ({
         dnszoneID,
         dnszoneRecordID,
         recordType,
         nsId,
         recordContent,
+        recordName
       }))
 
       const categorizeRecords = (records) => {
@@ -682,6 +685,7 @@ bot?.on('message', async msg => {
       set(state, chatId, 'dnsRecords', toSave)
 
       set(state, chatId, 'domainNameId', domainNameId)
+      set(state, chatId, 'provider', provider)
       set(state, chatId, 'action', 'choose-dns-action')
       send(chatId, t.viewDnsRecords(categorizedRecords, domain), trans('dns'))
     },
@@ -722,6 +726,7 @@ bot?.on('message', async msg => {
     //
 
     [user.wallet]: async () => {
+      console.log('wallet')
       set(state, chatId, 'action', user.wallet)
       const { usdBal, ngnBal } = await getBalance(walletOf, chatId)
       send(chatId, t.wallet(usdBal, ngnBal), k.wallet)
@@ -1557,6 +1562,7 @@ bot?.on('message', async msg => {
       // buy domain
       const domain = info?.domain
       const lang = info?.userLanguage ?? 'en'
+      const provider = info?.provider
       const error = await buyDomainFullProcess(chatId, lang, domain)
       if (error) return
       const name = await get(nameOf, chatId)
@@ -3099,7 +3105,8 @@ bot?.on('message', async msg => {
     const domainRegex = /^(?:(?!-)[A-Za-z0-9-]{1,63}(?<!-)\.)+[A-Za-z]{2,6}$/
     if (!domainRegex.test(domain))
       return send(chatId, t.domainInvalid)
-    const { available, price, originalPrice, message: msg } = await checkDomainPriceOnline(domain)
+
+    const { available, price, originalPrice, message: msg ,provider} = await checkDomainPriceOnline(domain)
     if (!available) return send(chatId, msg)
     if (!originalPrice) {
       send(TELEGRAM_DEV_CHAT_ID, t.issueGettingPrice)
@@ -3108,6 +3115,7 @@ bot?.on('message', async msg => {
     saveInfo('price', price)
     saveInfo('domain', domain)
     saveInfo('originalPrice', originalPrice)
+    saveInfo('provider', provider)
     return goto.askDomainToUseWithShortener()
   }
   if (action === a.askDomainToUseWithShortener) {
@@ -3661,10 +3669,11 @@ bot?.on('message', async msg => {
     if (message === t.back || message === t.no) return goto['select-dns-record-id-to-delete']()
     if (message !== t.yes) return send(chatId, t.what)
 
-    const { domainNameId, dnsRecords, domainToManage, delId } = info
+    const { domainNameId, dnsRecords, domainToManage, delId,provider } = info
     const nsRecords = dnsRecords.filter(r => r.recordType === 'NS')
-    const { dnszoneID, dnszoneRecordID, nsId } = dnsRecords[delId]
-    const { error } = await deleteDNSRecord(dnszoneID, dnszoneRecordID, domainToManage, domainNameId, nsId, nsRecords)
+    log("***********************",dnsRecords[delId])
+    const { dnszoneID, dnszoneRecordID, nsId,recordType,recordContent,recordName} = dnsRecords[delId]
+    const { error } = await deleteDNSRecord(dnszoneID, dnszoneRecordID,recordType,recordContent,recordName, domainToManage, domainNameId, nsId, nsRecords,provider)
     if (error) return send(chatId, t.errorDeletingDns(error))
 
     send(chatId, t.dnsRecordDeleted)
@@ -3718,6 +3727,7 @@ bot?.on('message', async msg => {
     if (message === t.back) return goto['choose-dns-action']()
 
     const dnsRecords = info?.dnsRecords
+    
     let id = Number(message)
     if (isNaN(id) || !(id > 0 && id <= dnsRecords.length)) {
       return send(chatId, t.selectValidOption)
@@ -3734,8 +3744,9 @@ bot?.on('message', async msg => {
     const domain = info?.domainToManage
     const id = info?.dnsRecordIdToUpdate
     let newRecordDetails = null
+    const provider = info?.provider
 
-    const { dnszoneID, dnszoneRecordID, recordType, nsId } = dnsRecords[id]
+    const { dnszoneID, dnszoneRecordID, nsId,recordType,recordContent:oldContent,recordName:oldName} = dnsRecords[id]
 
     if (recordType !== 'NS') {
       newRecordDetails = message.split(" ")
@@ -3744,6 +3755,7 @@ bot?.on('message', async msg => {
     }
     const recordContent = newRecordDetails ? newRecordDetails[newRecordDetails.length -1 ] : message
     const hostName = newRecordDetails && newRecordDetails.length === 3 ? newRecordDetails[1] : null
+
 
     const { error } = await updateDNSRecord(
       dnszoneID,
@@ -3754,7 +3766,10 @@ bot?.on('message', async msg => {
       domainNameId,
       nsId,
       dnsRecords.filter(r => r.recordType === 'NS'),
-      hostName
+      hostName,
+      oldName,
+      oldContent,
+      provider
     )
     if (error) {
       const m = `Error update dns record, ${error}, Provide value again`
@@ -4298,7 +4313,7 @@ async function backupPayments() {
   fs.writeFileSync('payments.csv', head + backup, 'utf-8')
 }
 
-async function buyDomain(chatId, domain) {
+async function buyDomain(chatId, domain,provider) {
   // ref https://www.mongodb.com/docs/manual/core/dot-dollar-considerations
   const domainSanitizedForDb = domain.replaceAll('.', '@')
 
@@ -4307,7 +4322,7 @@ async function buyDomain(chatId, domain) {
   // set(domainsOf, chatId, domainSanitizedForDb, true)
   // return { success: true }
 
-  const result = await buyDomainOnline(domain)
+  const result = await buyDomainOnline(domain,provider)
   if (result.success) {
     set(domainsOf, chatId, domainSanitizedForDb, true)
   }
@@ -4321,8 +4336,10 @@ const formatLinks = links => {
 
 const buyDomainFullProcess = async (chatId, lang, domain) => {
   try {
+    let info = await get(state, chatId)
     sendMessage(chatId, translation('t.paymentSuccessFul', lang), rem)
-    const { error: buyDomainError } = await buyDomain(chatId, domain)
+    const provider = info?.provider
+    const { error: buyDomainError } = await buyDomain(chatId, domain,provider)
     if (buyDomainError) {
       const m = translation('t.domainPurchasedFailed', lang, domain, buyDomainError)
       log(m)
@@ -4332,7 +4349,7 @@ const buyDomainFullProcess = async (chatId, lang, domain) => {
     }
     send(chatId, translation('t.domainBoughtSuccess', lang, domain), translation('o', lang))
 
-    let info = await get(state, chatId)
+    // let info = await get(state, chatId)
     if (info?.askDomainToUseWithShortener === translation('t.no', lang)) return
 
     // saveDomainInServerRender

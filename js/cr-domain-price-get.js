@@ -1,52 +1,67 @@
 /* global process */
 require('dotenv').config()
 const axios = require('axios')
-const API_KEY = process.env.API_KEY_CONNECT_RESELLER
+;('')
+const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL;
+// const API_KEY = process.env.API_KEY_CONNECT_RESELLER
 const PERCENT_INCREASE_DOMAIN = 1 + Number(process.env.PERCENT_INCREASE_DOMAIN)
 
 // Function to test domain availability
 async function checkDomainPriceOnline(domainName) {
-  const apiUrl = `https://api.connectreseller.com/ConnectReseller/ESHOP/checkDomainPrice?APIKey=${API_KEY}&websiteName=${domainName}`
+  const apiUrl = `${NAMEWORD_BASE_URL}/domain/search?websiteName=${domainName}&renewalFeePerc=0&transferFeePerc=0&registrationFeePerc=0`
+
+  const headers = {
+    accept: 'application/json',
+    'content-type': 'application/json',
+    'x-api-key': process.env.NAMEWORD_API_KEY,
+  }
 
   let response
 
   try {
-    response = await axios.get(apiUrl)
-    const statusCode = response?.data?.responseMsg?.statusCode
-    // console.log(JSON.stringify(response?.data, 0, 2))
+    response = await axios.get(apiUrl, {
+      headers,
+    })
+
+    const statusCode = response?.status
 
     if (statusCode === 200) {
-      const premiumPrice = response?.data?.responseData?.domainCheckResponce?.[0]?.creationSellFee
-      // console.log(JSON.stringify(response.data, 0, 2))
-      if (premiumPrice) return { available: true, price: premiumPrice, originalPrice: premiumPrice }
-      const [domainId] = Object.keys(response.data.responseData)
-      const price1Year = Number(
-        response?.data?.responseData?.[domainId]
-          ?.find(entry => entry?.description?.toLowerCase()?.includes('registration price for 1 year'))
-          ?.description?.split('is ')?.[1],
-      )
+      const domainData = response?.data
 
-      if (isNaN(price1Year)) {
+      if (domainData?.responseData?.available) {
+        if (domainData?.responseData.domainType === 'Premium')
+          return {
+            available: true,
+            price: domainData.responseData.registrationFee,
+            originalPrice: domainData.responseData.registrationFee,
+            provider:domainData?.provider
+          }
+        const price = Math.ceil(domainData.responseData.registrationFee * PERCENT_INCREASE_DOMAIN)
+        return {
+          available: true,
+          originalPrice: domainData.responseData.registrationFee < 1 ? 1 : domainData.responseData.registrationFee,
+          price: price < 10 ? 10 : price,
+          provider:domainData?.provider
+
+        }
+      } else {
         return {
           available: false,
-          message: 'Some issue, can not get price, error code 110',
+          message: domainData.message || 'Domain not available',
         }
       }
-
-      const price = Math.ceil(price1Year * PERCENT_INCREASE_DOMAIN)
-      return { available: true, originalPrice: price1Year < 1 ? 1 : price1Year, price: price < 10 ? 10 : price }
-    } else if (statusCode === 400) {
+    } else {
       return {
         available: false,
-        message: 'Domain name not available, please try another domain name',
+        message: 'Invalid domain name or API error',
       }
-    } else {
-      return { available: false, message: 'Invalid domain name, please try another domain name' }
     }
   } catch (error) {
-    const message = `An error occurred while checking domain availability. Maybe IP Not Whitelisted. ${
-      error?.message
-    } ${JSON.stringify(error?.response?.data, null, 2)}`
+    const message = `An error occurred while checking domain availability. ${error?.message} ${JSON.stringify(
+      error?.response?.data,
+      null,
+      2,
+    )}`
 
     console.error('checkDomainPriceOnline', message)
 
@@ -56,6 +71,5 @@ async function checkDomainPriceOnline(domainName) {
     }
   }
 }
-// checkDomainPriceOnline('usetraderep.com').then(console.log)
 
 module.exports = { checkDomainPriceOnline }

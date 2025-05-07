@@ -4,19 +4,26 @@ const axios = require('axios')
 const getDomainDetails = require('./cr-domain-details-get')
 const { log } = require('console')
 
-const API_KEY = process.env.API_KEY_CONNECT_RESELLER
-const URL = 'https://api.connectreseller.com/ConnectReseller/ESHOP/ViewDNSRecord'
+const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL;
 
-async function getDNSRecords(websiteId) {
+async function getDNSRecords(domain, domainId,provider) {
+  const URL = `${NAMEWORD_BASE_URL}/dns/view`
   try {
     const params = {
-      APIKey: API_KEY,
-      WebsiteId: websiteId,
+      domain: domain,
+      provider: provider,
+      domainId: domainId
     }
-    const response = await axios.get(URL, { params })
+    console.log(params)
+    const headers = {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'x-api-key': process.env.NAMEWORD_API_KEY,
+    }
+    const response = await axios.get(URL, { params, headers })
 
     if (response.status === 200) {
-      return response?.data?.responseData
+      return response?.data?.responseData?.records
     } else {
       log(`Error fetching DNS records. Status Code: ${response.status}`)
     }
@@ -50,30 +57,49 @@ async function getDNSRecords(websiteId) {
 //   return { records, domainNameId }
 // }
 
-const viewDNSRecords = async domain => {
+const viewDNSRecords = async (domain) => {
   try {
     const details = await getDomainDetails(domain);
 
-    const { websiteId, domainNameId, nameserver1, nameserver2, nameserver3, nameserver4 } = details?.responseData || {};
+    const { websiteId, domainNameId, nameserver1, nameserver2, nameserver3, nameserver4} = details?.responseData || {};
     if (!websiteId || !domainNameId) {
       log('No websiteId,', details?.responseMsg?.message)
       return
     }
 
-    const res = await getDNSRecords(websiteId);
+    
+
+    const res = await getDNSRecords(domain,websiteId || domainNameId,details?.provider);
     let records = [];
 
-    const a_records = res?.filter(r => r?.recordType === 'A');
+    console.log("res",res)
+
+    // const a_records = res?.filter(r => r?.recordType === 'A' || r?.type === 'A') || [];
+    const a_records = res?.filter(r => r?.recordType === 'A' || r?.type === 'A').map(r => ({
+      recordContent: r.recordContent || r.value || null,
+      recordType: 'A',
+      recordName: r.recordName ||r.name || null,
+      domainNameId: r.domainNameId || null
+    })) || [];
+    
     records = a_records?.length === 0 ? [{ recordContent: null, recordType: 'A' }] : a_records;
+
 
     nameserver1 && records.push({ domainNameId, recordContent: nameserver1, recordType: 'NS', nsId: 1 });
     nameserver2 && records.push({ domainNameId, recordContent: nameserver2, recordType: 'NS', nsId: 2 });
     nameserver3 && records.push({ domainNameId, recordContent: nameserver3, recordType: 'NS', nsId: 3 });
     nameserver4 && records.push({ domainNameId, recordContent: nameserver4, recordType: 'NS', nsId: 4 });
+    records = [...records, ...(res?.filter(r => r?.recordType === 'CNAME' || r?.type === 'CNAME') || []).map(r => ({
+      recordContent: r.recordContent || r.value || null,
+      recordType: 'CNAME',
+      recordName: r.recordName || r.name || null,
+      domainNameId: r.domainNameId || null
+    }))];
+    console.log("records",records)
 
-    records = [...records, ...res.filter(r => r?.recordType === 'CNAME')];
 
-    return { records, domainNameId };
+
+    return { records, domainNameId ,provider: details?.provider};
   } catch (error) {
     console.error('❌ Error in viewDNSRecords:', error.message || error);
     return { records: [], domainNameId: null, error: true };

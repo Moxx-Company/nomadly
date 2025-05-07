@@ -2,22 +2,30 @@
 const axios = require('axios')
 require('dotenv').config()
 
-const buyDomainOnline = async domain => {
+const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL;
+
+const buyDomainOnline = async (domain,provider=null) => {
   try {
-    const apiUrl = 'https://api.connectreseller.com/ConnectReseller/ESHOP/Order'
+    const apiUrl = `${NAMEWORD_BASE_URL}/domain/order`
     const requestData = {
-      ...(domain.includes('.us') && { isUs: 1, appPurpose: 'P1', nexusCategory: 'C32/CC' }),
-      APIKey: process.env.API_KEY_CONNECT_RESELLER,
-      ProductType: 1,
-      Websitename: domain,
-      Duration: 1,
-      IsWhoisProtection: false,
-      Id: 150106, // Replace with the actual customer ID
+      productType: 1,
+      websiteName: domain,
+      duration: 1,
+      isWhoisProtection: false,
       ns1: '8307.dns1.managedns.org',
       ns2: '8307.dns2.managedns.org',
+      id: 150106,
+      isEnablePremium: 0,
+      provider: provider,
+      handle: 'RA1083275-US'
     }
 
-    const response = await axios.get(apiUrl, { params: requestData })
+    const response = await axios.get(apiUrl, { 
+      params: requestData,
+      headers: {
+        'x-api-key': process.env.NAMEWORD_API_KEY
+      }
+    })
     console.log('buyDomain Response:', JSON.stringify(response.data, null, 2))
 
     if (response?.data?.responseMsg?.statusCode === 200) {

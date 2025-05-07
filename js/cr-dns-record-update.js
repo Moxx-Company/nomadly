@@ -5,7 +5,7 @@ const { log } = require('console')
 const APIKey = process.env.API_KEY_CONNECT_RESELLER
 const { updateDNSRecordNs } = require('./cr-dns-record-update-ns')
 const { saveServerInDomain } = require('./cr-dns-record-add')
-
+const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL;
 const updateDNSRecord = async (
   DNSZoneID,
   DNSZoneRecordID,
@@ -15,26 +15,53 @@ const updateDNSRecord = async (
   domainNameId,
   nsId,
   dnsRecords,
-  hostName
+  hostName,
+  oldRecordName = null,
+  oldRecordValue = null,
+  provider,
+  recordTTL = 600,
+  recordPriority = null,
+  oldRecordType = null,
+  oldRecordTTL = null,
+  oldRecordPriority = null,
 ) => {
-  if (RecordType === 'NS') return await updateDNSRecordNs(domainNameId, domainName, RecordValue, nsId, dnsRecords)
+  if (RecordType === 'NS') return await updateDNSRecordNs(domainNameId, domainName, RecordValue, nsId, dnsRecords,provider)
 
   // Custom Requirement fulfilled, if no A record present then show A Record: None, so we are updating it by creating it
   if (RecordType === 'A' && !DNSZoneID) return await saveServerInDomain(domainName, RecordValue, 'A', null, null, null, hostName)
 
   try {
-    const apiUrl = 'https://api.connectreseller.com/ConnectReseller/ESHOP/ModifyDNSRecord'
+    const apiUrl = `${NAMEWORD_BASE_URL}/dns/modify`
+
+    const headers = {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      'x-api-key': process.env.NAMEWORD_API_KEY,
+      // 'x-api-key': '67f294dcc6938176ec45a297|3b21eba7209d49c4824a4220de37c452',
+    }
     const RecordName = hostName ? `${hostName}.${domainName}` : domainName
     const requestData = {
-      APIKey,
-      DNSZoneID,
-      RecordName,
-      RecordType,
-      RecordValue,
-      DNSZoneRecordID,
+      dnsZoneId: DNSZoneID || "11", 
+      dnsZoneRecordId: DNSZoneRecordID || "11",
+      recordName: RecordName,
+      recordType: RecordType,
+      recordValue: RecordValue,
+      recordTTL,
+      recordPriority,
+      oldRecordName: oldRecordName,
+      oldRecordType:RecordType,
+      // oldRecordType: oldRecordType || RecordType,
+      oldRecordValue: oldRecordValue ,
+      // oldRecordTTL: oldRecordTTL || recordTTL,
+      // oldRecordPriority: oldRecordPriority || recordPriority,
+      domain: domainName,
+      provider
     }
 
-    const response = await axios.get(apiUrl, { params: requestData })
+    const response = await axios.get(apiUrl, { 
+      params: requestData,
+      headers
+    })
     log(
       'update DNS Record ',
       { DNSZoneID, DNSZoneRecordID, RecordName, RecordType, RecordValue },
