@@ -17,7 +17,7 @@ const buyDomainOnline = async (domain,provider=null) => {
       id: 150106,
       isEnablePremium: 0,
       provider: provider,
-      handle: 'RA1083275-US'
+      handle: 'JC960450-US'
     }
 
     const response = await axios.get(apiUrl, { 

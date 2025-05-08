@@ -37,9 +37,8 @@ const updateDNSRecord = async (
       accept: 'application/json',
       'content-type': 'application/json',
       'x-api-key': process.env.NAMEWORD_API_KEY,
-      // 'x-api-key': '67f294dcc6938176ec45a297|3b21eba7209d49c4824a4220de37c452',
     }
-    const RecordName = hostName ? `${hostName}.${domainName}` : domainName
+    const RecordName =  hostName ? (provider == 'openprovider' ? hostName : `${hostName}.${domainName}`) : domainName
     const requestData = {
       dnsZoneId: DNSZoneID || "11", 
       dnsZoneRecordId: DNSZoneRecordID || "11",

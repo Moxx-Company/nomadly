@@ -107,7 +107,7 @@ const saveServerInDomain = async (
     return { error: e }
   }
 
-  const RECORD_NAME = hostName ? `${hostName}.${domainName}` : domainName
+  const RECORD_NAME = hostName ? provider=="openprovider"?hostName: `${hostName}.${domainName}` : domainName
   const RECORD_VALUE = server
   const RECORD_TTL = 600
 
