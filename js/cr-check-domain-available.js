@@ -59,7 +59,7 @@ const getNewDomain = async (domainName, hostingType) => {
     response = response.data.data
     console.log('Response Formatted:', response);
 
-    let { registrationFee, registrationFees, domainType } = response.responseData;
+    let { registrationFee, registrationFees, domainType,available } = response.responseData;
 
     if (registrationFees) {
       domainPrice = registrationFees
@@ -73,7 +73,7 @@ const getNewDomain = async (domainName, hostingType) => {
     console.log(chatMessage);
 
     return {
-      available: true,
+      available: available === true || available === "true",
       originalPrice: domainPrice < 1 ? 1 : domainPrice,
       price: price < 10 ? 10 : price,
       chatMessage,
