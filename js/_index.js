@@ -659,7 +659,10 @@ bot?.on('message', async msg => {
 
     'choose-dns-action': async () => {
       const domain = info?.domainToManage
-      const { records, domainNameId,provider } = await viewDNSRecords(domain)
+      const result = await viewDNSRecords(domain)
+      const records = result?.records || []
+      const domainNameId = result?.domainNameId
+      const provider = result?.provider
 
       const toSave = records?.map(({ dnszoneID, dnszoneRecordID,recordName, recordType, nsId, recordContent }) => ({
         dnszoneID,
@@ -685,7 +688,7 @@ bot?.on('message', async msg => {
       set(state, chatId, 'dnsRecords', toSave)
 
       set(state, chatId, 'domainNameId', domainNameId)
-      set(state, chatId, 'provider', provider)
+      if (provider) set(state, chatId, 'provider', provider)
       set(state, chatId, 'action', 'choose-dns-action')
       send(chatId, t.viewDnsRecords(categorizedRecords, domain), trans('dns'))
     },
@@ -3713,7 +3716,7 @@ bot?.on('message', async msg => {
     }
 
     const nextId = nextNumber(nsRecords.map(r => r.nsId))
-    const { error } = await saveServerInDomain(domain, recordContent, t[recordType], domainNameId, nextId, nsRecords, hostName)
+    const {error} = await saveServerInDomain(domain, recordContent, t[recordType], domainNameId, nextId, nsRecords, hostName)
     if (error) {
       const m = t.errorSavingDns(error)
       return send(chatId, m)

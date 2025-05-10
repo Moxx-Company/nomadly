@@ -11,6 +11,12 @@ const deleteDNSRecord = async (DNSZoneID, DNSZoneRecordID,recordType,recordConte
   if (nsId) return updateDNSRecordNs(domainNameId, domain, undefined, nsId, dnsRecords,provider)
   try {
 
+    console.log("deleteDNSRecord", { DNSZoneID, DNSZoneRecordID,recordType,recordContent,recordName, domain, domainNameId, nsId, dnsRecords,provider })
+
+    if (provider === 'openprovider' && recordName) {
+      recordName = recordName.replace(`.${domain}`, '')
+    }
+
     // const apiUrl = 'https://api.connectreseller.com/ConnectReseller/ESHOP/DeleteDNSRecord'
     const requestData = {
       dnsZoneId: DNSZoneID || "11",

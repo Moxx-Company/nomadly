@@ -6,7 +6,7 @@ const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL;
 
 const getDomainDetails = async websiteName => {
   try {
-    const URL = `${NAMEWORD_BASE_URL}/domain/appview-domain`
+    const URL = `${NAMEWORD_BASE_URL}/domain/view-domain`
 
     const params = {
       domain: websiteName,

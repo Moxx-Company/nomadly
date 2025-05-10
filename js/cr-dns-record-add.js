@@ -4,7 +4,7 @@ const axios = require('axios')
 const { log } = require('console')
 const { updateDNSRecordNs } = require('./cr-dns-record-update-ns')
 
-const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL;
+const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL
 
 // const API_KEY = process.env.API_KEY_CONNECT_RESELLER
 
@@ -17,20 +17,19 @@ const saveServerInDomain = async (
   dnsRecords,
   hostName,
 ) => {
-  
   log(`saveServerInDomain ${domainName} ${server} ${RecordType}`)
   let dnsZoneId
   let websiteId
-  
+
   const headers = {
     accept: 'application/json',
     'content-type': 'application/json',
     'x-api-key': process.env.NAMEWORD_API_KEY,
   }
-  
+
   try {
-    const URL = `${NAMEWORD_BASE_URL}/domain/appview-domain`
-    
+    const URL = `${NAMEWORD_BASE_URL}/domain/view-domain`
+
     const params = {
       domain: domainName,
     }
@@ -38,11 +37,11 @@ const saveServerInDomain = async (
       headers,
       params: params,
     }
-    
-    let provider
-    
+
+    var provider
+
     const response = await axios.get(URL, config)
-    
+
     if (response?.data?.responseMsg?.statusCode === 200) {
       websiteId = response?.data?.responseData?.websiteId
       provider = response?.data?.provider
@@ -56,31 +55,29 @@ const saveServerInDomain = async (
     console.error('Error saveServerInDomain 2', e)
     return { error: e }
   }
-  if (RecordType === 'NS') return await updateDNSRecordNs(domainNameId, domainName, server, nsId, dnsRecords,provider)
-  
+  if (RecordType === 'NS') return await updateDNSRecordNs(domainNameId, domainName, server, nsId, dnsRecords, provider)
+
   try {
     const URL = `${NAMEWORD_BASE_URL}/domain/manage-dns-records`
 
     const params = {
       domain: domainName,
       provider: provider,
-      websiteId:websiteId
+      websiteId: websiteId,
     }
     const config = {
       headers,
       params: params,
     }
 
-    const dnsMgmtRes = await axios.get(URL, config)// Enable DNS Management
+    const dnsMgmtRes = await axios.get(URL, config) // Enable DNS Management
     console.log({ dnsMgmtRes: dnsMgmtRes?.data })
   } catch (error) {
     // let e = `${error?.message} ${JSON.stringify(error?.response?.data)}`
     console.error('Error managing DNS records', e)
-    
   }
 
   try {
-
     const URL = `${NAMEWORD_BASE_URL}/domain/view-domain`
 
     const params = {
@@ -107,23 +104,22 @@ const saveServerInDomain = async (
     return { error: e }
   }
 
-  const RECORD_NAME = hostName ? provider=="openprovider"?hostName: `${hostName}.${domainName}` : domainName
+  const RECORD_NAME = hostName ? (provider == 'openprovider' ? hostName : `${hostName}.${domainName}`) :domainName
   const RECORD_VALUE = server
   const RECORD_TTL = 600
 
   try {
-
     const URL = `${NAMEWORD_BASE_URL}/dns/add`
 
     const params = {
       dnsZoneId: dnsZoneId || 11,
-      recordName: RECORD_NAME || "",
-      recordType:RecordType,
+      recordName: RECORD_NAME || '',
+      recordType: RecordType,
       recordValue: RECORD_VALUE,
       recordTTL: RECORD_TTL,
-      recordPriority:1,
-      domain:domainName,
-      provider:provider,
+      recordPriority: 1,
+      domain: domainName,
+      provider: provider,
     }
     console.log(params)
     const config = {
@@ -144,9 +140,8 @@ const saveServerInDomain = async (
     // }
     // console.log(params)
     // const response = await axios.get(url, { params })
-    const success = 200 === response?.data?.responseData?.statusCode
-
-    return success ? { success } : { error: response?.data?.responseData?.message }
+    const success = 200 === response?.data?.responseMsg?.statusCode
+    return success ? { success } : { error:response?.data?.responseMsg?.message || 'Unknown error' }
   } catch (error) {
     console.error('Error saveServerInDomain 5', error?.message, error?.response?.data)
     return { error: `${error?.message} ${error?.response?.data}` }

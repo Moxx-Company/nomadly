@@ -23,7 +23,7 @@ async function getDNSRecords(domain, domainId,provider) {
     const response = await axios.get(URL, { params, headers })
 
     if (response.status === 200) {
-      return response?.data?.responseData?.records
+      return response?.data?.responseData?.records || response?.data?.responseData
     } else {
       log(`Error fetching DNS records. Status Code: ${response.status}`)
     }
@@ -79,7 +79,9 @@ const viewDNSRecords = async (domain) => {
       recordContent: r.recordContent || r.value || null,
       recordType: 'A',
       recordName: r.recordName ||r.name || null,
-      domainNameId: r.domainNameId || null
+      domainNameId: r.domainNameId || null,
+      dnszoneID:r?.dnszoneID, 
+      dnszoneRecordID:r?.dnszoneRecordID
     })) || [];
     
     records = a_records?.length === 0 ? [{ recordContent: null, recordType: 'A' }] : a_records;
@@ -93,7 +95,9 @@ const viewDNSRecords = async (domain) => {
       recordContent: r.recordContent || r.value || null,
       recordType: 'CNAME',
       recordName: r.recordName || r.name || null,
-      domainNameId: r.domainNameId || null
+      domainNameId: r?.domainNameId || null,
+      dnszoneID:r?.dnszoneID, 
+      dnszoneRecordID:r?.dnszoneRecordID
     }))];
     console.log("records",records)
 

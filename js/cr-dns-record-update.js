@@ -20,16 +20,16 @@ const updateDNSRecord = async (
   oldRecordValue = null,
   provider,
   recordTTL = 600,
-  recordPriority = null,
+  recordPriority = 1,
   oldRecordType = null,
-  oldRecordTTL = null,
-  oldRecordPriority = null,
+  oldRecordTTL = 600,
+  oldRecordPriority = 1,
 ) => {
   if (RecordType === 'NS') return await updateDNSRecordNs(domainNameId, domainName, RecordValue, nsId, dnsRecords,provider)
 
   // Custom Requirement fulfilled, if no A record present then show A Record: None, so we are updating it by creating it
-  if (RecordType === 'A' && !DNSZoneID) return await saveServerInDomain(domainName, RecordValue, 'A', null, null, null, hostName)
-
+  if (RecordType === 'A' && (provider !== "openprovider" && !DNSZoneID)) return await saveServerInDomain(domainName, RecordValue, 'A', null, null, null, hostName)
+  
   try {
     const apiUrl = `${NAMEWORD_BASE_URL}/dns/modify`
 
@@ -38,7 +38,12 @@ const updateDNSRecord = async (
       'content-type': 'application/json',
       'x-api-key': process.env.NAMEWORD_API_KEY,
     }
-    const RecordName =  hostName ? (provider == 'openprovider' ? hostName : `${hostName}.${domainName}`) : domainName
+    var RecordName =  hostName ? (provider == 'openprovider' ? hostName : `${hostName}.${domainName}`) :domainName
+
+    var oldRecordNameValue = oldRecordName
+    if (provider === 'openprovider' ) {
+      oldRecordNameValue= oldRecordName.replace(`.${domainName}`, '')
+    }
     const requestData = {
       dnsZoneId: DNSZoneID || "11", 
       dnsZoneRecordId: DNSZoneRecordID || "11",
@@ -51,8 +56,8 @@ const updateDNSRecord = async (
       oldRecordType:RecordType,
       // oldRecordType: oldRecordType || RecordType,
       oldRecordValue: oldRecordValue ,
-      // oldRecordTTL: oldRecordTTL || recordTTL,
-      // oldRecordPriority: oldRecordPriority || recordPriority,
+      oldRecordTTL: oldRecordTTL,
+      oldRecordPriority: oldRecordPriority ,
       domain: domainName,
       provider
     }

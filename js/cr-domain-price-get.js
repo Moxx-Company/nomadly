@@ -17,7 +17,7 @@ async function checkDomainPriceOnline(domainName) {
   }
 
   let response
-
+  
   try {
     response = await axios.get(apiUrl, {
       headers,
