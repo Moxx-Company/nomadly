@@ -12,12 +12,24 @@ const buyDomainOnline = async (domain,provider=null) => {
       websiteName: domain,
       duration: 1,
       isWhoisProtection: false,
-      ns1: '8307.dns1.managedns.org',
-      ns2: '8307.dns2.managedns.org',
+
       id: 150106,
       isEnablePremium: 0,
       provider: provider,
-      handle: 'JC960450-US'
+      handle:'JC960450-US',
+
+      ...(provider === 'openprovider'
+        ? {
+            ns1: 'ns1.openprovider.nl',
+            ns2: 'ns2.openprovider.be',
+            ns3: 'ns3.openprovider.eu',
+          }
+        : {
+            ns1: '8307.dns1.managedns.org',
+            ns2: '8307.dns2.managedns.org',
+          }),
+      // 'TT953070-US'
+      // 'JC960450-US'
     }
 
     const response = await axios.get(apiUrl, { 

@@ -19,10 +19,10 @@ const updateDNSRecord = async (
   oldRecordName = null,
   oldRecordValue = null,
   provider,
-  recordTTL = 600,
+  recordTTL = 900,
   recordPriority = 1,
   oldRecordType = null,
-  oldRecordTTL = 600,
+  oldRecordTTL = 900,
   oldRecordPriority = 1,
 ) => {
   if (RecordType === 'NS') return await updateDNSRecordNs(domainNameId, domainName, RecordValue, nsId, dnsRecords,provider)

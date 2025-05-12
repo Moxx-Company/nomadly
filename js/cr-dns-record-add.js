@@ -106,7 +106,7 @@ const saveServerInDomain = async (
 
   const RECORD_NAME = hostName ? (provider == 'openprovider' ? hostName : `${hostName}.${domainName}`) :domainName
   const RECORD_VALUE = server
-  const RECORD_TTL = 600
+  const RECORD_TTL = 900
 
   try {
     const URL = `${NAMEWORD_BASE_URL}/dns/add`
