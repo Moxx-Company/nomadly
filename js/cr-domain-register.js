@@ -22,7 +22,6 @@ const buyDomainOnline = async (domain,provider=null) => {
         ? {
             ns1: 'ns1.openprovider.nl',
             ns2: 'ns2.openprovider.be',
-            ns3: 'ns3.openprovider.eu',
           }
         : {
             ns1: '8307.dns1.managedns.org',
