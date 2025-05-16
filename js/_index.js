@@ -249,7 +249,7 @@ const loadData = async () => {
 
   log(`DB Connected lala. May peace be with you and Lord's mercy and blessings.`)
 
-  // await set(walletOf, 590716835, 'usdIn', 100)
+  // await set(walletOf, 590716835, 'usdIn', 300)
 
   //
   // sendMessage(6687923716, 'bot started')
@@ -686,8 +686,7 @@ bot?.on('message', async msg => {
       const categorizedRecords = categorizeRecords(records);
 
       set(state, chatId, 'dnsRecords', toSave)
-
-      set(state, chatId, 'domainNameId', domainNameId)
+      if(domainNameId) set(state, chatId, 'domainNameId', domainNameId)
       if (provider) set(state, chatId, 'provider', provider)
       set(state, chatId, 'action', 'choose-dns-action')
       send(chatId, t.viewDnsRecords(categorizedRecords, domain), trans('dns'))
@@ -3115,10 +3114,11 @@ bot?.on('message', async msg => {
       send(TELEGRAM_DEV_CHAT_ID, t.issueGettingPrice)
       return send(chatId, t.issueGettingPrice)
     }
-    saveInfo('price', price)
-    saveInfo('domain', domain)
-    saveInfo('originalPrice', originalPrice)
-    saveInfo('provider', provider)
+    if(price) saveInfo('price', price)
+    if(domain) saveInfo('domain', domain)
+    if(originalPrice) saveInfo('originalPrice', originalPrice)
+
+    if(provider)saveInfo('provider', provider)
     return goto.askDomainToUseWithShortener()
   }
   if (action === a.askDomainToUseWithShortener) {
@@ -4356,7 +4356,7 @@ const buyDomainFullProcess = async (chatId, lang, domain) => {
     if (info?.askDomainToUseWithShortener === translation('t.no', lang)) return
 
     // saveDomainInServerRender
-    const { server, error, recordType } =
+    const { server, error, recordType } = 
       process.env.HOSTED_ON === 'render'
         ? await saveDomainInServerRender(domain)
         : await saveDomainInServerRailway(domain) // save domain in railway // can do separately maybe or just send messages of progress to user
