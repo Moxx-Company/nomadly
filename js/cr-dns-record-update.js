@@ -42,7 +42,7 @@ const updateDNSRecord = async (
 
     var oldRecordNameValue = oldRecordName
     if (provider === 'openprovider' ) {
-      oldRecordNameValue= oldRecordName.replace(`.${domainName}`, '')
+      oldRecordNameValue= oldRecordName?.replace(`.${domainName}`, '')
     }
     const requestData = {
       dnsZoneId: DNSZoneID || "11", 
