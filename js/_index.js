@@ -3662,12 +3662,16 @@ bot?.on('message', async msg => {
     if (message !== t.yes) return send(chatId, t.what)
 
     const { domainNameId, dnsRecords, domainToManage, delId } = info
-    const nsRecords = dnsRecords.filter(r => r.recordType === 'NS')
-    const { dnszoneID, dnszoneRecordID, nsId } = dnsRecords[delId]
-    const { error } = await deleteDNSRecord(dnszoneID, dnszoneRecordID, domainToManage, domainNameId, nsId, nsRecords)
-    if (error) return send(chatId, t.errorDeletingDns(error))
-
-    send(chatId, t.dnsRecordDeleted)
+    if(!!dnsRecords && !!dnsRecords?.[delId]) {
+      const nsRecords = dnsRecords.filter(r => r.recordType === 'NS')
+      const { dnszoneID, dnszoneRecordID, nsId } = dnsRecords[delId]
+      const { error } = await deleteDNSRecord(dnszoneID, dnszoneRecordID, domainToManage, domainNameId, nsId, nsRecords)
+      if (error) return send(chatId, t.errorDeletingDns(error))
+  
+      send(chatId, t.dnsRecordDeleted)
+    } else {
+      send(chatId, t.errorDeletingDns("NO DNS Record ID Found"))
+    }
     return goto['choose-dns-action']()
   }
   if (action === 'select-dns-record-type-to-add') {
@@ -4349,8 +4353,8 @@ const buyDomainFullProcess = async (chatId, lang, domain) => {
     sendMessage(chatId, translation('t.domainLinking', lang, domain))
 
     await sleep(65000) // sleep 65 seconds so that CR API can get the info that
-
     const { error: saveServerInDomainError } = await saveServerInDomain(domain, server, recordType)
+    console.log("###saveServerInDomainError",saveServerInDomainError)
     if (saveServerInDomainError) {
       const m = `Error saving server in domain ${saveServerInDomainError}`
       sendMessage(chatId, m)
