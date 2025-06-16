@@ -81,7 +81,7 @@ const viewDNSRecords = async (domain) => {
       recordName: r.recordName ||r.name || null,
       domainNameId: r.domainNameId || null,
       dnszoneID:r?.dnszoneID, 
-      dnszoneRecordID:r?.dnszoneRecordID
+      dnszoneRecordID:r?.dnszoneRecordID || r?.id
     })) || [];
     
     records = a_records?.length === 0 ? [{ recordContent: null, recordType: 'A' }] : a_records;
@@ -97,7 +97,7 @@ const viewDNSRecords = async (domain) => {
       recordName: r.recordName || r.name || null,
       domainNameId: r?.domainNameId || null,
       dnszoneID:r?.dnszoneID, 
-      dnszoneRecordID:r?.dnszoneRecordID
+      dnszoneRecordID:r?.dnszoneRecordID || r?.id
     }))];
     console.log("records",records)
 
