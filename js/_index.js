@@ -3675,6 +3675,7 @@ bot?.on('message', async msg => {
     const { domainNameId, dnsRecords, domainToManage, delId,provider } = info
     const nsRecords = dnsRecords.filter(r => r.recordType === 'NS')
     log("***********************",dnsRecords[delId])
+    if (!dnsRecords && !dnsRecords?.[delId]) return send(chatId, t.errorDeletingDns("DNS ID not found"))
     const { dnszoneID, dnszoneRecordID, nsId,recordType,recordContent,recordName} = dnsRecords[delId]
     const { error } = await deleteDNSRecord(dnszoneID, dnszoneRecordID,recordType,recordContent,recordName, domainToManage, domainNameId, nsId, nsRecords,provider)
     if (error) return send(chatId, t.errorDeletingDns(error))
