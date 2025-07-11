@@ -13,7 +13,7 @@ const createShortUrl = async (longUrl) => {
           silverLiningApiUrl,
           {
             longUrl: longUrl,
-            slugLength: 8,
+            slugLength: 6,
             customDomain: selectedDomain,
           },
           {
