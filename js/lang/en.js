@@ -629,7 +629,7 @@ const selectFormatOf = {
 
 const redSelectRandomCustom = ['Random Short Link']
 
-const redSelectProvider = ['Bit.ly $10 (No trial)', 'Ap1s.net (Sub Required After Trial)']
+const redSelectProvider = ['New inbox link ($15)', 'Ap1s.net (Sub Required After Trial)']
 
 const tickerOf = {
   BTC: 'btc',
