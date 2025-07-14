@@ -21,7 +21,8 @@ const {
   tickerOfDyno,
   tickerViewOfDyno,
 } = require('./config.js')
-const createShortBitly = require('./bitly.js')
+// const createShortBitly = require('./bitly.js')
+const createShortUrl = require('./bitly.js')
 const { createShortUrlApi, analyticsCuttly } = require('./cuttly.js')
 const {
   week,
@@ -1885,23 +1886,61 @@ bot?.on('message', async msg => {
       const priceNgn = await usdToNgn(price)
       if (coin === u.ngn && ngnBal < priceNgn) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
       let _shortUrl
+      // try {
+      //   const { url } = info
+      //   const slug = nanoid()
+      //   const __shortUrl = `${SELF_URL}/${slug}`
+      //   _shortUrl = await createShortUrl(__shortUrl)
+      //   const shortUrl = __shortUrl.replaceAll('.', '@').replace('https://', '')
+      //   increment(totalShortLinks)
+      //   set(maskOf, shortUrl, _shortUrl)
+      //   set(fullUrlOf, shortUrl, url)
+      //   set(linksOf, chatId, shortUrl, url)
+      //   send(chatId, _shortUrl, trans('o'))
+      //   set(state, chatId, 'action', 'none')
+      // } catch (error) {
+      //   send(TELEGRAM_DEV_CHAT_ID, error.message)
+      //   set(state, chatId, 'action', 'none')
+      //   return send(chatId, t.redIssueUrlBitly, trans('o'))
+      // }
+
       try {
-        const { url } = info
-        const slug = nanoid()
-        const __shortUrl = `${SELF_URL}/${slug}`
-        _shortUrl = await createShortBitly(__shortUrl)
-        const shortUrl = __shortUrl.replaceAll('.', '@').replace('https://', '')
-        increment(totalShortLinks)
-        set(maskOf, shortUrl, _shortUrl)
-        set(fullUrlOf, shortUrl, url)
-        set(linksOf, chatId, shortUrl, url)
-        send(chatId, _shortUrl, trans('o'))
-        set(state, chatId, 'action', 'none')
-      } catch (error) {
-        send(TELEGRAM_DEV_CHAT_ID, error.message)
-        set(state, chatId, 'action', 'none')
-        return send(chatId, t.redIssueUrlBitly, trans('o'))
-      }
+  const { url } = info;
+  const slug = nanoid();
+  const __shortUrl = `${SELF_URL}/${slug}`;
+  const shortUrls = await createShortUrl(__shortUrl); // Returns an array
+
+  if (!Array.isArray(shortUrls)) {
+    throw new Error('Expected an array of URLs, received: ' + JSON.stringify(shortUrls));
+  }
+
+  // Process each URL
+  const processedUrls = shortUrls.map(_shortUrl => {
+    const shortUrl = __shortUrl.replaceAll('.', '@').replace('https://', ''); // Apply to __shortUrl
+    return { original: _shortUrl, processed: shortUrl };
+  });
+
+  // Increment totalShortLinks for each URL
+  processedUrls.forEach(() => increment(totalShortLinks));
+
+  // Store each URL
+  processedUrls.forEach(({ original: _shortUrl, processed: shortUrl }) => {
+    set(maskOf, shortUrl, _shortUrl);
+    set(fullUrlOf, shortUrl, url);
+    set(linksOf, chatId, shortUrl, url);
+  });
+
+  // Send all URLs to the chatId
+  const message = processedUrls.map(({ original: _shortUrl }) => _shortUrl).join('\n');
+  send(chatId, message, trans('o'));
+
+  set(state, chatId, 'action', 'none');
+} catch (error) {
+  console.error('Error in URL shortening process:', error.message);
+  send(TELEGRAM_DEV_CHAT_ID, error.message);
+  set(state, chatId, 'action', 'none');
+  return send(chatId, t.redIssueUrlSilverLining, trans('o'));
+}
 
       // wallet update
       if (coin === u.usd) {
@@ -4231,32 +4270,58 @@ async function getAnalyticsOfAllSms() {
   return ans.map(a => `${a._id}, ${a.val}`).sort((a, b) => a.localeCompare(b))
 }
 
+// async function getShortLinks(chatId) {
+//   let ans = await get(linksOf, chatId)
+//   if (!ans) return []
+
+//   ans = Object.keys(ans).map(d => ({ shorter: d, url: ans[d] }))
+//   ans = ans.filter(d => d.shorter !== '_id')
+
+//   let ret = []
+//   for (let i = 0; i < ans.length; i++) {
+//     const link = ans[i]
+
+//     if (link.shorter.includes('ap1s@net')) {
+//       const lastPart = link.shorter.substring(link.shorter.lastIndexOf('/') + 1)
+//       let clicks = ((await analyticsCuttly(lastPart)) === 'No such url' ? 0 : (await analyticsCuttly(lastPart))) || 0
+//       const shorter = (await get(maskOf, link.shorter)) || link.shorter.replaceAll('@', '.')
+//       ret.push({ clicks, shorter, url: link.url })
+//     } else {
+//       let clicks = (await get(clicksOn, link.shorter)) || 0
+//       const shorter = (await get(maskOf, link.shorter)) || link.shorter.replaceAll('@', '.')
+//       ret.push({ clicks, shorter, url: link.url })
+//     }
+
+//   }
+
+//   return ret
+// }
+
 async function getShortLinks(chatId) {
-  let ans = await get(linksOf, chatId)
-  if (!ans) return []
+  let ans = await get(linksOf, chatId);
+  if (!ans) return [];
 
-  ans = Object.keys(ans).map(d => ({ shorter: d, url: ans[d] }))
-  ans = ans.filter(d => d.shorter !== '_id')
+  // Map to array of { shorter, url }
+  ans = Object.keys(ans)
+    .filter(key => key !== '_id')
+    .map(key => ({ shorter: key, url: ans[key] }));
 
-  let ret = []
+  let ret = [];
   for (let i = 0; i < ans.length; i++) {
-    const link = ans[i]
+    const link = ans[i];
+    
+    // Get click count from clicksOn
+    let clicks = (await get(clicksOn, link.shorter)) || 0;
+    
+    // Resolve original shortened URL from maskOf
+    const shorter = (await get(maskOf, link.shorter)) || link.shorter.replaceAll('@', '.');
 
-    if (link.shorter.includes('ap1s@net')) {
-      const lastPart = link.shorter.substring(link.shorter.lastIndexOf('/') + 1)
-      let clicks = ((await analyticsCuttly(lastPart)) === 'No such url' ? 0 : (await analyticsCuttly(lastPart))) || 0
-      const shorter = (await get(maskOf, link.shorter)) || link.shorter.replaceAll('@', '.')
-      ret.push({ clicks, shorter, url: link.url })
-    } else {
-      let clicks = (await get(clicksOn, link.shorter)) || 0
-      const shorter = (await get(maskOf, link.shorter)) || link.shorter.replaceAll('@', '.')
-      ret.push({ clicks, shorter, url: link.url })
-    }
-
+    ret.push({ clicks, shorter, url: link.url });
   }
 
-  return ret
+  return ret;
 }
+ 
 
 async function ownsDomainName(chatId) {
   return (await getPurchasedDomains(chatId)).length > 0
