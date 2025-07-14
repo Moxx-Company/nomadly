@@ -583,7 +583,7 @@ const selectFormatOf = {
 
 const redSelectRandomCustom = ['Lien court aléatoire']
 
-const redSelectProvider = ['Nouveau lien de boîte de réception (15 $)', 'Ap1s.net (Abonnement requis après essai)']
+const redSelectProvider = ['Nouveau lien de boîte de réception (15 $)', 'Nouveau lien de boîte de réception (Abonnement requis après essai)']
 
 const tickerOf = {
   BTC: 'btc',

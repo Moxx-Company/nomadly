@@ -574,7 +574,7 @@ const selectFormatOf = {
 
 const redSelectRandomCustom = ['यादृच्छिक शॉर्ट लिंक']
 
-const redSelectProvider = ['नई इनबॉक्स लिंक ($15)', 'Ap1s.net (परीक्षण के बाद सदस्यता आवश्यक)']
+const redSelectProvider = ['नई इनबॉक्स लिंक ($15)', 'नया इनबॉक्स लिंक (परीक्षण के बाद सदस्यता आवश्यक)']
 
 const tickerOf = {
   BTC: 'btc',
