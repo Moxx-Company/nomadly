@@ -522,7 +522,7 @@ const validatorSelectFormat = ['Local Format', 'International Format']
 
 //redSelectRandomCustom
 
-const redSelectRandomCustom = ['Random Short Link']
+const redSelectRandomCustom = ['Random Short Link', 'Custom Short Link']
 
 const redSelectProvider = ['New inbox link ($15)', 'New inbox link (Sub Required After Trial)']
 
