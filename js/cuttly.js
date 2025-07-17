@@ -52,29 +52,30 @@ const createShortUrlApi = async (longUrl, customSlug = null) => {
   }
 };
 
-const analyticsSilverLining = async (shortUrlHash) => {
+const analyticsSilverLining = async (shortUrlHash, domain) => {
   try {
-    const config = {
-      method: 'get',
-      url: `${silverLiningTrackUrl}/${shortUrlHash}`,
+    const response = await axios.post(silverLiningTrackUrl, {
+      slug: shortUrlHash,
+      customDomain: domain || 'aws3.link'
+    }, {
       headers: {
         'x-api-key': apiKey,
         'Content-Type': 'application/json',
       },
-    };
-
-    const response = await axios(config);
+    })
     if (response.status === 200) {
-      const clickData = response.data.clicks || {};
-      return Object.values(clickData).reduce((sum, val) => sum + (typeof val === 'number' ? val : 0), 0);
+      return response.data.totalHits || 0;
+      //return Object.values(clickData).reduce((sum, val) => sum + (typeof val === 'number' ? val : 0), 0)
     } else {
       console.error('Error getting total clicks, Code:', response?.status);
       return 0;
+      console.error('Error getting total clicks, Code:', response?.status)
+      return 0
     }
   } catch (error) {
-    console.error('Error getting analytics:', error.response?.data || error.message);
-    return error?.response?.data?.message || 'No such URL';
+    console.error('Error getting analytics:', error.response?.data || error.message)
+    return error?.response?.data?.message || 'No such URL'
   }
-};
+}
 
-module.exports = { createShortUrlApi, analyticsSilverLining };
+module.exports = { createShortUrlApi, analyticsSilverLining }

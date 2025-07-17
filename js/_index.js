@@ -2946,100 +2946,122 @@ bot?.on('message', async msg => {
     saveInfo('format', message)
 
 
- // Random slug handling
-  if (redSelectRandomCustom[0] === message) {
-    try {
-      const { url } = info; // Custom slug not provided for random
-      let shortUrls, shortUrl;
+    // Random slug handling
+    if (redSelectRandomCustom[0] === message) {
+      try {
+        const { url } = info // Custom slug not provided for random
+        let shortUrls;
+        const isUserSubscribed = await isSubscribed(chatId)
+        if (process.env.LINK_TO_SELF_SERVER === 'false') {
+          shortUrls = await createShortUrlApi(url) // Returns array of 4 links
+          shortUrls.map((shortUrl) => {
+            if (!shortUrl) {
+              return;
+            }
+            set(linksOf, chatId, shortUrl.replaceAll('.', '@'), url)
+            increment(totalShortLinks)
+            set(maskOf, shortUrl.replaceAll('.', '@'), shortUrl)
+            set(fullUrlOf, shortUrl.replaceAll('.', '@'), url)
 
-      if (process.env.LINK_TO_SELF_SERVER === 'false') {
-        shortUrls = await createShortUrlApi(url); // Returns array of 4 links
-        shortUrl = shortUrls[0]; // Use first link for primary storage
-        set(linksOf, chatId, shortUrl.replaceAll('.', '@'), url);
-      } else {
-        const slug = nanoid();
-        const __shortUrl = `${process.env.SELF_URL}/${slug}`;
-        shortUrls = await createShortUrlApi(__shortUrl); // Returns array of 4 links
-        shortUrl = shortUrls[0];
-        set(linksOf, chatId, shortUrl.replaceAll('.', '@'), url);
+            if (!isUserSubscribed) {
+              decrement(freeShortLinksOf, chatId)
+              set(expiryOf, shortUrl.replaceAll('.', '@'), Date.now() + Number(process.env.FREE_LINKS_TIME_SECONDS) * 1000)
+            }
+          })
+          //set(linksOf, chatId, shortUrl.replaceAll('.', '@'), url)
+        } else {
+          const slug = nanoid()
+          const __shortUrl = `${process.env.SELF_URL}/${slug}`
+          shortUrls = await createShortUrlApi(__shortUrl) // Returns array of 4 links
+
+          // shortUrl = shortUrls[0];
+          shortUrls.forEach((shortUrl) => {
+            if (!shortUrl) {
+              return;
+            }
+            set(linksOf, chatId, shortUrl.replaceAll('.', '@'), url)
+            increment(totalShortLinks)
+            set(maskOf, shortUrl.replaceAll('.', '@'), shortUrl)
+            set(fullUrlOf, shortUrl.replaceAll('.', '@'), url)
+
+
+            if (!isUserSubscribed) {
+              decrement(freeShortLinksOf, chatId)
+              set(expiryOf, shortUrl.replaceAll('.', '@'), Date.now() + Number(process.env.FREE_LINKS_TIME_SECONDS) * 1000)
+            }
+          })
+
+        }
+
+        set(state, chatId, 'action', 'none')
+
+        const responseMessage = `Shortened URLs:\n${shortUrls
+          .map((url, i) => (url ? `${i + 1}. ${url}` : `${i + 1}. Not available`))
+          .join('\n')}`
+        return bot.sendMessage(chatId, responseMessage, trans('o'))
+      } catch (error) {
+        bot.sendMessage(
+          process.env.TELEGRAM_ADMIN_CHAT_ID,
+          'SilverLining issue: ' + (error?.response?.data?.error || error.message),
+        )
+        set(state, chatId, 'action', 'none')
+        return bot.sendMessage(chatId, 'Error creating short URL with SilverLining', trans('o'))
       }
+    }
 
-      increment(totalShortLinks);
-      set(maskOf, shortUrl.replaceAll('.', '@'), shortUrl);
-      set(fullUrlOf, shortUrl.replaceAll('.', '@'), url);
+    // Custom slug handling
+    if (redSelectRandomCustom[1] === message) return goto.redSelectCustomExt()
 
-      if (!(await isSubscribed(chatId))) {
-        decrement(freeShortLinksOf, chatId);
-        set(expiryOf, shortUrl.replaceAll('.', '@'), Date.now() + Number(process.env.FREE_LINKS_TIME_SECONDS) * 1000);
-      }
-      set(state, chatId, 'action', 'none');
+    if (state === a.redSelectCustomExt) {
+      if (message === t.back) return goto.redSelectRandomCustom()
 
-      const responseMessage = `Shortened URLs:\n${shortUrls
-        .map((url, i) => (url ? `${i + 1}. ${url}` : `${i + 1}. Not available`))
+      if (!isValidUrl(`https://abc.com/${message}`)) return bot.sendMessage(chatId, t.notValidHalf)
+      try {
+        const { url } = info
+        const customSlug = message
+        let shortUrls, shortUrl
+
+        if (process.env.LINK_TO_SELF_SERVER === 'false') {
+          shortUrls = await createCustomShortUrl(url, customSlug) // Returns array of 4 links
+          shortUrl = shortUrls[0]
+          set(linksOf, chatId, shortUrl.replaceAll('.', '@'), url)
+        } else {
+          const slug = customSlug || nanoid()
+          const __shortUrl = `${process.env.SELF_URL}/${slug}`
+          shortUrls = await createCustomShortUrl(__shortUrl, customSlug)
+          shortUrl = shortUrls[0]
+          set(linksOf, chatId, shortUrl.replaceAll('.', '@'), url)
+        }
+
+        increment(totalShortLinks)
+        set(maskOf, shortUrl.replaceAll('.', '@'), shortUrl)
+        set(fullUrlOf, shortUrl.replaceAll('.', '@'), url)
+
+        if (!(await isSubscribed(chatId))) {
+          decrement(freeShortLinksOf, chatId)
+          set(expiryOf, shortUrl.replaceAll('.', '@'), Date.now() + Number(process.env.FREE_LINKS_TIME_SECONDS) * 1000)
+        }
+        set(state, chatId, 'action', 'none')
+
+        const responseMessage = `Shortened URLs:\n${shortUrls
+          .map((url, i) => (url ? `${i + 1}. ${url}` : `${i + 1}. Not available`))
         .join('\n')}`;
       return bot.sendMessage(chatId, responseMessage, trans('o'));
-    } catch (error) {
-      bot.sendMessage(
-        process.env.TELEGRAM_ADMIN_CHAT_ID,
-        'SilverLining issue: ' + (error?.response?.data?.error || error.message)
-      );
-      set(state, chatId, 'action', 'none');
-      return bot.sendMessage(chatId, 'Error creating short URL with SilverLining', trans('o'));
+      } catch (error) {
+        if (error?.response?.data?.error === 'Invalid Input: The request contains incorrectly formatted parameters') {
+          return bot.sendMessage(chatId, 'Invalid custom slug provided')
+        }
+
+        bot.sendMessage(
+          process.env.TELEGRAM_ADMIN_CHAT_ID,
+          'SilverLining issue: ' + (error?.response?.data?.error || error.message),
+        )
+        set(state, chatId, 'action', 'none')
+        return bot.sendMessage(chatId, 'Error creating custom short URL with SilverLining', trans('o'))
+      }
     }
   }
 
-  // Custom slug handling
-  if (redSelectRandomCustom[1] === message) return goto.redSelectCustomExt();
-  
-  if (state === a.redSelectCustomExt) {
-    if (message === t.back) return goto.redSelectRandomCustom();
-
-    if (!isValidUrl(`https://abc.com/${message}`)) return bot.sendMessage(chatId, t.notValidHalf);
-    try {
-      const { url } = info;
-      const customSlug = message;
-      let shortUrls, shortUrl;
-
-      if (process.env.LINK_TO_SELF_SERVER === 'false') {
-        shortUrls = await createCustomShortUrl(url, customSlug); // Returns array of 4 links
-        shortUrl = shortUrls[0];
-        set(linksOf, chatId, shortUrl.replaceAll('.', '@'), url);
-      } else {
-        const slug = customSlug || nanoid();
-        const __shortUrl = `${process.env.SELF_URL}/${slug}`;
-        shortUrls = await createCustomShortUrl(__shortUrl, customSlug);
-        shortUrl = shortUrls[0];
-        set(linksOf, chatId, shortUrl.replaceAll('.', '@'), url);
-      }
-
-      increment(totalShortLinks);
-      set(maskOf, shortUrl.replaceAll('.', '@'), shortUrl);
-      set(fullUrlOf, shortUrl.replaceAll('.', '@'), url);
-
-      if (!(await isSubscribed(chatId))) {
-        decrement(freeShortLinksOf, chatId);
-        set(expiryOf, shortUrl.replaceAll('.', '@'), Date.now() + Number(process.env.FREE_LINKS_TIME_SECONDS) * 1000);
-      }
-      set(state, chatId, 'action', 'none');
-
-      const responseMessage = `Shortened URLs:\n${shortUrls
-        .map((url, i) => (url ? `${i + 1}. ${url}` : `${i + 1}. Not available`))
-        .join('\n')}`;
-      return bot.sendMessage(chatId, responseMessage, trans('o'));
-    } catch (error) {
-      if (error?.response?.data?.error === 'Invalid Input: The request contains incorrectly formatted parameters') {
-        return bot.sendMessage(chatId, 'Invalid custom slug provided');
-      }
-
-      bot.sendMessage(
-        process.env.TELEGRAM_ADMIN_CHAT_ID,
-        'SilverLining issue: ' + (error?.response?.data?.error || error.message)
-      );
-      set(state, chatId, 'action', 'none');
-      return bot.sendMessage(chatId, 'Error creating custom short URL with SilverLining', trans('o'));
-    }
-  }
-};
 
   if (action === a.askCoupon + a.redSelectProvider) {
     if (message === t.back) return goto.redSelectProvider()
@@ -3799,10 +3821,17 @@ bot?.on('message', async msg => {
     let newRecordDetails = null
     const provider = info?.provider
 
-    const { dnszoneID, dnszoneRecordID, nsId,recordType,recordContent:oldContent,recordName:oldName} = dnsRecords[id]
+    const {
+      dnszoneID,
+      dnszoneRecordID,
+      nsId,
+      recordType,
+      recordContent: oldContent,
+      recordName: oldName,
+    } = dnsRecords[id]
 
     if (recordType !== 'NS') {
-      newRecordDetails = message.split(" ")
+      newRecordDetails = message.split(' ')
       if (!newRecordDetails || newRecordDetails.length < 2 || newRecordDetails.length > 3) return send(chatId, t.selectValidOption)
       if (!['A', 'CNAME'].includes(newRecordDetails[0].toLocaleUpperCase()))return send(chatId, t.selectValidOption)
     }
@@ -4289,12 +4318,18 @@ async function getShortLinks(chatId) {
 
   let ret = [];
   for (let i = 0; i < ans.length; i++) {
-    const link = ans[i];
-    const shortUrlHash = link.shorter.substring(link.shorter.lastIndexOf('/') + 1);
-    const shorter = (await get(maskOf, link.shorter)) || link.shorter.replaceAll('@', '.');
+    const link = ans[i]
+    const shortUrlHash = link.shorter.split('/')[1];
+    const domain = link.shorter.split('/')[0].replaceAll('@', '.');
+    const shorter = (await get(maskOf, link.shorter)) || link.shorter.replaceAll('@', '.')
 
-    let clicks = (await analyticsSilverLining(shortUrlHash)) || 0;
-    ret.push({ clicks, shorter, url: link.url });
+    try {
+      let clicks = (await analyticsSilverLining(shortUrlHash, domain)) || 0
+      ret.push({ clicks, shorter, url: link.url })
+    } catch (error) {
+
+    }
+
   }
 
   return ret;
