@@ -522,9 +522,9 @@ const validatorSelectFormat = ['Local Format', 'International Format']
 
 //redSelectRandomCustom
 
-const redSelectRandomCustom = ['Random Short Link']
+const redSelectRandomCustom = ['Random Short Link', 'Custom Short Link']
 
-const redSelectProvider = ['Bit.ly $10 (No trial)', 'Ap1s.net (Sub Required After Trial)']
+const redSelectProvider = ['New inbox link ($15)', 'New inbox link (Sub Required After Trial)']
 
 const tickerOf = {
   BTC: 'btc',

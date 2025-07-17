@@ -21,8 +21,11 @@ const {
   tickerOfDyno,
   tickerViewOfDyno,
 } = require('./config.js')
-const createShortBitly = require('./bitly.js')
-const { createShortUrlApi, analyticsCuttly } = require('./cuttly.js')
+// const createShortBitly = require('./bitly.js')
+const createShortUrl = require('./bitly.js')
+const { createShortUrlApi, analyticsSilverLining } = require('./cuttly.js')
+
+
 const {
   week,
   year,
@@ -75,7 +78,9 @@ const { getCryptoDepositAddress, convert } = require('./pay-blockbee.js')
 const { validateBulkNumbers } = require('./validatePhoneBulk.js')
 const { countryCodeOf, areasOfCountry } = require('./areasOfCountry.js')
 const { validatePhoneBulkFile } = require('./validatePhoneBulkFile.js')
-const createCustomShortUrlCuttly = require('./customCuttly.js')
+// const createCustomShortUrlCuttly = require('./customCuttly.js')
+const createCustomShortUrl = require('./customCuttly.js')
+
 const schedule = require('node-schedule')
 const { registerDomainAndCreateCpanel } = require('./cr-register-domain-&-create-cpanel.js')
 const { isEmail } = require('validator')
@@ -787,8 +792,8 @@ bot?.on('message', async msg => {
         const tickerDyno = tickerOfDyno[tickerView]
         const redirect_url = `${SELF_URL}/dynopay/crypto-wallet`
         const meta_data = {
-          "product_name": dynopayActions.walletFund,
-          "refId" : ref
+          'product_name': dynopayActions.walletFund,
+          'refId': ref,
         }
         const { qr_code, address } = await getDynopayCryptoAddress(amount, tickerDyno, redirect_url, meta_data)
         if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
@@ -1889,18 +1894,38 @@ bot?.on('message', async msg => {
         const { url } = info
         const slug = nanoid()
         const __shortUrl = `${SELF_URL}/${slug}`
-        _shortUrl = await createShortBitly(__shortUrl)
-        const shortUrl = __shortUrl.replaceAll('.', '@').replace('https://', '')
-        increment(totalShortLinks)
-        set(maskOf, shortUrl, _shortUrl)
-        set(fullUrlOf, shortUrl, url)
-        set(linksOf, chatId, shortUrl, url)
-        send(chatId, _shortUrl, trans('o'))
+        const shortUrls = await createShortUrl(__shortUrl)
+
+        if (!Array.isArray(shortUrls)) {
+          throw new Error('Expected an array of URLs, received: ' + JSON.stringify(shortUrls))
+        }
+
+        // Process each URL
+        const processedUrls = shortUrls.map(_shortUrl => {
+          const shortUrl = __shortUrl.replaceAll('.', '@').replace('https://', '')
+          return { original: _shortUrl, processed: shortUrl }
+        })
+
+        // Increment totalShortLinks for each URL
+        processedUrls.forEach(() => increment(totalShortLinks))
+
+        // Store each URL
+        processedUrls.forEach(({ original: _shortUrl, processed: shortUrl }) => {
+          set(maskOf, shortUrl, _shortUrl)
+          set(fullUrlOf, shortUrl, url)
+          set(linksOf, chatId, shortUrl, url)
+        })
+
+        // Send all URLs to the chatId
+        const message = processedUrls.map(({ original: _shortUrl }) => _shortUrl).join('\n')
+        send(chatId, message, trans('o'))
+
         set(state, chatId, 'action', 'none')
       } catch (error) {
+        console.error('Error in URL shortening process:', error.message)
         send(TELEGRAM_DEV_CHAT_ID, error.message)
         set(state, chatId, 'action', 'none')
-        return send(chatId, t.redIssueUrlBitly, trans('o'))
+        return send(chatId, t.redIssueUrlSilverLining, trans('o'))
       }
 
       // wallet update
@@ -1944,7 +1969,7 @@ bot?.on('message', async msg => {
 
   if (message === user.changeSetting) {
     set(state, chatId, 'action', a.updateUserLanguage)
-    return send(chatId, trans('l.askPreferredLanguage') , trans('languageMenu'))
+    return send(chatId, trans('l.askPreferredLanguage'), trans('languageMenu'))
   }
   //
   if (message === t.cancel || (firstSteps.includes(action) && message === t.back)) {
@@ -2920,77 +2945,123 @@ bot?.on('message', async msg => {
     if (!redSelectRandomCustom.includes(message)) return send(chatId, t.what)
     saveInfo('format', message)
 
-    // random
-    if (redSelectRandomCustom[0] === message) {
 
+    // Random slug handling
+    if (redSelectRandomCustom[0] === message) {
       try {
-        const { url } = info
-        let _shortUrl, shortUrl
+        const { url } = info // Custom slug not provided for random
+        let shortUrls;
+        const isUserSubscribed = await isSubscribed(chatId)
         if (process.env.LINK_TO_SELF_SERVER === 'false') {
-          _shortUrl = await createShortUrlApi(url)
-          shortUrl = _shortUrl.replaceAll('.', '@').replace('https://', '')
-          set(linksOf, chatId, shortUrl, url)
+          shortUrls = await createShortUrlApi(url) // Returns array of 4 links
+          shortUrls.map((shortUrl) => {
+            if (!shortUrl) {
+              return;
+            }
+            set(linksOf, chatId, shortUrl.replaceAll('.', '@'), url)
+            increment(totalShortLinks)
+            set(maskOf, shortUrl.replaceAll('.', '@'), shortUrl)
+            set(fullUrlOf, shortUrl.replaceAll('.', '@'), url)
+
+            if (!isUserSubscribed) {
+              decrement(freeShortLinksOf, chatId)
+              set(expiryOf, shortUrl.replaceAll('.', '@'), Date.now() + Number(process.env.FREE_LINKS_TIME_SECONDS) * 1000)
+            }
+          })
+          //set(linksOf, chatId, shortUrl.replaceAll('.', '@'), url)
         } else {
           const slug = nanoid()
-          const __shortUrl = `${SELF_URL}/${slug}`
-          _shortUrl = await createShortUrlApi(__shortUrl)
-          shortUrl = __shortUrl.replaceAll('.', '@').replace('https://', '')
-          const shortUrlLink = _shortUrl.replaceAll('.', '@').replace('https://', '')
-          set(linksOf, chatId, shortUrlLink, url)
+          const __shortUrl = `${process.env.SELF_URL}/${slug}`
+          shortUrls = await createShortUrlApi(__shortUrl) // Returns array of 4 links
+
+          // shortUrl = shortUrls[0];
+          shortUrls.forEach((shortUrl) => {
+            if (!shortUrl) {
+              return;
+            }
+            set(linksOf, chatId, shortUrl.replaceAll('.', '@'), url)
+            increment(totalShortLinks)
+            set(maskOf, shortUrl.replaceAll('.', '@'), shortUrl)
+            set(fullUrlOf, shortUrl.replaceAll('.', '@'), url)
+
+
+            if (!isUserSubscribed) {
+              decrement(freeShortLinksOf, chatId)
+              set(expiryOf, shortUrl.replaceAll('.', '@'), Date.now() + Number(process.env.FREE_LINKS_TIME_SECONDS) * 1000)
+            }
+          })
+
         }
+
+        set(state, chatId, 'action', 'none')
+
+        const responseMessage = `Shortened URLs:\n${shortUrls
+          .map((url, i) => (url ? `${i + 1}. ${url}` : `${i + 1}. Not available`))
+          .join('\n')}`
+        return bot.sendMessage(chatId, responseMessage, trans('o'))
+      } catch (error) {
+        bot.sendMessage(
+          process.env.TELEGRAM_ADMIN_CHAT_ID,
+          'SilverLining issue: ' + (error?.response?.data?.error || error.message),
+        )
+        set(state, chatId, 'action', 'none')
+        return bot.sendMessage(chatId, 'Error creating short URL with SilverLining', trans('o'))
+      }
+    }
+
+    // Custom slug handling
+    if (redSelectRandomCustom[1] === message) return goto.redSelectCustomExt()
+
+    if (state === a.redSelectCustomExt) {
+      if (message === t.back) return goto.redSelectRandomCustom()
+
+      if (!isValidUrl(`https://abc.com/${message}`)) return bot.sendMessage(chatId, t.notValidHalf)
+      try {
+        const { url } = info
+        const customSlug = message
+        let shortUrls, shortUrl
+
+        if (process.env.LINK_TO_SELF_SERVER === 'false') {
+          shortUrls = await createCustomShortUrl(url, customSlug) // Returns array of 4 links
+          shortUrl = shortUrls[0]
+          set(linksOf, chatId, shortUrl.replaceAll('.', '@'), url)
+        } else {
+          const slug = customSlug || nanoid()
+          const __shortUrl = `${process.env.SELF_URL}/${slug}`
+          shortUrls = await createCustomShortUrl(__shortUrl, customSlug)
+          shortUrl = shortUrls[0]
+          set(linksOf, chatId, shortUrl.replaceAll('.', '@'), url)
+        }
+
         increment(totalShortLinks)
-        set(maskOf, shortUrl, _shortUrl)
-        set(fullUrlOf, shortUrl, url)
+        set(maskOf, shortUrl.replaceAll('.', '@'), shortUrl)
+        set(fullUrlOf, shortUrl.replaceAll('.', '@'), url)
 
         if (!(await isSubscribed(chatId))) {
           decrement(freeShortLinksOf, chatId)
-          set(expiryOf, shortUrl, Date.now() + FREE_LINKS_TIME_SECONDS)
+          set(expiryOf, shortUrl.replaceAll('.', '@'), Date.now() + Number(process.env.FREE_LINKS_TIME_SECONDS) * 1000)
         }
         set(state, chatId, 'action', 'none')
-        return send(chatId, _shortUrl, trans('o'))
+
+        const responseMessage = `Shortened URLs:\n${shortUrls
+          .map((url, i) => (url ? `${i + 1}. ${url}` : `${i + 1}. Not available`))
+        .join('\n')}`;
+      return bot.sendMessage(chatId, responseMessage, trans('o'));
       } catch (error) {
-        send(TELEGRAM_ADMIN_CHAT_ID, error?.response?.data)
+        if (error?.response?.data?.error === 'Invalid Input: The request contains incorrectly formatted parameters') {
+          return bot.sendMessage(chatId, 'Invalid custom slug provided')
+        }
+
+        bot.sendMessage(
+          process.env.TELEGRAM_ADMIN_CHAT_ID,
+          'SilverLining issue: ' + (error?.response?.data?.error || error.message),
+        )
         set(state, chatId, 'action', 'none')
-        return send(chatId, t.redIssueUrlCuttly, trans('o'))
+        return bot.sendMessage(chatId, 'Error creating custom short URL with SilverLining', trans('o'))
       }
     }
-
-    // custom
-    if (redSelectRandomCustom[1] === message) return goto.redSelectCustomExt()
   }
-  if (action === a.redSelectCustomExt) {
-    if (message === t.back) return goto.redSelectRandomCustom()
 
-    if (!isValidUrl(`https://abc.com/${message}`)) return send(chatId, t.notValidHalf)
-    try {
-      const { url } = info
-      const slug = nanoid()
-      const __shortUrl = `${SELF_URL}/${slug}`
-      const _shortUrl = await createCustomShortUrlCuttly(__shortUrl, message)
-      const shortUrl = __shortUrl.replaceAll('.', '@').replace('https://', '')
-      increment(totalShortLinks)
-      set(maskOf, shortUrl, _shortUrl)
-      set(fullUrlOf, shortUrl, url)
-      set(linksOf, chatId, shortUrl, url)
-      if (!(await isSubscribed(chatId))) {
-        decrement(freeShortLinksOf, chatId)
-        set(expiryOf, shortUrl, Date.now() + FREE_LINKS_TIME_SECONDS)
-      }
-      set(state, chatId, 'action', 'none')
-      return send(chatId, _shortUrl, trans('o'))
-    } catch (error) {
-      if (error?.response?.data?.url?.status === 3) {
-        return send(chatId, t.redIssueSlugCuttly)
-      }
-
-      send(
-        TELEGRAM_ADMIN_CHAT_ID,
-        'cuttly issue: status:' + error?.response?.data?.url?.status + ' ' + error?.response?.data,
-      )
-      set(state, chatId, 'action', 'none')
-      return send(chatId, t.redIssueUrlCuttly, trans('o'))
-    }
-  }
 
   if (action === a.askCoupon + a.redSelectProvider) {
     if (message === t.back) return goto.redSelectProvider()
@@ -3750,10 +3821,17 @@ bot?.on('message', async msg => {
     let newRecordDetails = null
     const provider = info?.provider
 
-    const { dnszoneID, dnszoneRecordID, nsId,recordType,recordContent:oldContent,recordName:oldName} = dnsRecords[id]
+    const {
+      dnszoneID,
+      dnszoneRecordID,
+      nsId,
+      recordType,
+      recordContent: oldContent,
+      recordName: oldName,
+    } = dnsRecords[id]
 
     if (recordType !== 'NS') {
-      newRecordDetails = message.split(" ")
+      newRecordDetails = message.split(' ')
       if (!newRecordDetails || newRecordDetails.length < 2 || newRecordDetails.length > 3) return send(chatId, t.selectValidOption)
       if (!['A', 'CNAME'].includes(newRecordDetails[0].toLocaleUpperCase()))return send(chatId, t.selectValidOption)
     }
@@ -4232,31 +4310,33 @@ async function getAnalyticsOfAllSms() {
 }
 
 async function getShortLinks(chatId) {
-  let ans = await get(linksOf, chatId)
-  if (!ans) return []
+  let ans = await get(linksOf, chatId);
+  if (!ans) return [];
 
-  ans = Object.keys(ans).map(d => ({ shorter: d, url: ans[d] }))
-  ans = ans.filter(d => d.shorter !== '_id')
+  ans = Object.keys(ans).map(d => ({ shorter: d, url: ans[d] }));
+  ans = ans.filter(d => d.shorter !== '_id');
 
-  let ret = []
+  let ret = [];
   for (let i = 0; i < ans.length; i++) {
     const link = ans[i]
+    const shortUrlHash = link.shorter.split('/')[1];
+    const domain = link.shorter.split('/')[0].replaceAll('@', '.');
+    const shorter = (await get(maskOf, link.shorter)) || link.shorter.replaceAll('@', '.')
 
-    if (link.shorter.includes('ap1s@net')) {
-      const lastPart = link.shorter.substring(link.shorter.lastIndexOf('/') + 1)
-      let clicks = ((await analyticsCuttly(lastPart)) === 'No such url' ? 0 : (await analyticsCuttly(lastPart))) || 0
-      const shorter = (await get(maskOf, link.shorter)) || link.shorter.replaceAll('@', '.')
+    try {
+      let clicks = (await analyticsSilverLining(shortUrlHash, domain)) || 0
       ret.push({ clicks, shorter, url: link.url })
-    } else {
-      let clicks = (await get(clicksOn, link.shorter)) || 0
-      const shorter = (await get(maskOf, link.shorter)) || link.shorter.replaceAll('@', '.')
-      ret.push({ clicks, shorter, url: link.url })
+    } catch (error) {
+
     }
 
   }
 
-  return ret
+  return ret;
 }
+
+ 
+ 
 
 async function ownsDomainName(chatId) {
   return (await getPurchasedDomains(chatId)).length > 0
