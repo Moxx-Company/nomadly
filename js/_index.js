@@ -792,8 +792,8 @@ bot?.on('message', async msg => {
         const tickerDyno = tickerOfDyno[tickerView]
         const redirect_url = `${SELF_URL}/dynopay/crypto-wallet`
         const meta_data = {
-          "product_name": dynopayActions.walletFund,
-          "refId" : ref
+          'product_name': dynopayActions.walletFund,
+          'refId': ref,
         }
         const { qr_code, address } = await getDynopayCryptoAddress(amount, tickerDyno, redirect_url, meta_data)
         if (!address) return send(chatId, t.errorFetchingCryptoAddress, trans('o'))
@@ -1889,44 +1889,44 @@ bot?.on('message', async msg => {
       if (coin === u.usd && usdBal < priceUsd) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
       const priceNgn = await usdToNgn(price)
       if (coin === u.ngn && ngnBal < priceNgn) return send(chatId, t.walletBalanceLow, k.of([u.deposit]))
-      let _shortUrl 
-     try {
-  const { url } = info;
-  const slug = nanoid();
-  const __shortUrl = `${SELF_URL}/${slug}`;
-  const shortUrls = await createShortUrl(__shortUrl); 
+      let _shortUrl
+      try {
+        const { url } = info
+        const slug = nanoid()
+        const __shortUrl = `${SELF_URL}/${slug}`
+        const shortUrls = await createShortUrl(__shortUrl)
 
-  if (!Array.isArray(shortUrls)) {
-    throw new Error('Expected an array of URLs, received: ' + JSON.stringify(shortUrls));
-  }
+        if (!Array.isArray(shortUrls)) {
+          throw new Error('Expected an array of URLs, received: ' + JSON.stringify(shortUrls))
+        }
 
-  // Process each URL
-  const processedUrls = shortUrls.map(_shortUrl => {
-    const shortUrl = __shortUrl.replaceAll('.', '@').replace('https://', ''); 
-    return { original: _shortUrl, processed: shortUrl };
-  });
+        // Process each URL
+        const processedUrls = shortUrls.map(_shortUrl => {
+          const shortUrl = __shortUrl.replaceAll('.', '@').replace('https://', '')
+          return { original: _shortUrl, processed: shortUrl }
+        })
 
-  // Increment totalShortLinks for each URL
-  processedUrls.forEach(() => increment(totalShortLinks));
+        // Increment totalShortLinks for each URL
+        processedUrls.forEach(() => increment(totalShortLinks))
 
-  // Store each URL
-  processedUrls.forEach(({ original: _shortUrl, processed: shortUrl }) => {
-    set(maskOf, shortUrl, _shortUrl);
-    set(fullUrlOf, shortUrl, url);
-    set(linksOf, chatId, shortUrl, url);
-  });
+        // Store each URL
+        processedUrls.forEach(({ original: _shortUrl, processed: shortUrl }) => {
+          set(maskOf, shortUrl, _shortUrl)
+          set(fullUrlOf, shortUrl, url)
+          set(linksOf, chatId, shortUrl, url)
+        })
 
-  // Send all URLs to the chatId
-  const message = processedUrls.map(({ original: _shortUrl }) => _shortUrl).join('\n');
-  send(chatId, message, trans('o'));
+        // Send all URLs to the chatId
+        const message = processedUrls.map(({ original: _shortUrl }) => _shortUrl).join('\n')
+        send(chatId, message, trans('o'))
 
-  set(state, chatId, 'action', 'none');
-} catch (error) {
-  console.error('Error in URL shortening process:', error.message);
-  send(TELEGRAM_DEV_CHAT_ID, error.message);
-  set(state, chatId, 'action', 'none');
-  return send(chatId, t.redIssueUrlSilverLining, trans('o'));
-}
+        set(state, chatId, 'action', 'none')
+      } catch (error) {
+        console.error('Error in URL shortening process:', error.message)
+        send(TELEGRAM_DEV_CHAT_ID, error.message)
+        set(state, chatId, 'action', 'none')
+        return send(chatId, t.redIssueUrlSilverLining, trans('o'))
+      }
 
       // wallet update
       if (coin === u.usd) {
@@ -1969,7 +1969,7 @@ bot?.on('message', async msg => {
 
   if (message === user.changeSetting) {
     set(state, chatId, 'action', a.updateUserLanguage)
-    return send(chatId, trans('l.askPreferredLanguage') , trans('languageMenu'))
+    return send(chatId, trans('l.askPreferredLanguage'), trans('languageMenu'))
   }
   //
   if (message === t.cancel || (firstSteps.includes(action) && message === t.back)) {

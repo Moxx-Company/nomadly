@@ -19,8 +19,8 @@ const createShortUrlApi = async (longUrl, customSlug = null) => {
           silverLiningApiUrl,
           {
             longUrl: longUrl,
-            customSlug: customSlug || undefined, 
-            slugLength: customSlug ? undefined : 6, 
+            customSlug: customSlug || undefined,
+            slugLength: customSlug ? undefined : 6,
             customDomain: selectedDomain,
           },
           {
@@ -40,7 +40,7 @@ const createShortUrlApi = async (longUrl, customSlug = null) => {
       })
     );
 
-    
+
     while (shortUrls.length < 4) {
       shortUrls.push(null);
     }
@@ -67,8 +67,6 @@ const analyticsSilverLining = async (shortUrlHash, domain) => {
       return response.data.totalHits || 0;
       //return Object.values(clickData).reduce((sum, val) => sum + (typeof val === 'number' ? val : 0), 0)
     } else {
-      console.error('Error getting total clicks, Code:', response?.status);
-      return 0;
       console.error('Error getting total clicks, Code:', response?.status)
       return 0
     }
