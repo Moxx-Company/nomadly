@@ -17,6 +17,13 @@ const API_KEY_CURRENCY_EXCHANGE = process.env.API_KEY_CURRENCY_EXCHANGE
 const UPDATE_DNS_INTERVAL = Number(process.env.UPDATE_DNS_INTERVAL || 60)
 const PERCENT_INCREASE_USD_TO_NAIRA = Number(process.env.PERCENT_INCREASE_USD_TO_NAIRA)
 
+// Helper function to get chat IDs - defined early to avoid hoisting issues
+const getChatIds = async nameOf => {
+  let ans = await getAll(nameOf)
+  if (!ans) return []
+  return ans.map(a => a._id)
+}
+
 function isValidUrl(url) {
   const urlRegex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/
   return urlRegex.test(url)
@@ -143,17 +150,124 @@ const nextNumber = arr => {
   return n
 }
 
+// Import broadcast configuration
+const BROADCAST_CONFIG = require('./broadcast-config.js')
+
 const sendMessageToAllUsers = async (bot, message, method, nameOf, myChatId) => {
-  const chatIds = await getChatIds(nameOf)
-  const total = chatIds.length
-  bot.sendMessage(myChatId, `Total users: ${total}`)
-  for (let i = 0; i < total; i++) bot[method](chatIds[i], message).catch(err => log(err.message, chatIds[i]))
+  try {
+    const chatIds = await getChatIds(nameOf)
+    const total = chatIds.length
+    
+    if (total === 0) {
+      bot.sendMessage(myChatId, 'No users found to broadcast to.')
+      return
+    }
+
+    // Use configuration constants
+    const { BATCH_SIZE, DELAY_BETWEEN_BATCHES, DELAY_BETWEEN_MESSAGES, MAX_RETRIES, RETRY_DELAY } = BROADCAST_CONFIG
+    
+    const startTime = Date.now()
+    bot.sendMessage(myChatId, `🚀 Starting broadcast to ${total} users...\n📊 Batch size: ${BATCH_SIZE}\n⏱️ Estimated time: ${Math.ceil(total / BATCH_SIZE)} seconds`)
+    
+    let successCount = 0
+    let errorCount = 0
+    let currentBatch = 0
+    const totalBatches = Math.ceil(total / BATCH_SIZE)
+    
+    // Process users in batches
+    for (let i = 0; i < total; i += BATCH_SIZE) {
+      currentBatch++
+      const batch = chatIds.slice(i, i + BATCH_SIZE)
+      
+      // Send progress update
+      bot.sendMessage(myChatId, `📤 Processing batch ${currentBatch}/${totalBatches} (${i + 1}-${Math.min(i + BATCH_SIZE, total)} of ${total})`)
+      
+      // Process current batch with retry logic
+      const batchPromises = batch.map(async (chatId, index) => {
+        // Add small delay between messages in the same batch
+        await sleep(index * DELAY_BETWEEN_MESSAGES)
+        
+        // Retry logic for failed messages
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+          try {
+            if (method === 'sendPhoto') {
+              await bot.sendPhoto(chatId, message)
+            } else {
+              await bot.sendMessage(chatId, message)
+            }
+            
+            successCount++
+            return { success: true, chatId, attempts: attempt }
+          } catch (error) {
+            if (attempt === MAX_RETRIES) {
+              errorCount++
+              log(`Failed to send message to ${chatId} after ${MAX_RETRIES} attempts: ${error.message}`)
+              return { success: false, chatId, error: error.message, attempts: attempt }
+            } else {
+              log(`Attempt ${attempt} failed for ${chatId}, retrying in ${RETRY_DELAY/1000}s...`)
+              await sleep(RETRY_DELAY)
+            }
+          }
+        }
+      })
+      
+      // Wait for current batch to complete
+      await Promise.allSettled(batchPromises)
+      
+      // Send batch completion status
+      bot.sendMessage(myChatId, `✅ Batch ${currentBatch}/${totalBatches} completed\n📊 Success: ${successCount}, Errors: ${errorCount}`)
+      
+      // Add delay between batches (except for the last batch)
+      if (i + BATCH_SIZE < total) {
+        bot.sendMessage(myChatId, `⏳ Waiting ${DELAY_BETWEEN_BATCHES/1000}s before next batch...`)
+        await sleep(DELAY_BETWEEN_BATCHES)
+      }
+    }
+    
+    // Final summary
+    const finalMessage = `🎉 Broadcast completed!\n\n📊 Final Results:\n✅ Successfully sent: ${successCount}\n❌ Failed: ${errorCount}\n📈 Success rate: ${((successCount / total) * 100).toFixed(1)}%`
+    
+    bot.sendMessage(myChatId, finalMessage)
+    
+    // Log detailed results
+    log(`Broadcast completed - Total: ${total}, Success: ${successCount}, Errors: ${errorCount}`)
+    
+    // Store broadcast statistics for admin reference
+    const broadcastStats = {
+      timestamp: new Date().toISOString(),
+      totalUsers: total,
+      successCount,
+      errorCount,
+      successRate: ((successCount / total) * 100).toFixed(1),
+      duration: Date.now() - startTime
+    }
+    
+    // You can store this in database if needed
+    log(`Broadcast stats:`, broadcastStats)
+    
+  } catch (error) {
+    log(`Broadcast error: ${error.message}`)
+    bot.sendMessage(myChatId, `❌ Broadcast failed: ${error.message}`)
+  }
 }
 
-const getChatIds = async nameOf => {
-  let ans = await getAll(nameOf)
-  if (!ans) return []
-  return ans.map(a => a._id)
+// Helper function to get broadcast statistics
+const getBroadcastStats = async (nameOf) => {
+  try {
+    const chatIds = await getChatIds(nameOf)
+    const total = chatIds.length
+    
+    return {
+      totalUsers: total,
+      estimatedBatchTime: Math.ceil(total / BROADCAST_CONFIG.BATCH_SIZE),
+      batchSize: BROADCAST_CONFIG.BATCH_SIZE,
+      delayBetweenBatches: BROADCAST_CONFIG.DELAY_BETWEEN_BATCHES / 1000,
+      maxRetries: BROADCAST_CONFIG.MAX_RETRIES
+    }
+  } catch (error) {
+    log(`Error getting broadcast stats: ${error.message}`)
+    return null
+  }
 }
 
 const sendQrCode = async (bot, chatId, bb, lang) => {
@@ -360,6 +474,8 @@ module.exports = {
   checkFreeTrialTaken,
   extractPhoneNumbers,
   sendMessageToAllUsers,
+  getBroadcastStats,
+  getChatIds,
   planGetNewDomain,
   planCheckExistingDomain,
   removeProtocolFromDomain,

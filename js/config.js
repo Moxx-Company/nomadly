@@ -65,6 +65,7 @@ const admin = {
   blockUser: '✋ Block User',
   unblockUser: '👌 Unblock User',
   messageUsers: '👋 Message all users',
+  broadcastSettings: '⚙️ Broadcast Settings',
 }
 const user = {
   // main keyboards
@@ -653,8 +654,8 @@ const adminKeyboard = {
 const userKeyboard = {
   reply_markup: {
     keyboard: [
-      [user.cPanelWebHostingPlans],
-      [user.pleskWebHostingPlans],
+      // [user.cPanelWebHostingPlans],
+      // [user.pleskWebHostingPlans],
       [user.joinChannel, user.wallet],
       [user.phoneNumberLeads],
       HIDE_SMS_APP === 'true' ? [user.domainNames] : [user.freeTrialAvailable, user.domainNames],

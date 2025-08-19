@@ -67,7 +67,8 @@ const getNewDomain = async (domainName, hostingType) => {
       domainPrice = registrationFee
     }
 
-    const price = Math.ceil(domainPrice * PERCENT_INCREASE_DOMAIN)
+    let price = Math.ceil(domainPrice * PERCENT_INCREASE_DOMAIN)
+    price = Math.max(price, 25) // Minimum $25
 
     const chatMessage = response.responseMsg.message;
     console.log(chatMessage);
@@ -75,7 +76,7 @@ const getNewDomain = async (domainName, hostingType) => {
     return {
       available: true,
       originalPrice: domainPrice < 1 ? 1 : domainPrice,
-      price: price < 10 ? 10 : price,
+      price,
       chatMessage,
       domainType
     }
