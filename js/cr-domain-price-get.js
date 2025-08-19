@@ -33,8 +33,9 @@ async function checkDomainPriceOnline(domainName) {
         }
       }
 
-      const price = Math.ceil(price1Year * PERCENT_INCREASE_DOMAIN)
-      return { available: true, originalPrice: price1Year < 1 ? 1 : price1Year, price: price < 10 ? 10 : price }
+      let price = Math.ceil(price1Year * PERCENT_INCREASE_DOMAIN)
+      price = Math.max(price, 25) // Ensure minimum $25
+      return { available: true, originalPrice: price1Year < 1 ? 1 : price1Year, price }
     } else if (statusCode === 400) {
       return {
         available: false,

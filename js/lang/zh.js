@@ -67,8 +67,8 @@ const admin = {
 }
 const user = {
   // main keyboards
-  cPanelWebHostingPlans: '俄罗斯 cPanel 托管计划 🔒',
-  pleskWebHostingPlans: '俄罗斯 Plesk 托管计划 🔒',
+  // cPanelWebHostingPlans: '俄罗斯 cPanel 托管计划 🔒',
+  // pleskWebHostingPlans: '俄罗斯 Plesk 托管计划 🔒',
   joinChannel: '📢 加入频道',
   phoneNumberLeads: '📲 HQ 短信线索',
   wallet: '👛 我的钱包',
@@ -682,9 +682,9 @@ const adminKeyboard = {
 const userKeyboard = {
   reply_markup: {
     keyboard: [
-      [user.cPanelWebHostingPlans],
-      [user.pleskWebHostingPlans],
-      [user.vpsPlans],
+      // [user.cPanelWebHostingPlans],
+      // [user.pleskWebHostingPlans],
+      // [user.vpsPlans],
       [user.joinChannel, user.wallet],
       [user.phoneNumberLeads],
       HIDE_SMS_APP === 'true' ? [user.domainNames] : [user.freeTrialAvailable, user.domainNames],

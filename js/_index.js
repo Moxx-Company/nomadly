@@ -40,6 +40,7 @@ const {
   subscribePlan,
   regularCheckDns,
   sendMessageToAllUsers,
+  getBroadcastStats,
   parse,
   extractPhoneNumbers,
   sendQr,
@@ -117,6 +118,7 @@ const {
   renewVPSCPanel
 } = require('./vm-instance-setup.js')
 const { console } = require('inspector')
+const BROADCAST_CONFIG = require('./broadcast-config.js')
 
 process.env['NTBA_FIX_350'] = 1
 const DB_NAME = process.env.DB_NAME
@@ -540,6 +542,7 @@ bot?.on('message', async msg => {
     'block-user',
     'unblock-user',
     admin.messageUsers,
+    admin.broadcastSettings,
 
     'choose-subscription',
     user.wallet,
@@ -716,6 +719,12 @@ bot?.on('message', async msg => {
     adminConfirmMessage: () => {
       send(chatId, 'Confirm?',  trans('yes_no'))
       set(state, chatId, 'action', 'adminConfirmMessage')
+    },
+    broadcastSettings: () => {
+      const configText = `⚙️ Broadcast Configuration\n\n📊 Current Settings:\n• Batch Size: ${BROADCAST_CONFIG.BATCH_SIZE} users\n• Delay Between Batches: ${BROADCAST_CONFIG.DELAY_BETWEEN_BATCHES/1000}s\n• Delay Between Messages: ${BROADCAST_CONFIG.DELAY_BETWEEN_MESSAGES}ms\n• Max Retries: ${BROADCAST_CONFIG.MAX_RETRIES}\n• Retry Delay: ${BROADCAST_CONFIG.RETRY_DELAY/1000}s\n\n📝 To modify settings, edit js/broadcast-config.js file`
+      
+      send(chatId, configText, aO)
+      set(state, chatId, 'action', 'none')
     },
     //
     //
@@ -1978,10 +1987,27 @@ bot?.on('message', async msg => {
     if (!isAdmin(chatId)) return send(chatId, 'not authorized')
     return goto[admin.messageUsers]()
   }
+  if (message === admin.broadcastSettings) {
+    if (!isAdmin(chatId)) return send(chatId, 'not authorized')
+    return goto.broadcastSettings()
+  }
   if (action === admin.messageUsers) {
     const fileId = msg?.photo?.[0]?.file_id
     set(state, chatId, 'messageContent', fileId || message)
     set(state, chatId, 'messageMethod', fileId ? 'sendPhoto' : 'sendMessage')
+    
+    // Get broadcast statistics
+    const stats = await getBroadcastStats(nameOf)
+    const previewText = fileId ? '📷 Photo message' : `📝 Text message: ${message}`
+    
+    let statsText = ''
+    if (stats) {
+      statsText = `📊 Broadcast Statistics:\n• Total users: ${stats.totalUsers}\n• Batch size: ${stats.batchSize}\n• Estimated time: ${stats.estimatedBatchTime} seconds\n• Delay between batches: ${stats.delayBetweenBatches}s\n• Max retries: ${stats.maxRetries}`
+    } else {
+      statsText = '📊 Unable to get user statistics'
+    }
+    
+    send(chatId, `${previewText}\n\n${statsText}\n\nReady to broadcast?`)
     return goto.adminConfirmMessage()
   }
   if (action === 'adminConfirmMessage') {
@@ -1989,8 +2015,23 @@ bot?.on('message', async msg => {
     if (message !== t.yes) return send(chatId, t.what)
 
     set(state, chatId, 'action', 'none')
+    
+    // Start broadcast with progress tracking
+    send(chatId, '🚀 Starting broadcast... This may take a while for large user bases.')
+    
+    // Run broadcast in background to avoid blocking
     sendMessageToAllUsers(bot, info?.messageContent, info?.messageMethod, nameOf, chatId)
-    return send(chatId, 'Sent to all users', aO)
+      .then(() => {
+        // Broadcast completed successfully
+        log(`Admin ${chatId} completed broadcast successfully`)
+      })
+      .catch((error) => {
+        // Handle broadcast errors
+        log(`Admin ${chatId} broadcast failed: ${error.message}`)
+        send(chatId, `❌ Broadcast failed: ${error.message}`)
+      })
+    
+    return send(chatId, '📤 Broadcast initiated! You\'ll receive progress updates.', aO)
   }
   if (action === a.addUserLanguage) {
     const language = message
