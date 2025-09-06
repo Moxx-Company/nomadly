@@ -11,7 +11,7 @@ async function checkDomainPriceOnline(domainName) {
   let response
 
   try {
-    response = await axios.get(apiUrl)
+    response = await axios.get(apiUrl, { timeout: 10000 })
     const statusCode = response?.data?.responseMsg?.statusCode
     // console.log(JSON.stringify(response?.data, 0, 2))
 
@@ -21,9 +21,14 @@ async function checkDomainPriceOnline(domainName) {
       if (premiumPrice) return { available: true, price: premiumPrice, originalPrice: premiumPrice }
       const [domainId] = Object.keys(response.data.responseData)
       const price1Year = Number(
-        response?.data?.responseData?.[domainId]
-          ?.find(entry => entry?.description?.toLowerCase()?.includes('registration price for 1 year'))
-          ?.description?.split('is ')?.[1],
+        (() => {
+          const entries = response?.data?.responseData?.[domainId];
+          if (!Array.isArray(entries)) return null;
+          const entry = entries.find(entry => entry?.description?.toLowerCase()?.includes('registration price for 1 year'));
+          if (!entry?.description) return null;
+          const parts = entry.description.split('is ');
+          return parts.length > 1 ? parts[1] : null;
+        })(),
       )
 
       if (isNaN(price1Year)) {
@@ -33,8 +38,9 @@ async function checkDomainPriceOnline(domainName) {
         }
       }
 
-      const price = Math.ceil(price1Year * PERCENT_INCREASE_DOMAIN)
-      return { available: true, originalPrice: price1Year < 1 ? 1 : price1Year, price: price < 10 ? 10 : price }
+      let price = Math.ceil(price1Year * PERCENT_INCREASE_DOMAIN)
+      price = Math.max(price, 25) // Ensure minimum $25
+      return { available: true, originalPrice: price1Year < 1 ? 1 : price1Year, price }
     } else if (statusCode === 400) {
       return {
         available: false,
