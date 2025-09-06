@@ -3,7 +3,7 @@ const fs = require('fs')
 require('dotenv').config()
 const axios = require('axios')
 const QRCode = require('qrcode')
-const { timeOf, freeDomainsOf, o } = require('./config')
+const { timeOf, freeDomainsOf } = require('./config')
 const { getAll, get, set } = require('./db')
 const { log } = require('console')
 const resolveDns = require('./resolve-cname.js')
@@ -17,9 +17,23 @@ const API_KEY_CURRENCY_EXCHANGE = process.env.API_KEY_CURRENCY_EXCHANGE
 const UPDATE_DNS_INTERVAL = Number(process.env.UPDATE_DNS_INTERVAL || 60)
 const PERCENT_INCREASE_USD_TO_NAIRA = Number(process.env.PERCENT_INCREASE_USD_TO_NAIRA)
 
+// Helper function to get chat IDs - defined early to avoid hoisting issues
+const getChatIds = async nameOf => {
+  let ans = await getAll(nameOf)
+  if (!ans) return []
+  return ans.map(a => a._id)
+}
+
 function isValidUrl(url) {
-  const urlRegex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/
-  return urlRegex.test(url)
+  try {
+    // More robust URL validation using built-in URL constructor
+    if (!url || typeof url !== 'string') return false
+    const urlObj = new URL(url)
+    return ['http:', 'https:', 'ftp:'].includes(urlObj.protocol)
+  } catch (error) {
+    // If URL constructor throws, it's invalid
+    return false
+  }
 }
 
 function isNormalUser(chatId) {
@@ -38,13 +52,19 @@ async function usdToNgn(amountInUSD) {
   try {
     const apiUrl = `https://openexchangerates.org/api/latest.json?app_id=${API_KEY_CURRENCY_EXCHANGE}`
 
-    const response = await axios.get(apiUrl)
+    const response = await axios.get(apiUrl, { timeout: 10000 })
+    if (!response?.data?.rates?.['NGN']) {
+      console.error('Error usdToNgn: Invalid API response structure')
+      // Return fallback rate (1 USD = 1650 NGN)
+      return Number(amountInUSD) * 1650
+    }
     const usdToNgnRate = response.data.rates['NGN']
     const nairaAmount = Number(amountInUSD) * usdToNgnRate * (1 + PERCENT_INCREASE_USD_TO_NAIRA)
     return Number(nairaAmount.toFixed())
   } catch (error) {
     console.error(`Error usdToNgn: ${error.message}`)
-    return error.message
+    // Return fallback rate (1 USD = 1650 NGN)
+    return Number(amountInUSD) * 1650
   }
 }
 
@@ -54,28 +74,61 @@ async function ngnToUsd(ngn) {
   try {
     const apiUrl = `https://openexchangerates.org/api/latest.json?app_id=${API_KEY_CURRENCY_EXCHANGE}`
 
-    const response = await axios.get(apiUrl)
+    const response = await axios.get(apiUrl, { timeout: 10000 })
+    if (!response?.data?.rates?.['NGN']) {
+      console.error('Error ngnToUsd: Invalid API response structure')
+      // Return fallback rate (1 USD = 1650 NGN)
+      return Number(ngn) / 1650
+    }
     const usdToNgnRate = response.data.rates['NGN']
     const usd = Number(ngn) / (usdToNgnRate * (1 + PERCENT_INCREASE_USD_TO_NAIRA))
     return usd
   } catch (error) {
     console.error(`Error ngnToUsd: ${error.message}`)
-    return error.message
+    // Return fallback rate (1 USD = 1650 NGN)
+    return Number(ngn) / 1650
   }
 }
 
 // ngnToUsd(1000).then(log);
 const addZero = number => (number < 10 ? '0' + number : number)
-const date = () => {
-  const currentDate = new Date()
-  const year = currentDate.getFullYear()
-  const month = addZero(currentDate.getMonth() + 1)
-  const day = addZero(currentDate.getDate())
-  const hours = addZero(currentDate.getHours())
-  const minutes = addZero(currentDate.getMinutes())
-  const seconds = addZero(currentDate.getSeconds())
+const date = (date) => {
+  try {
+    const currentDate = date ? new Date(date) : new Date()
+    if (isNaN(currentDate.getTime())) {
+      console.error('Invalid date provided:', date)
+      return new Date().toISOString()
+    }
+    const year = currentDate.getFullYear()
+    const month = addZero(currentDate.getMonth() + 1)
+    const day = addZero(currentDate.getDate())
+    const hours = addZero(currentDate.getHours())
+    const minutes = addZero(currentDate.getMinutes())
+    const seconds = addZero(currentDate.getSeconds())
 
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+  } catch (error) {
+    console.error('Error in date function:', error.message)
+    return new Date().toISOString()
+  }
+}
+
+// Safe JSON stringify that handles circular references
+const safeStringify = (obj, replacer = null, space = 2) => {
+  try {
+    const seen = new WeakSet()
+    return JSON.stringify(obj, (key, val) => {
+      if (val != null && typeof val === 'object') {
+        if (seen.has(val)) {
+          return '[Circular]'
+        }
+        seen.add(val)
+      }
+      return replacer ? replacer(key, val) : val
+    }, space)
+  } catch (error) {
+    return `[Object stringify error: ${error.message}]`
+  }
 }
 
 function today() {
@@ -108,11 +161,14 @@ function year() {
 }
 
 function isValidEmail(email) {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
   return regex.test(email)
 }
 
 function removeProtocolFromDomain(domain) {
+  if (!domain || typeof domain !== 'string') {
+    return domain || ''
+  }
   return domain.toLowerCase().replace('https://', '').replace('http://', '')
 }
 
@@ -143,17 +199,124 @@ const nextNumber = arr => {
   return n
 }
 
+// Import broadcast configuration
+const BROADCAST_CONFIG = require('./broadcast-config.js')
+
 const sendMessageToAllUsers = async (bot, message, method, nameOf, myChatId) => {
-  const chatIds = await getChatIds(nameOf)
-  const total = chatIds.length
-  bot.sendMessage(myChatId, `Total users: ${total}`)
-  for (let i = 0; i < total; i++) bot[method](chatIds[i], message, o).catch(err => log(err.message, chatIds[i]))
+  try {
+    const chatIds = await getChatIds(nameOf)
+    const total = chatIds.length
+    
+    if (total === 0) {
+      bot.sendMessage(myChatId, 'No users found to broadcast to.')
+      return
+    }
+
+    // Use configuration constants
+    const { BATCH_SIZE, DELAY_BETWEEN_BATCHES, DELAY_BETWEEN_MESSAGES, MAX_RETRIES, RETRY_DELAY } = BROADCAST_CONFIG
+    
+    const startTime = Date.now()
+    bot.sendMessage(myChatId, `🚀 Starting broadcast to ${total} users...\n📊 Batch size: ${BATCH_SIZE}\n⏱️ Estimated time: ${Math.ceil(total / BATCH_SIZE)} seconds`)
+    
+    let successCount = 0
+    let errorCount = 0
+    let currentBatch = 0
+    const totalBatches = Math.ceil(total / BATCH_SIZE)
+    
+    // Process users in batches
+    for (let i = 0; i < total; i += BATCH_SIZE) {
+      currentBatch++
+      const batch = chatIds.slice(i, i + BATCH_SIZE)
+      
+      // Send progress update
+      bot.sendMessage(myChatId, `📤 Processing batch ${currentBatch}/${totalBatches} (${i + 1}-${Math.min(i + BATCH_SIZE, total)} of ${total})`)
+      
+      // Process current batch with retry logic
+      const batchPromises = batch.map(async (chatId, index) => {
+        // Add small delay between messages in the same batch
+        await sleep(index * DELAY_BETWEEN_MESSAGES)
+        
+        // Retry logic for failed messages
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+          try {
+            if (method === 'sendPhoto') {
+              await bot.sendPhoto(chatId, message)
+            } else {
+              await bot.sendMessage(chatId, message)
+            }
+            
+            successCount++
+            return { success: true, chatId, attempts: attempt }
+          } catch (error) {
+            if (attempt === MAX_RETRIES) {
+              errorCount++
+              log(`Failed to send message to ${chatId} after ${MAX_RETRIES} attempts: ${error.message}`)
+              return { success: false, chatId, error: error.message, attempts: attempt }
+            } else {
+              log(`Attempt ${attempt} failed for ${chatId}, retrying in ${RETRY_DELAY/1000}s...`)
+              await sleep(RETRY_DELAY)
+            }
+          }
+        }
+      })
+      
+      // Wait for current batch to complete
+      await Promise.allSettled(batchPromises)
+      
+      // Send batch completion status
+      bot.sendMessage(myChatId, `✅ Batch ${currentBatch}/${totalBatches} completed\n📊 Success: ${successCount}, Errors: ${errorCount}`)
+      
+      // Add delay between batches (except for the last batch)
+      if (i + BATCH_SIZE < total) {
+        bot.sendMessage(myChatId, `⏳ Waiting ${DELAY_BETWEEN_BATCHES/1000}s before next batch...`)
+        await sleep(DELAY_BETWEEN_BATCHES)
+      }
+    }
+    
+    // Final summary
+    const finalMessage = `🎉 Broadcast completed!\n\n📊 Final Results:\n✅ Successfully sent: ${successCount}\n❌ Failed: ${errorCount}\n📈 Success rate: ${((successCount / total) * 100).toFixed(1)}%`
+    
+    bot.sendMessage(myChatId, finalMessage)
+    
+    // Log detailed results
+    log(`Broadcast completed - Total: ${total}, Success: ${successCount}, Errors: ${errorCount}`)
+    
+    // Store broadcast statistics for admin reference
+    const broadcastStats = {
+      timestamp: new Date().toISOString(),
+      totalUsers: total,
+      successCount,
+      errorCount,
+      successRate: ((successCount / total) * 100).toFixed(1),
+      duration: Date.now() - startTime
+    }
+    
+    // You can store this in database if needed
+    log(`Broadcast stats:`, broadcastStats)
+    
+  } catch (error) {
+    log(`Broadcast error: ${error.message}`)
+    bot.sendMessage(myChatId, `❌ Broadcast failed: ${error.message}`)
+  }
 }
 
-const getChatIds = async nameOf => {
-  let ans = await getAll(nameOf)
-  if (!ans) return []
-  return ans.map(a => a._id)
+// Helper function to get broadcast statistics
+const getBroadcastStats = async (nameOf) => {
+  try {
+    const chatIds = await getChatIds(nameOf)
+    const total = chatIds.length
+    
+    return {
+      totalUsers: total,
+      estimatedBatchTime: Math.ceil(total / BROADCAST_CONFIG.BATCH_SIZE),
+      batchSize: BROADCAST_CONFIG.BATCH_SIZE,
+      delayBetweenBatches: BROADCAST_CONFIG.DELAY_BETWEEN_BATCHES / 1000,
+      maxRetries: BROADCAST_CONFIG.MAX_RETRIES
+    }
+  } catch (error) {
+    log(`Error getting broadcast stats: ${error.message}`)
+    return null
+  }
 }
 
 const sendQrCode = async (bot, chatId, bb, lang) => {
@@ -215,10 +378,27 @@ const subscribePlan = async (planEndingTime, freeDomainNamesAvailableFor, planOf
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
-const parse = (cc, s) => parseInt(s.replace(`+${cc}`, ``).replace(/[^\d]/g, ''), 10).toString()
+const parse = (cc, s) => {
+  try {
+    if (!s || typeof s !== 'string') return ''
+    const cleanedStr = s.replace(`+${cc}`, ``).replace(/[^\d]/g, '')
+    const parsed = parseInt(cleanedStr, 10)
+    return isNaN(parsed) ? '' : parsed.toString()
+  } catch (error) {
+    console.error('Error in parse function:', error.message)
+    return ''
+  }
+}
+
 const getInt = str => {
-  const match = str.match(/\d+/)
-  return match ? parseInt(match[0], 10) : null
+  try {
+    if (!str || typeof str !== 'string') return null
+    const match = str.match(/\d+/)
+    return match ? parseInt(match[0], 10) : null
+  } catch (error) {
+    console.error('Error in getInt function:', error.message)
+    return null
+  }
 }
 // const phoneLen = {
 //   1: 11,
@@ -289,14 +469,12 @@ async function planGetNewDomain(message, chatId, send, saveInfo, hostingType, ve
     let modifiedDomain = removeProtocolFromDomain(message)
 
     const { available, originalPrice, price, chatMessage, domainType } = await getNewDomain(modifiedDomain, hostingType)
-
     if (!available) {
-      if(verbose) {
+      // if(verbose) {
         await send(chatId, chatMessage)
-      }
+      // }
       return getDefaultDomainResponse()
     }
-
     if (!originalPrice) {
       await send(TELEGRAM_DEV_CHAT_ID, 'Some issue in getting price')
       if(verbose) {
@@ -306,7 +484,6 @@ async function planGetNewDomain(message, chatId, send, saveInfo, hostingType, ve
     }
 
     saveDomainInfo(saveInfo, modifiedDomain, price, originalPrice)
-
     return { modifiedDomain, price, domainType, chatMessage }
   } catch (error) {
     return getDefaultDomainResponse()
@@ -363,7 +540,10 @@ module.exports = {
   checkFreeTrialTaken,
   extractPhoneNumbers,
   sendMessageToAllUsers,
+  getBroadcastStats,
+  getChatIds,
   planGetNewDomain,
   planCheckExistingDomain,
   removeProtocolFromDomain,
+  safeStringify,
 }
