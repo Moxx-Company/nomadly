@@ -13,7 +13,7 @@ async function getDNSRecords(websiteId) {
       APIKey: API_KEY,
       WebsiteId: websiteId,
     }
-    const response = await axios.get(URL, { params })
+    const response = await axios.get(URL, { params, timeout: 10000 })
 
     if (response.status === 200) {
       return response?.data?.responseData
@@ -25,30 +25,61 @@ async function getDNSRecords(websiteId) {
   }
 }
 
+// const viewDNSRecords = async domain => {
+//   const details = await getDomainDetails(domain)
+
+//   const { websiteId, domainNameId, nameserver1, nameserver2, nameserver3, nameserver4 } = details?.responseData
+//   if (!websiteId || !domainNameId) {
+//     log('No websiteId,', details?.responseMsg?.message)
+//     return
+//   }
+
+//   const res = await getDNSRecords(websiteId)
+//   let records = []
+
+//   const a_records = res.filter(r => r.recordType === 'A')
+//   records = a_records.length === 0 ? [{ recordContent: null, recordType: 'A' }] : a_records
+
+//   nameserver1 && records.push({ domainNameId, recordContent: nameserver1, recordType: 'NS', nsId: 1 })
+//   nameserver2 && records.push({ domainNameId, recordContent: nameserver2, recordType: 'NS', nsId: 2 })
+//   nameserver3 && records.push({ domainNameId, recordContent: nameserver3, recordType: 'NS', nsId: 3 })
+//   nameserver4 && records.push({ domainNameId, recordContent: nameserver4, recordType: 'NS', nsId: 4 })
+
+//   records = [...records, ...res.filter(r => r.recordType === 'CNAME')]
+
+//   return { records, domainNameId }
+// }
+
 const viewDNSRecords = async domain => {
-  const details = await getDomainDetails(domain)
+  try {
+    const details = await getDomainDetails(domain);
 
-  const { websiteId, domainNameId, nameserver1, nameserver2, nameserver3, nameserver4 } = details?.responseData
-  if (!websiteId || !domainNameId) {
-    log('No websiteId,', details?.responseMsg?.message)
-    return
+    const { websiteId, domainNameId, nameserver1, nameserver2, nameserver3, nameserver4 } = details?.responseData || {};
+    if (!websiteId || !domainNameId) {
+      log('No websiteId,', details?.responseMsg?.message)
+      return { records: [], domainNameId: null, error: true }
+    }
+
+    const res = await getDNSRecords(websiteId);
+    let records = [];
+
+    const a_records = Array.isArray(res) ? res.filter(r => r?.recordType === 'A') : [];
+    records = a_records.length === 0 ? [{ recordContent: null, recordType: 'A' }] : a_records;
+
+    nameserver1 && records.push({ domainNameId, recordContent: nameserver1, recordType: 'NS', nsId: 1 });
+    nameserver2 && records.push({ domainNameId, recordContent: nameserver2, recordType: 'NS', nsId: 2 });
+    nameserver3 && records.push({ domainNameId, recordContent: nameserver3, recordType: 'NS', nsId: 3 });
+    nameserver4 && records.push({ domainNameId, recordContent: nameserver4, recordType: 'NS', nsId: 4 });
+
+    records = [...records, ...(Array.isArray(res) ? res.filter(r => r?.recordType === 'CNAME') : [])];
+
+    return { records, domainNameId };
+  } catch (error) {
+    console.error('❌ Error in viewDNSRecords:', error.message || error);
+    return { records: [], domainNameId: null, error: true };
   }
+};
 
-  const res = await getDNSRecords(websiteId)
-  let records = []
-
-  const a_records = res.filter(r => r.recordType === 'A')
-  records = a_records.length === 0 ? [{ recordContent: null, recordType: 'A' }] : a_records
-
-  nameserver1 && records.push({ domainNameId, recordContent: nameserver1, recordType: 'NS', nsId: 1 })
-  nameserver2 && records.push({ domainNameId, recordContent: nameserver2, recordType: 'NS', nsId: 2 })
-  nameserver3 && records.push({ domainNameId, recordContent: nameserver3, recordType: 'NS', nsId: 3 })
-  nameserver4 && records.push({ domainNameId, recordContent: nameserver4, recordType: 'NS', nsId: 4 })
-
-  records = [...records, ...res.filter(r => r.recordType === 'CNAME')]
-
-  return { records, domainNameId }
-}
 
 // viewDNSRecords('glasso.sbs').then(log);
 
