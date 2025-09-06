@@ -1,3 +1,19 @@
+// Load configuration first
+require('./config-setup');
+
+// Global error handlers to prevent crashes
+const { safeStringify } = require('./utils');
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Promise Rejection:', safeStringify(reason))
+  console.error('Promise:', promise)
+})
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error.message)
+  console.error('Stack:', error.stack)
+  // Don't exit the process to keep the bot running
+})
+
 const axios = require('axios');
 const { log } = require('console');
 const { convert } = require('./pay-blockbee');
@@ -32,7 +48,7 @@ const handleAxiosError = (error, customMessage) => {
     error?.message,
     error?.response?.data,
     error?.cause,
-    JSON.stringify(error?.response?.data, null, 2)
+    safeStringify(error?.response?.data)
   );
 };
 
