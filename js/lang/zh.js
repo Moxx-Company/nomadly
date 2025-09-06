@@ -31,6 +31,7 @@ const APP_SUPPORT_LINK = process.env.APP_SUPPORT_LINK
 const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
+const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) || 50
 
 const npl = {
   // New Zealand
@@ -66,14 +67,15 @@ const admin = {
 }
 const user = {
   // main keyboards
-  cPanelWebHostingPlans: '私人 cPanel 主机计划 🔒',
-  pleskWebHostingPlans: '私人 Plesk 主机计划 🔒',
+  // cPanelWebHostingPlans: '俄罗斯 cPanel 托管计划 🔒',
+  // pleskWebHostingPlans: '俄罗斯 Plesk 托管计划 🔒',
   joinChannel: '📢 加入频道',
   phoneNumberLeads: '📲 HQ 短信线索',
   wallet: '👛 我的钱包',
   urlShortenerMain: '🔗✂️ URL 缩短器',
+  vpsPlans: '购买防弹 VPS🛡️ - 按小时/按月',
   buyPlan: '🔔 订阅这里',
-  domainNames: '🌐 域名',
+  domainNames: '🌐 注册域名 - ❌ DMCA',
   viewPlan: '🔔 我的计划',
   becomeReseller: '💼 成为代理商',
   getSupport: '💬 获取支持',
@@ -96,6 +98,11 @@ const user = {
   proPlan: '🔷 专业计划',
   businessPlan: '👑 商业计划',
   contactSupport: '📞 联系支持',
+
+  // Sub Menu 4: VPS Plans
+  buyVpsPlan: '⚙️ 创建新的VPS',
+  manageVpsPlan: '🖥️ 查看/管理VPS',
+  manageVpsSSH: '🔑 SSH密钥',
 
   // Free Trial
   freeTrialMenuButton: '🚀 免费试用（12小时）',
@@ -130,7 +137,7 @@ const u = {
   withdraw: '➖💵 撤回',
 
   // wallet
-  usd: 'USD',
+  usd: '美元',
   ngn: 'NGN',
 }
 const view = num => Number(num).toFixed(2)
@@ -141,6 +148,17 @@ const bal = (usd, ngn) =>
     ? `$${view(usd)}
 ₦${view(ngn)}`
     : `$${view(usd)}`
+
+const dnsEntryFormat = `记录格式：
+	•	A 记录（网站必需）/ CNAME（可选，不能与 A 记录共存）
+	•	主机名：子域名（例如 auth）或根域名使用 '@'（可选）
+	•	值：A 记录使用 IP 地址 / CNAME 记录使用主机名
+
+请按照下面提供的格式输入您的记录：
+
+示例：
+✅ A 记录：A pay 192.0.2.1（如果没有主机名，则 A 192.0.2.1）
+✅ CNAME 记录：CNAME pay 0oaawzt7.up.railway.app（如果没有主机名，则 CNAME 0oaawzt7.up.railway.app）`
 
 const t = {
   yes: '是',
@@ -293,7 +311,39 @@ ${CHAT_BOT_NAME}`,
   errorSavingDomain: `保存域名时出错，请联系支持 ${SUPPORT_USERNAME}。更多信息请访问 ${TG_HANDLE}。`,
   chooseDomainToManage: `请选择您要管理的域名。`,
   chooseDomainWithShortener: `请选择或购买您想要连接到短链接的域名。`,
-  viewDnsRecords: `以下是 {{domain}} 的 DNS 记录`,
+  viewDnsRecords: (records, domain) => `以下是 ${domain} 的 DNS 记录
+
+A 记录（可选，但用于直接 IP 映射是必需的）
+${
+  records.A && records.A.length
+    ? records.A.map(
+        record => `<strong>${record.index}. A 记录</strong>
+  • 主机名：${record.recordName}
+  • A 记录值：${record.recordContent ? record.recordContent : '无'}`,
+      ).join('\n')
+    : '  • A 记录：无'
+}
+
+NS 记录（必需 – 用于域名解析）
+${
+  records.NS && records.NS.length
+    ? records.NS.map(record => `<strong>${record.index}. NS 记录 ${record.nsId}</strong> ${record.recordContent}`).join(
+        '\n\n',
+      )
+    : '  • NS 记录：无'
+}
+
+CNAME 记录（可选，但如果要将另一个域作为别名，而不是使用 A 记录，则必需）
+${
+  records.CNAME && records.CNAME.length
+    ? records.CNAME.map(
+        record => `<strong>${record.index}. CNAME 记录</strong>
+  • 主机名：${record.recordName}
+  • CNAME 记录值：${record.recordContent ? record.recordContent : '无'}`,
+      ).join('\n')
+    : '  • CNAME 记录：无'
+}`,
+
   addDns: `添加 DNS 记录`,
   updateDns: `更新 DNS 记录`,
   deleteDns: `删除 DNS 记录`,
@@ -304,24 +354,26 @@ ${CHAT_BOT_NAME}`,
   a: `A 记录`,
   cname: `CNAME 记录`,
   ns: `NS 记录`,
-  'A Record': `A 记录`,
-  'CNAME Record': `CNAME 记录`,
-  'NS Record': `NS 记录`,
+  'A 记录': `A`,
+  'CNAME 记录': `CNAME`,
+  'NS 记录': `NS`,
   askDnsContent: {
-    A: `请输入 A 记录。例：108.0.56.98`,
-    'A Record': `请输入 A 记录。例：108.0.56.98`,
-    CNAME: `请输入 CNAME 记录。例：abc.hello.org`,
-    'CNAME Record': `请输入 CNAME 记录。例：abc.hello.org`,
+    A: dnsEntryFormat,
+    'A 记录': dnsEntryFormat,
+
+    CNAME: dnsEntryFormat,
+    'CNAME 记录': dnsEntryFormat,
+
     NS: `请输入您的 NS 记录。例：dell.ns.cloudflare.com。一个新的 NS 记录将添加到现有记录中。`,
-    'NS Record': `请输入您的 NS 记录。例：dell.ns.cloudflare.com。如果 N1-N4 已存在，请更新记录。`,
+    'NS 记录': `请输入您的 NS 记录。例：dell.ns.cloudflare.com。如果 N1-N4 已存在，请更新记录。`,
   },
   askUpdateDnsContent: {
-    A: `请输入 A 记录。例：108.0.56.98`,
-    'A Record': `请输入 A 记录。例：108.0.56.98`,
-    CNAME: `请输入 CNAME 记录。例：abc.hello.org`,
-    'CNAME Record': `请输入 CNAME 记录。例：abc.hello.org`,
+    A: dnsEntryFormat,
+    'A 记录': dnsEntryFormat,
+    CNAME: dnsEntryFormat,
+    'CNAME 记录': dnsEntryFormat,
     NS: `一个新的 NS 记录将被更新到选定的 ID。如果要添加新记录，请选择“添加 DNS 记录”`,
-    'NS Record': `一个新的 NS 记录将被更新到选定的 ID。如果要添加新记录，请选择“添加 DNS 记录”`,
+    'NS 记录': `一个新的 NS 记录将被更新到选定的 ID。如果要添加新记录，请选择“添加 DNS 记录”`,
   },
   dnsRecordSaved: `记录已添加`,
   dnsRecordDeleted: `记录已删除`,
@@ -472,12 +524,18 @@ ${CHAT_BOT_NAME}`,
   qrCodeText: `这是您的二维码！`,
   scanQrOrUseChat: chatId => `使用短信营销应用扫描二维码登录。您也可以使用此代码登录：${chatId}`,
   domainPurchasedFailed: (domain, buyDomainError) => `域名购买失败，请尝试其他名称。 ${domain} ${buyDomainError}`,
+  noDomainRegistered: '您还没有购买任何域名。',
+  registeredDomainList: domainsText => `以下是您购买的域名：\n${domainsText}`,
+  comingSoon: `即将推出`,
+  goBackToCoupon: '❌ 返回并应用优惠券',
+  errorFetchingCryptoAddress: '获取加密货币地址时出错。请稍后再试。',
+  paymentSuccessFul: '✅ 付款成功！您的订单正在处理。详细信息将很快提供。',
 }
 
-const phoneNumberLeads = ['💰📲 Buy PhoneLeads', '✅📲 Validate PhoneLeads']
+const phoneNumberLeads = ['💰📲 购买电话线索', '✅📲 验证电话线索']
 
 const buyLeadsSelectCountry = Object.keys(areasOfCountry)
-const buyLeadsSelectSmsVoice = ['SMS (Price 20$ for 1000)', 'Voice (Price 0$ for 1000)']
+const buyLeadsSelectSmsVoice = ['短信 (价格为 20$/1000)', '语音 (价格为 0$/1000)']
 const buyLeadsSelectArea = country => Object.keys(areasOfCountry?.[country])
 const buyLeadsSelectAreaCode = (country, area) => {
   const codes = areasOfCountry?.[country]?.[area].map(c => format(countryCodeOf[country], c))
@@ -487,14 +545,19 @@ const _buyLeadsSelectAreaCode = (country, area) => areasOfCountry?.[country]?.[a
 const buyLeadsSelectCnam = yesNo
 const buyLeadsSelectCarrier = country => carriersOf[country]
 const buyLeadsSelectAmount = ['1000', '2000', '3000', '4000', '5000']
-const buyLeadsSelectFormat = ['Local Format', 'International Format']
+const buyLeadsSelectFormat = ['本地格式', '国际格式']
 
 const validatorSelectCountry = Object.keys(areasOfCountry)
-const validatorSelectSmsVoice = ['SMS (Price 15$ for 1000)', 'Voice (Price 0$ for 1000)']
+const validatorSelectSmsVoice = ['短信 (价格为 20$/1000)', '语音 (价格为 0$/1000)']
 const validatorSelectCarrier = country => carriersOf[country]
 const validatorSelectCnam = yesNo
 const validatorSelectAmount = ['ALL', '1000', '2000', '3000', '4000', '5000']
-const validatorSelectFormat = ['Local Format', 'International Format']
+const validatorSelectFormat = ['本地格式', '国际格式']
+
+const selectFormatOf = {
+  本地格式: 'Local Format',
+  国际格式: 'International Format',
+}
 
 //redSelectRandomCustom
 
@@ -619,8 +682,9 @@ const adminKeyboard = {
 const userKeyboard = {
   reply_markup: {
     keyboard: [
-      [user.cPanelWebHostingPlans],
-      [user.pleskWebHostingPlans],
+      // [user.cPanelWebHostingPlans],
+      // [user.pleskWebHostingPlans],
+      // [user.vpsPlans],
       [user.joinChannel, user.wallet],
       [user.phoneNumberLeads],
       HIDE_SMS_APP === 'true' ? [user.domainNames] : [user.freeTrialAvailable, user.domainNames],
@@ -676,9 +740,7 @@ const l = {
   viewTermsAgainButton: '🔄 查看条款',
   exitSetupButton: '❌ 退出设置',
   acceptedTermsMsg: `✅ 您已成功接受条款和条件！ 🎉
-  您已准备好开始使用 ${CHAT_BOT_NAME}。让我们进入有趣的部分！ 🎯
-  
-  您可以随时在个人资料设置中查看条款和条件。`,
+  您已准备好开始使用 ${CHAT_BOT_NAME}。让我们进入有趣的部分！ 🎯`,
   declinedTermsMsg: `⚠️ 您需要接受条款和条件才能继续使用 ${CHAT_BOT_NAME}。 
   请在您准备好的时候再次查看。`,
   userExitMsg: '用户按下了退出按钮。',
@@ -823,7 +885,7 @@ const plans = hostingType => {
       duration: '30 天',
       storage: '10 GB SSD',
       bandwidth: '100 GB',
-      domains: '1 个域名',
+      domains: '无限制域名',
       emailAccounts: '5 个邮箱账户',
       databases: '1 个 MySQL 数据库',
       features: `完全访问 ${hostingType} 用于管理文件、数据库、电子邮件等。`,
@@ -835,7 +897,7 @@ const plans = hostingType => {
       duration: '30 天',
       storage: '50 GB SSD',
       bandwidth: '500 GB',
-      domains: '5 个域名',
+      domains: '无限制域名',
       emailAccounts: '25 个邮箱账户',
       databases: '10 个 MySQL 数据库',
       features: `完全访问 ${hostingType}，配备高级工具用于备份、安全和分析。`,
@@ -954,6 +1016,518 @@ ${CHAT_BOT_NAME}`,
 ${CHAT_BOT_NAME}`,
 }
 
+const vpsBC = ['🔙 返回', '取消']
+
+const vpsOptionsOf = list => ({
+  reply_markup: {
+    // Handle if there are multiples buttons in a row
+    keyboard: [
+      ...list.map(a => (Array.isArray(a) ? a : [a])),
+      ...(list.some(
+        a => Array.isArray(a) && a.some(item => typeof item === 'string' && item.includes(t.goBackToCoupon)),
+      )
+        ? []
+        : [vpsBC]),
+    ],
+  },
+  parse_mode: 'HTML',
+})
+
+const vpsPlans = {
+  hourly: '按小时',
+  monthly: '每月',
+  quaterly: '季度',
+  annually: '每年',
+}
+
+const vpsPlanMenu = ['按小时', '每月', '季度', '每年']
+const vpsConfigurationMenu = ['基本', '标准', '高级', '企业']
+const vpsCpanelOptional = ['WHM', 'Plesk', '❌ 跳过控制面板']
+
+const vpsPlanOf = {
+  按小时: 'hourly',
+  每月: 'monthly',
+  季度: 'quaterly',
+  每年: 'annually',
+}
+
+const vp = {
+  of: vpsOptionsOf,
+  back: '🔙 返回',
+  skip: '❌ 跳过',
+  cancel: '❌ 取消',
+
+  askCountryForUser: `🌍 选择最佳区域，以获得最佳性能和最低延迟。
+
+💡 低延迟 = 更快的响应时间。请选择最接近用户的区域，以获得最佳性能。`,
+  chooseValidCountry: '请从列表中选择一个国家：',
+  askRegionForUser: country => `📍 选择 ${country} 内的数据中心（价格可能因位置而异）。`,
+  chooseValidRegion: '请从列表中选择有效的地区：',
+  askZoneForUser: region => `📍 选择 ${region} 内的可用区。`,
+
+  chooseValidZone: '请选择列表中的有效区域：',
+  confirmZone: (region, zone) => `✅  您选择了${region}（${zone}）。您要继续选择此项吗？`,
+  failedFetchingData: '获取数据时出错，请稍后再试。',
+  confirmBtn: `✅ 确认选择`,
+
+  askVpsDiskType: list => `💾 根据性能和预算选择您的存储类型：
+
+${list?.map(item => `• ${item.description}`).join('\n')}`,
+
+  chooseValidDiskType: '请选择有效的磁盘类型',
+
+  askPlanType: plans => `💳 选择账单周期：
+
+${plans
+  .map(
+    item =>
+      `<strong>• ${item.type === 'Hourly' ? '⏳' : '📅'} ${item.type} –</strong> $${item.originalPrice} ${
+        item.discount === 0 ? '(无折扣）' : `（包括 ${item.discount}% 折扣）`
+      }`,
+  )
+  .join('\n')}`,
+  planTypeMenu: vpsOptionsOf(vpsPlanMenu),
+  hourlyBillingMessage: `⚠️ 按小时计费需要支付 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 可退款押金。此押金确保服务不中断，未使用部分可退款。
+
+✅ 账单每小时从您的钱包余额中扣除。
+🔹 月度许可证（Windows/WHM/Plesk）需提前支付。`,
+
+  // 配置
+  askVpsConfig: list => `⚙️ 根据您的需求选择 VPS 计划（提供按小时或按月计费）：
+  
+${list
+  .map(
+    config =>
+      `<strong>• ${config.name} -</strong>  ${config.specs.vCPU} vCPU, ${config.specs.RAM}GB 内存, ${config.specs.disk}GB 硬盘`,
+  )
+  .join('\n')}`,
+
+  validVpsConfig: '请选择一个有效的VPS配置：',
+
+  configMenu: vpsOptionsOf(vpsConfigurationMenu),
+
+  askForCoupon: '🎟️ 有优惠券代码吗？输入它可享受额外折扣（如适用），或者跳过此步骤。任何计费周期折扣已包含在内。',
+  couponInvalid: `❌ 无效：代码已过期、不适用或输入错误。请重试。`,
+  couponValid: amt => `✅ 有效：应用的折扣：-$${amt}。`,
+  skipCouponwarning: `⚠️ 跳过意味着您以后无法再应用折扣。`,
+  confirmSkip: '✅ 确认跳过',
+  goBackToCoupon: '❌ 返回并应用优惠券',
+
+  askVpsOS: price => `💡 默认操作系统：Ubuntu（Linux）（如果未进行选择）。
+💻 选择操作系统（Windows Server 额外收费 $${price}/月）。  
+
+<strong>💡 推荐: </strong>  
+<strong>• Ubuntu –</strong> 适用于常规使用和开发  
+<strong>• CentOS –</strong> 适用于企业级应用，稳定可靠  
+<strong>• Windows Server –</strong> 适用于基于 Windows 的应用（+$${price}/月）`,
+  chooseValidOS: `请选择可用列表中的有效操作系统：`,
+  skipOSBtn: '❌ 跳过操作系统选择',
+  skipOSwarning: '⚠️ 您的VPS将没有操作系统启动。您需要通过SSH或恢复模式手动安装一个。',
+
+  askVpsCpanel: `🛠️ 选择控制面板以更轻松地管理服务器（可选.
+
+<strong>• ⚙️ WHM –</strong> 推荐用于托管多个网站
+<strong>• ⚙️ Plesk –</strong> 适用于管理个人网站和应用程序
+<strong>• ❌ 跳过 –</strong> 不安装控制面板`,
+
+  cpanelMenu: vpsOptionsOf(vpsCpanelOptional),
+  noControlPanel: vpsCpanelOptional[2],
+  skipPanelMessage: '⚠️ 将不会安装控制面板。您可以稍后手动安装。',
+  validCpanel: '请选择一个有效的控制面板或跳过。',
+
+  askCpanelOtions: (name, list) => `⚙️ 选择 ${
+    name == 'whm' ? 'WHM' : 'Plesk Web Host Edition'
+  } 许可证，或选择免费试用（有效期 ${name == 'whm' ? '15' : '7'} 天）。
+  
+💰 ${name == 'whm' ? 'WHM' : 'Plesk'} 许可证定价：
+
+${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : ''}${item.label}`).join('\n')}`,
+
+  trialCpanelMessage: panel =>
+    `✅ ${panel.name == 'whm' ? 'WHM' : 'Plesk'} 免费试用（${panel.duration} 天）已激活。您可以随时联系支持进行升级。`,
+
+  vpsWaitingTime: '⚙️ 正在获取详细信息... 这只需要一点时间。',
+  failedCostRetrieval: '获取成本信息失败... 请稍后再试。',
+
+  errorPurchasingVPS: plan => `在设置您的 ${plan} VPS 计划时出现问题。
+
+请联系支持 ${SUPPORT_USERNAME}。
+了解更多 ${TG_HANDLE}。`,
+
+  generateBillSummary: vpsDetails => `<strong>📋 最终费用明细：</strong>
+
+<strong>•📅 硬盘类型 –</strong> ${vpsDetails.diskType}
+<strong>•🖥️ VPS 方案：</strong> ${vpsDetails.config.name}
+<strong>•📅 计费周期 (${vpsDetails.plan} 方案) –</strong> $${vpsDetails.plantotalPrice} USD
+<strong>•💻 操作系统许可证 (${vpsDetails.os ? vpsDetails.os.name : '未选择'}) –</strong> $${
+    vpsDetails.selectedOSPrice
+  } USD
+<strong>•🛠️ 控制面板 (${
+    vpsDetails.panel ? `${vpsDetails.panel.name == 'whm' ? 'WHM' : 'Plesk'} ${vpsDetails.panel.licenseName}` : '未选择'
+  }) –</strong> $${vpsDetails.selectedCpanelPrice} USD
+<strong>•🎟️ 优惠券折扣 –</strong> -$${vpsDetails.couponDiscount} USD
+<strong>•🔄 自动续费 –</strong>  ${
+    vpsDetails.plan === 'Hourly' ? '⏳ 按小时' : vpsDetails.autoRenewalPlan ? '✅ 启用' : '❌ 禁用'
+  }
+
+${
+  vpsDetails.plan === 'Hourly'
+    ? `注意：您的总费用中包含 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 作为预存款。在第一小时费率扣除后，剩余金额将返还至您的钱包。`
+    : ''
+}
+
+<strong>💰 总计：</strong> $${
+    vpsDetails.plan === 'Hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      : vpsDetails.totalPrice
+  } USD
+
+<strong>✅ 是否继续下单？</strong>`,
+  no: '❌ 取消订单',
+  yes: '✅ 确认订单',
+  askPaymentMethod: '选择支付方式：',
+
+  showDepositCryptoInfoVps: (priceCrypto, tickerView, address, vpsDetails) =>
+    `请将 ${priceCrypto} ${tickerView} 汇款至\n\n<code>${address}</code>
+
+请注意，密码货币交易可能需要最多 30 分钟才能完成。一旦交易确认，您将及时收到通知，您的 VPS 计划将被顺利激活。
+
+此致,
+${CHAT_BOT_NAME}`,
+
+  extraMoney: '您的按小时计费计划的剩余金额已存入钱包。',
+  paymentRecieved: `✅ 支付成功！您的 VPS 正在设置中。详细信息很快将可用，并会通过电子邮件发送给您以方便查看。`,
+  paymentFailed: `❌ 支付失败。请检查您的支付方式或重试。`,
+
+  lowWalletBalance: vpsName => `
+您的 VPS 计划实例 ${vpsName} 已因余额不足而停止。
+
+请充值您的钱包以继续使用 VPS 计划。`,
+
+  vpsBoughtSuccess: (vpsDetails, response) =>
+    `<strong>🎉 VPS [${response.label}] 已激活！</strong>
+
+<strong>🔑 登录凭据:</strong>
+  <strong>• IP:</strong> ${response.host}
+  <strong>• 操作系统:</strong> ${vpsDetails.os ? vpsDetails.os.name : '未选择'}
+  <strong>• 用户名:</strong> ${credentials.username}
+  <strong>• 密码:</strong> ${credentials.password}（立即更改）。
+    
+📧 这些详细信息也已发送到您的注册电子邮件。请保管好它们。
+
+⚙️ 控制面板安装（WHM/Plesk）
+如果您订购了WHM或Plesk，安装正在进行中。控制面板登录详情将在设置完成后单独发送给您。
+
+感谢您选择我们的服务
+${CHAT_BOT_NAME}
+`,
+  vpsHourlyPlanRenewed: (vpsName, price) => `
+您的 VPS 计划实例 ${vpsName} 已成功续订。
+${price}$ 已从您的钱包中扣除。`,
+
+  bankPayVPS: (
+    priceNGN,
+    plan,
+  ) => `请点击“进行支付”以汇款 ${priceNGN} NGN。交易确认后，您将及时收到通知，您的 ${plan} VPS 计划将顺利激活。
+
+此致,
+${CHAT_BOT_NAME}`,
+
+  askAutoRenewal: `🔄 启用自动续订，以确保服务不中断？  
+
+🛑 续订前您将收到提醒，您可以随时禁用。`,
+  enable: '✅ 启用',
+  skipAutoRenewalWarming: expiresAt =>
+    `⚠️ 您的 VPS 将于 ${new Date(expiresAt).toLocaleDateString('zh-CN').replace(/\//g, '-')} ${new Date(
+      expiresAt,
+    ).toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })} 到期，服务可能会中断。`,
+
+  generateSSHKeyBtn: '✅ 生成新密钥',
+  linkSSHKeyBtn: '🗂️ 关联现有密钥',
+  skipSSHKeyBtn: '❌ 跳过（使用密码登录）',
+  noExistingSSHMessage: '🔑 未检测到 SSH 密钥。您想生成新的 SSH 密钥以确保安全访问，还是使用密码登录（安全性较低）？',
+  existingSSHMessage: '🔑 您已有 SSH 密钥。请选择一个选项：',
+  confirmSkipSSHMsg: `⚠️ 警告：密码登录的安全性较低，容易受到攻击。
+🔹 我们强烈建议使用 SSH 密钥。您确定要继续吗？`,
+  confirmSkipSSHBtn: '✅ 仍然继续',
+  setUpSSHBtn: '🔄 设置 SSH 密钥',
+  sshLinkingSkipped: '❌ SSH 密钥关联已跳过，未进行任何更改。',
+  newSSHKeyGeneratedMsg: name => `✅ SSH 密钥（${name}）已创建。
+⚠️ 请妥善保存此密钥 – 以后可以再次检索。`,
+  selectSSHKey: '🗂️ 选择一个现有的 SSH 密钥以关联到您的 VPS：',
+  uploadNewKeyBtn: '➕ 上传新密钥',
+  cancelLinkingSSHKey: `❌ SSH 密钥关联已取消，未进行任何更改。`,
+  selectValidSShKey: '请选择列表中的有效 SSH 密钥。',
+  sshKeySavedForVPS: name => `✅ SSH 密钥（${name}）将关联到新的 VPS。`,
+  askToUploadSSHKey: `📤 请上传您的 SSH 公钥（.pub 文件）或在下方粘贴密钥。`,
+  failedGeneratingSSHKey: '无法生成新的 SSH 密钥。请重试或使用其他方法。',
+  newSSHKeyUploadedMsg: name => `✅ SSH 密钥（${name}）已成功上传并将关联到 VPS。`,
+  fileTypePub: '文件类型应为 .pub',
+
+  vpsList: list => `<strong>🖥️ 活跃的 VPS 实例：</strong>
+
+${list
+  .map(vps => `<strong>• ${vps.name} :</strong> ${vps.status === 'RUNNING' ? '🟢' : '🔴'} ${vps.status}`)
+  .join('\n')}
+`,
+  noVPSfound: '没有活跃的 VPS 实例。请创建一个新的。',
+  selectCorrectOption: '请选择列表中的一个选项',
+  selectedVpsData: data => `<strong>🖥️ VPS ID：</strong> ${data.name}
+
+<strong>• 计划：</strong> ${data.planDetails.name}
+<strong>• vCPUs：</strong> ${data.planDetails.specs.vCPU} | RAM: ${data.planDetails.specs.RAM} GB | 硬盘：${
+    data.planDetails.specs.disk
+  } GB (${data.diskTypeDetails.type})
+<strong>• 操作系统：</strong> ${data.osDetails.name}
+<strong>• 控制面板：</strong> ${
+    data.cPanelPlanDetails && data.cPanelPlanDetails.type ? data.cPanelPlanDetails.type : '无'
+  }
+<strong>• 状态：</strong> ${data.status === 'RUNNING' ? '🟢' : '🔴'} ${data.status}
+<strong>• 自动续费：</strong> ${data.autoRenewable ? '已启用' : '已禁用'}
+<strong>• IP 地址：</strong> ${data.host}`,
+  stopVpsBtn: '⏹️ 停止',
+  startVpsBtn: '▶️ 启动',
+  restartVpsBtn: '🔄 重启',
+  deleteVpsBtn: '🗑️ 删除',
+  subscriptionBtn: '🔄 订阅',
+  VpsLinkedKeysBtn: '🔑 SSH 密钥',
+  confirmChangeBtn: '✅ 确认',
+
+  confirmStopVpstext: name => `⚠️ 您确定要停止 VPS <strong>${name}</strong> 吗？`,
+  vpsBeingStopped: name => `⚙️ 请稍等，您的 VPS (${name}) 正在停止中`,
+  vpsStopped: name => `✅ VPS (${name}) 已停止。`,
+  failedStoppingVPS: name => `❌ 停止 VPS (${name}) 失败。
+
+请稍后再试。`,
+  vpsBeingStarted: name => `⚙️ 请稍等，您的 VPS (${name}) 正在启动中`,
+  vpsStarted: name => `✅ VPS (${name}) 现已运行。`,
+  failedStartedVPS: name => `❌ 启动 VPS (${name}) 失败。
+
+请稍后再试。`,
+  vpsBeingRestarted: name => `⚙️ 请稍等，您的 VPS (${name}) 正在重启中`,
+  vpsRestarted: name => `✅ VPS (${name}) 已成功重启。`,
+  failedRestartingVPS: name => `❌ 重启 VPS (${name}) 失败。
+
+请稍后再试。`,
+  confirmDeleteVpstext: name => `⚠️ 警告：删除此 VPS ${name} 是永久性的，所有数据将丢失。
+  • 未使用的订阅时间不予退款。
+  • 自动续订将被取消，不会产生额外费用。
+  
+您确定要继续吗？`,
+  vpsBeingDeleted: name => `⚙️ 请稍等，您的 VPS (${name}) 正在删除中`,
+  vpsDeleted: name => `✅ VPS (${name}) 已永久删除。`,
+  failedDeletingVPS: name => `❌ 删除 VPS (${name}) 失败。
+
+请稍后再试。`,
+
+  upgradeVpsBtn: '⬆️ 升级',
+  upgradeVpsPlanBtn: '⬆️ VPS 计划',
+  upgradeVpsDiskBtn: '📀 磁盘类型',
+  upgradeVpsDiskTypeBtn: '💾 升级磁盘类型',
+  upgradeVPS: '选择升级类型',
+  upgradeOptionVPSBtn: to => {
+    return `🔼 升级到 ${to}`
+  },
+  upgradeVpsPlanMsg: options => `⚙️ 选择一个新计划以扩展您的 VPS 资源。
+💡 升级增加 vCPUs、RAM 和存储，但无法撤销。
+
+📌 可用的升级：
+${options
+  .map(
+    planDetails =>
+      `<strong>• ${planDetails.from} ➡ ${planDetails.to} –</strong> $${planDetails.monthlyPrice}/月 ($${planDetails.hourlyPrice}/小时)`,
+  )
+  .join('\n')}
+
+💰 账单通知：您的当前计划将因未使用的天数而获得信用，并且新费率将在账单周期的其余部分应用（按比例调整）。`,
+
+  alreadyEnterprisePlan: '⚠️ 您已在最高可用计划（企业版）上。无法进行进一步的升级。',
+
+  alreadyHighestDisk: vpsData => `⚠️ 您已在最高可用磁盘（${vpsData.diskTypeDetails.type}）上。无法进行进一步的升级。`,
+  newVpsDiskBtn: type => `升级到 ${type}`,
+  upgradeVpsDiskMsg: upgrades => `💾 升级您的存储类型以获得更好的性能。
+⚠️ 磁盘升级是永久性的，不能降级。
+
+📌 可用选项：
+${upgrades.map(val => `<strong>• ${val.from} ➡ ${val.to} –</strong> +$${val.price}/${val.duration}`).join('\n')}
+
+💰 账单通知：如果在账单周期中途应用升级，将按比例调整当前账单周期未使用的部分。`,
+  upgradePlanSummary: (newData, vpsDetails, lowBal) => `<strong>📜 订单摘要：</strong>
+
+<strong>• VPS ID：</strong> ${vpsDetails.name}
+<strong>• 旧计划：</strong> ${newData.upgradeOption.from}
+<strong>• 新计划：</strong> ${newData.upgradeOption.to}
+<strong>• 计费周期：</strong> ${newData.billingCycle}
+<strong>• 新计费费率：</strong> $${newData.totalPrice} USD${
+    newData.billingCycle === 'Hourly' ? '/小时' : '（已应用按比例调整）'
+  }
+<strong>• 生效日期：</strong> 立即生效
+${
+  lowBal
+    ? `
+💡 注意：您的总费用中包含 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 预存款。在扣除首小时费用后，剩余的预存款将存入您的钱包。
+`
+    : ''
+}
+<strong>• 总价格：</strong> $${lowBal ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE : newData.totalPrice} USD
+
+<strong>✅ 是否继续下单？</strong>`,
+
+  vpsSubscriptionData: (vpsData, planExpireDate, panelExpireDate) => `<strong>🗂️ 您的有效订阅：</strong>
+
+<strong>• VPS ${vpsData.name} </strong> – 到期日期：${planExpireDate}  (自动续订：${
+    vpsData.autoRenewable ? '已启用' : '已禁用'
+  })
+<strong>• 控制面板 ${vpsData?.cPanelPlanDetails ? vpsData.cPanelPlanDetails.type : '：未选择'} </strong> ${
+    vpsData?.cPanelPlanDetails
+      ? `${vpsData?.cPanelPlanDetails.status === 'active' ? '- 到期日期：' : '- 已过期：'}${panelExpireDate}`
+      : ''
+  } `,
+
+  manageVpsSubBtn: '🖥️ 管理VPS订阅',
+  manageVpsPanelBtn: '🛠️ 管理控制面板订阅',
+
+  vpsSubDetails: (data, date) => `<strong>📅 VPS订阅详情：</strong>
+
+<strong>• VPS ID：</strong> ${data.name}
+<strong>• 计划：</strong> ${data.planDetails.name}
+<strong>• 当前到期日期：</strong> ${date}
+<strong>• 自动续订：</strong> ${data.autoRenewable ? '启用' : '禁用'}`,
+
+  vpsCPanelDetails: (data, date) => `<strong>📅 控制面板订阅详情：</strong>
+
+<strong>• 关联的 VPS ID：</strong> ${data.name}
+<strong>• 控制面板类型：</strong> ${data.cPanelPlanDetails.type} (${data.cPanelPlanDetails.name})
+<strong>• 当前到期日期：</strong> ${date}
+<strong>• 自动续订：</strong> ${data.autoRenewable ? '已启用' : '已禁用'}
+`,
+
+  vpsEnableRenewalBtn: '🔄 启用自动续订',
+  vpsDisableRenewalBtn: '❌ 禁用自动续订',
+  vpsPlanRenewBtn: '📅 立即续订',
+  unlinkVpsPanelBtn: '❌ 取消与VPS的链接',
+  bankPayVPSUpgradePlan: (priceNGN, vpsDetails) =>
+    `请点击下方的“付款”按钮支付 ${priceNGN} NGN。一旦交易确认，您将立即收到通知，您的新 ${vpsDetails.upgradeOption.to} VPS 方案将无缝激活。`,
+
+  bankPayVPSUpgradeDisk: (priceNGN, vpsDetails) =>
+    `请通过点击“付款”来支付 ${priceNGN} NGN。交易确认后，您将立即收到通知，您的VPS计划将以新磁盘类型 ${vpsDetails.upgradeOption.toType} 配置无缝激活。`,
+
+  showDepositCryptoInfoVpsUpgrade: (priceCrypto, tickerView, address) =>
+    `请将 ${priceCrypto} ${tickerView} 转账到\n\n<code>${address}</code>
+
+请注意，加密交易可能需要最多30分钟才能完成。交易确认后，您将立即收到通知，您的新VPS计划将无缝激活。
+
+此致敬礼，
+${CHAT_BOT_NAME}`,
+
+  linkVpsSSHKeyBtn: '➕ 关联新密钥',
+  unlinkSSHKeyBtn: '❌ 取消关联密钥',
+  downloadSSHKeyBtn: '⬇️ 下载密钥',
+
+  noLinkedKey: name => `⚠️ 当前没有SSH密钥与该VPS [${name}] 关联。
+
+请将SSH密钥关联到您的账户，以启用安全访问。`,
+
+  linkedKeyList: (list, name) => `🗂️ 与VPS ${name} 关联的SSH密钥：
+
+${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
+
+  unlinkSSHKeyList: name => `🗂️ 选择一个SSH密钥从VPS [${name}] 中移除：`,
+
+  confirmUnlinkKey: data => `⚠️ 确定要将 [${data.keyForUnlink}] 从 VPS [${data.name}] 解绑吗？`,
+  confirmUnlinkBtn: '✅ 确认解绑',
+  keyUnlinkedMsg: data => `✅ SSH 密钥 [${data.keyForUnlink}] 已成功从 VPS [${data.name}] 解绑。`,
+  failedUnlinkingKey: data => `❌ SSH 密钥解绑失败（VPS: ${data.name}）。 
+
+请稍后重试。`,
+
+  userSSHKeyList: name => `🗂️ 选择一个 SSH 密钥以链接到 VPS [${name}]：`,
+  noUserKeyList: `🔑 未检测到 SSH 密钥。是否要上传新的 SSH 密钥？`,
+  linkKeyToVpsSuccess: (key, name) => `✅ SSH 密钥 [${key}] 成功链接到 VPS [${name}]。`,
+  failedLinkingSSHkeyToVps: (key, name) => `❌ SSH 密钥 [${key}] 绑定到 VPS (${name}) 失败。 
+
+请稍后重试。`,
+
+  selectSSHKeyToDownload: '🗂️ 请选择要下载的 SSH 密钥：',
+
+  disabledAutoRenewal: (data, expiryDate) => `⚠️ 自动续订已禁用。您的 VPS 将于 ${expiryDate} 过期，除非手动续订。
+✅ 自动续订已成功禁用。`,
+
+  enabledAutoRenewal: (data, expiryDate) => `✅ 自动续订已启用。您的 VPS 将于 ${expiryDate} 自动续订。`,
+
+  renewVpsPlanConfirmMsg: (data, vpsDetails, expiryDate, lowBal) => `<strong>📜 发票摘要</strong>
+
+<strong>• VPS ID：</strong> ${vpsDetails.name}
+<strong>• 计划：</strong> ${vpsDetails.planDetails.name}
+<strong>• 计费周期：</strong> ${vpsDetails.billingCycleDetails.type}
+<strong>• 当前到期日期：</strong> ${expiryDate}
+<strong>• 应付金额：</strong> ${data.totalPrice} USD
+
+${
+  lowBal
+    ? `注意：您的总金额中包含 $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD 的押金。第一小时费用扣除后，剩余押金将退还到您的钱包。`
+    : ''
+}
+
+<strong>• 总价：</strong> $${
+    lowBal
+      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      : data.totalPrice
+  } USD
+
+<strong>💳 是否继续续订 VPS？</strong>`,
+
+  payNowBtn: '✅ 立即支付',
+
+  vpsChangePaymentRecieved: `✅ 付款成功！您的 VPS 正在配置中，详细信息将很快提供。`,
+
+  bankPayVPSRenewPlan: priceNGN =>
+    `请点击下方的“支付”按钮支付 ${priceNGN} NGN。一旦交易确认，您将立即收到通知，您的 VPS 计划将被激活并续订。`,
+
+  renewVpsPanelConfirmMsg: (data, panelDetails, date) => `<strong>💳 是否继续续订控制面板？</strong>
+
+<strong>📜 发票摘要</strong>
+  <strong>• 关联的 VPS ID：</strong> ${data.name}
+  <strong>• 控制面板：</strong> ${panelDetails.type}
+  <strong>• 续订周期：</strong> ${panelDetails.durationValue}${' '}个月
+  <strong>• 当前到期日期：</strong> ${date}
+  <strong>• 应付金额：</strong> ${data.totalPrice} USD`,
+
+  bankPayVPSRenewCpanel: (priceNGN, vpsDetails) =>
+    `请点击下方的“支付”按钮支付 ${priceNGN} NGN。一旦交易确认，您将立即收到通知，您的 VPS 计划将被激活，并且 ${vpsDetails.cPanelPlanDetails.type} 控制面板将被续订。`,
+
+  vpsUnlinkCpanelWarning: vpsDetails =>
+    `⚠️ 警告：取消关联将从 VPS ${vpsDetails.name} 中移除 ${vpsDetails.cPanel} 许可证，您将无法使用其功能。是否继续？`,
+
+  unlinkCpanelConfirmed: data => `✅ 控制面板 ${data.cPanel} 已成功从 VPS ${data.name} 取消关联。`,
+
+  errorUpgradingVPS: vpsName => `升级 VPS 计划 ${vpsName} 时出现错误。
+
+请联系支持 ${SUPPORT_USERNAME}。
+了解更多信息 ${TG_HANDLE}。`,
+
+  vpsUpgradePlanTypeSuccess: vpsDetails => `
+✅ VPS ${vpsDetails.name} 已成功升级至 ${vpsDetails.upgradeOption.to}。您的新资源现已可用。`,
+
+  vpsUpgradeDiskTypeSuccess: vpsDetails =>
+    `✅ VPS ${vpsDetails.name} 的磁盘已成功升级至 ${vpsDetails.upgradeOption.to}。您的新磁盘类型现已激活。`,
+
+  vpsRenewPlanSuccess: (vpsDetails, expiryDate) =>
+    `✅ VPS订阅 ${vpsDetails.name} 已成功续订！
+
+• 新到期日期：${expiryDate}
+`,
+  vpsRenewCPanelSuccess: (vpsDetails, expiryDate) =>
+    `✅ ${vpsDetails.name} 的控制面板订阅已成功续订！
+
+• 新到期日期：${expiryDate}
+`,
+}
+
 const zh = {
   k,
   t,
@@ -1010,6 +1584,10 @@ const zh = {
   l,
   termsAndConditionType,
   hP: hostingPlansText,
+  selectFormatOf,
+  vp,
+  vpsPlanOf,
+  vpsCpanelOptional,
 }
 
 module.exports = {
