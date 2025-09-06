@@ -4,6 +4,7 @@ const { log } = require('console')
 const sendEmail = require('./send-email')
 const { assignPackageToUser, set, removeKeysFromDocumentById } = require('./db')
 const { translation } = require('./translation')
+const { rem } = require('./config')
 
 
 const NAMEWORD_BASE_URL = process.env.NAMEWORD_BASE_URL
@@ -15,7 +16,9 @@ async function registerDomainAndCreateCpanel(send, info, keyboardButtons, state)
   let hostingType = info.hostingType.toLowerCase();
 
   let endpoint = `${NAMEWORD_BASE_URL}/${hostingType}/accounts/telegram`
-
+  
+  const lang = info?.userLanguage ?? 'en'
+  send(info._id, translation('t.paymentSuccessFul', lang), rem)
   try {
     headers = {
       accept: 'application/json',
@@ -38,7 +41,6 @@ async function registerDomainAndCreateCpanel(send, info, keyboardButtons, state)
     const statusCode = response.request.res.statusCode;
 
     if (statusCode === 201) {
-      const lang = info?.userLanguage ?? 'en'
       response = response.data.data
 
       send(info._id, translation('hP.successText', lang, info, response), keyboardButtons)
