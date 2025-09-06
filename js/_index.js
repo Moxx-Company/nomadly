@@ -54,7 +54,6 @@ const {
   date,
 } = require('./utils.js')
 const fs = require('fs')
-require('dotenv').config()
 const cors = require('cors')
 const axios = require('axios')
 const express = require('express')
@@ -122,6 +121,9 @@ const { console } = require('inspector')
 const BROADCAST_CONFIG = require('./broadcast-config.js')
 
 process.env['NTBA_FIX_350'] = 1
+
+// Load environment variables from .env file first
+require('dotenv').config()
 const DB_NAME = process.env.DB_NAME
 const SELF_URL = process.env.SELF_URL
 const NOT_TRY_CR = process.env.NOT_TRY_CR
@@ -5477,8 +5479,8 @@ app.get('/:id', async (req, res) => {
   increment(clicksOn, shortUrlSanitized)
 })
 const startServer = () => {
-  const port = process.env.PORT || 4001
-  app.listen(port, () => log(`Server ran away! http://localhost:${port}`))
+  const port = process.env.PORT || 5000
+  app.listen(port, '0.0.0.0', () => log(`Server ran away! ${new Date()}`))
 }
 
 const tryConnectReseller = async () => {
