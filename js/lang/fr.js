@@ -31,6 +31,7 @@ const MONTHLY_PLAN_FREE_DOMAINS = Number(process.env.MONTHLY_PLAN_FREE_DOMAINS)
 const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
+const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) || 50
 
 const npl = {
   // New Zealand
@@ -67,14 +68,15 @@ const admin = {
 
 const user = {
   // main keyboards
-  cPanelWebHostingPlans: "Plans d'hébergement cPanel privés 🔒",
-  pleskWebHostingPlans: "Plans d'hébergement Plesk privés 🔒",
+  cPanelWebHostingPlans: "Plans d'hébergement cPanel en Russie 🔒",
+  pleskWebHostingPlans: "Plans d'hébergement Plesk en Russie 🔒",
   joinChannel: '📢 Rejoindre le canal',
   phoneNumberLeads: '📲 Pistes SMS HQ',
   wallet: '👛 Mon portefeuille',
   urlShortenerMain: "🔗✂️ Raccourcisseur d'URL",
+  vpsPlans: 'Acheter un VPS Bulletproof🛡️ - Horaire/Mensuel',
   buyPlan: '🔔 Souscrire ici',
-  domainNames: '🌐 Noms de domaine',
+  domainNames: '🌐 Enregistrer des noms de domaine - ❌ DMCA',
   viewPlan: '🔔 Mon plan',
   becomeReseller: '💼 Devenir revendeur',
   getSupport: "💬 Obtenir de l'aide",
@@ -97,6 +99,11 @@ const user = {
   proPlan: '🔷 Plan Pro',
   businessPlan: '👑 Plan Business',
   contactSupport: '📞 Contacter le support',
+
+  // Sub Menu 4: VPS Plans
+  buyVpsPlan: '⚙️ Créer un nouveau VPS',
+  manageVpsPlan: '🖥️ Afficher/Gérer le VPS',
+  manageVpsSSH: '🔑 Clés SSH',
 
   // Free Trial
   freeTrialMenuButton: '🚀 Essai gratuit (12 heures)',
@@ -142,6 +149,17 @@ const bal = (usd, ngn) =>
     ? `$${view(usd)}
 ₦${view(ngn)}`
     : `$${view(usd)}`
+
+const dnsEntryFormat = `Format d'enregistrement :
+	•	Enregistrement A (Obligatoire pour un site web) / CNAME (Optionnel, ne peut pas coexister avec un enregistrement A)
+	•	Nom d'hôte : Sous-domaine (ex. : auth) ou '@' pour la racine (Optionnel)
+	•	Valeur : Adresse IP pour A / Nom d'hôte pour CNAME
+
+Veuillez saisir votre enregistrement en utilisant le format fourni ci-dessous :
+
+Exemples :
+✅ Enregistrement A : A pay 192.0.2.1 (ou A 192.0.2.1 si aucun nom d'hôte)
+✅ Enregistrement CNAME : CNAME pay 0oaawzt7.up.railway.app (ou CNAME 0oaawzt7.up.railway.app si aucun nom d'hôte)`
 
 const t = {
   yes: 'Oui',
@@ -304,7 +322,39 @@ ${CHAT_BOT_NAME}`,
   errorSavingDomain: `Erreur lors de l'enregistrement du domaine sur le serveur, veuillez contacter le support ${SUPPORT_USERNAME}. Découvrez plus ${TG_HANDLE}.`,
   chooseDomainToManage: `Veuillez sélectionner un domaine si vous souhaitez gérer ses paramètres DNS.`,
   chooseDomainWithShortener: `Veuillez sélectionner ou acheter le nom de domaine que vous souhaitez relier à votre lien raccourci.`,
-  viewDnsRecords: `Voici les enregistrements DNS pour {{domain}}`,
+  viewDnsRecords: (records, domain) => `Voici les enregistrements DNS pour ${domain}
+
+Enregistrements A (Optionnels, mais requis pour le mappage direct de l'IP)
+${
+  records.A && records.A.length
+    ? records.A.map(
+        record => `<strong>${record.index}. Enregistrement A</strong>
+  • Nom d’hôte : ${record.recordName}
+  • Valeur de l’enregistrement A : ${record.recordContent ? record.recordContent : 'Aucune'}`,
+      ).join('\n')
+    : '  • Enregistrement A : AUCUN'
+}
+
+Enregistrements NS (Obligatoires – Requis pour la résolution de domaine)
+${
+  records.NS && records.NS.length
+    ? records.NS.map(
+        record => `<strong>${record.index}. Enregistrement NS${record.nsId}</strong> ${record.recordContent}`,
+      ).join('\n\n')
+    : '  • Enregistrement NS : AUCUN'
+}
+
+Enregistrements CNAME (Optionnels, mais requis pour l’alias d’un autre domaine au lieu d’un enregistrement A)
+${
+  records.CNAME && records.CNAME.length
+    ? records.CNAME.map(
+        record => `<strong>${record.index}. Enregistrement CNAME</strong>
+  • Nom d’hôte : ${record.recordName}
+  • Valeur de l’enregistrement CNAME : ${record.recordContent ? record.recordContent : 'Aucune'}`,
+      ).join('\n')
+    : '  • Enregistrement CNAME : AUCUN'
+}`,
+
   addDns: `Ajouter un enregistrement DNS`,
   updateDns: `Mettre à jour un enregistrement DNS`,
   deleteDns: `Supprimer un enregistrement DNS`,
@@ -315,24 +365,24 @@ ${CHAT_BOT_NAME}`,
   a: `Enregistrement A`,
   cname: `Enregistrement CNAME`,
   ns: `Enregistrement NS`,
-  'A Record': `Enregistrement A`,
-  'CNAME Record': `Enregistrement CNAME`,
-  'NS Record': `Enregistrement NS`,
+  'Enregistrement A': `A`,
+  'Enregistrement CNAME': `CNAME`,
+  'Enregistrement NS': `NS`,
   askDnsContent: {
-    A: `Veuillez fournir l'enregistrement A. i.e, 108.0.56.98`,
-    'A Record': `Veuillez fournir l'enregistrement A. i.e, 108.0.56.98`,
-    CNAME: `Veuillez fournir l'enregistrement CNAME. i.e, abc.hello.org`,
-    'CNAME Record': `Veuillez fournir l'enregistrement CNAME. i.e, abc.hello.org`,
+    A: dnsEntryFormat,
+    'Enregistrement A': dnsEntryFormat,
+    CNAME: dnsEntryFormat,
+    'Enregistrement CNAME': dnsEntryFormat,
     NS: `Veuillez entrer votre enregistrement NS. i.e., dell.ns.cloudflare.com. Un nouvel enregistrement NS sera ajouté aux existants.`,
-    'NS Record': `Veuillez entrer votre enregistrement NS. i.e., dell.ns.cloudflare.com .Si les N1-N4 existent déjà, veuillez mettre à jour l'enregistrement à la place`,
+    'Enregistrement NS': `Veuillez entrer votre enregistrement NS. i.e., dell.ns.cloudflare.com .Si les N1-N4 existent déjà, veuillez mettre à jour l'enregistrement à la place`,
   },
   askUpdateDnsContent: {
-    A: `Veuillez fournir l'enregistrement A. i.e, 108.0.56.98`,
-    'A Record': `Veuillez fournir l'enregistrement A. i.e, 108.0.56.98`,
-    CNAME: `Veuillez fournir l'enregistrement CNAME. i.e, abc.hello.org`,
-    'CNAME Record': `Veuillez fournir l'enregistrement CNAME. i.e, abc.hello.org`,
+    A: dnsEntryFormat,
+    'Enregistrement A': dnsEntryFormat,
+    CNAME: dnsEntryFormat,
+    'Enregistrement CNAME': dnsEntryFormat,
     NS: `Un nouvel enregistrement NS sera mis à jour pour l'identifiant sélectionné. Pour ajouter un nouvel enregistrement, veuillez choisir "Ajouter un enregistrement DNS"`,
-    'NS Record': `Un nouvel enregistrement NS sera mis à jour pour l'identifiant sélectionné. Pour ajouter un nouvel enregistrement, veuillez choisir "Ajouter un enregistrement DNS"`,
+    'Enregistrement NS': `Un nouvel enregistrement NS sera mis à jour pour l'identifiant sélectionné. Pour ajouter un nouvel enregistrement, veuillez choisir "Ajouter un enregistrement DNS"`,
   },
   dnsRecordSaved: `Enregistrement ajouté`,
   dnsRecordDeleted: `Enregistrement supprimé`,
@@ -373,7 +423,7 @@ ${CHAT_BOT_NAME}`,
     `Veuillez envoyer ${priceCrypto} ${tickerView} à\n\n<code>${address}</code>\n\nVeuillez noter que les transactions cryptographiques peuvent prendre jusqu'à 30 minutes pour être confirmées. Une fois la transaction confirmée, vous serez notifié rapidement et votre portefeuille sera mis à jour.\n\nCordialement,\n${CHAT_BOT_NAME}`,
 
   confirmationDepositMoney: (amount, usd) =>
-    `Votre paiement de ${amount} ($${usd}) est traité. Merci de nous avoir choisi.\nCordialement,\n${CHAT_BOT_NAME}`,
+    `Votre paiement de ${amount} ($${usd}) a été traité. Merci de nous avoir choisi.\nCordialement,\n${CHAT_BOT_NAME}`,
 
   showWallet: (usd, ngn) => `Solde du portefeuille :\n\n${bal(usd, ngn)}`,
 
@@ -492,12 +542,20 @@ ${CHAT_BOT_NAME}`,
     `Scannez le QR avec l'application de marketing SMS pour vous connecter. Vous pouvez également utiliser ce code pour vous connecter : ${chatId}`,
   domainPurchasedFailed: (domain, buyDomainError) =>
     `Échec de l'achat du domaine, essayez un autre nom. ${domain} ${buyDomainError}`,
+  noDomainRegistered: `Vous n'avez pas encore acheté de domaines.`,
+  registeredDomainList: domainsText => `Voici vos domaines achetés :\n${domainsText}`,
+  comingSoon: `Bientôt disponible`,
+  goBackToCoupon: '❌ Retourner & Appliquer le Coupon',
+  errorFetchingCryptoAddress:
+    "Erreur lors de la récupération de l'adresse de la cryptomonnaie. Veuillez réessayer plus tard.",
+  paymentSuccessFul:
+    '✅ Paiement réussi ! Votre commande est en cours de traitement. Les détails seront disponibles sous peu.',
 }
 
-const phoneNumberLeads = ['💰📲 Buy PhoneLeads', '✅📲 Validate PhoneLeads']
+const phoneNumberLeads = ['💰📲 Acheter des leads téléphoniques', '✅📲 Valider les leads téléphoniques']
 
 const buyLeadsSelectCountry = Object.keys(areasOfCountry)
-const buyLeadsSelectSmsVoice = ['SMS (Price 20$ for 1000)', 'Voice (Price 0$ for 1000)']
+const buyLeadsSelectSmsVoice = ['SMS (Prix 20$ pour 1000)', 'Voix (Prix 0$ pour 1000)']
 const buyLeadsSelectArea = country => Object.keys(areasOfCountry?.[country])
 const buyLeadsSelectAreaCode = (country, area) => {
   const codes = areasOfCountry?.[country]?.[area].map(c => format(countryCodeOf[country], c))
@@ -507,14 +565,19 @@ const _buyLeadsSelectAreaCode = (country, area) => areasOfCountry?.[country]?.[a
 const buyLeadsSelectCnam = yesNo
 const buyLeadsSelectCarrier = country => carriersOf[country]
 const buyLeadsSelectAmount = ['1000', '2000', '3000', '4000', '5000']
-const buyLeadsSelectFormat = ['Local Format', 'International Format']
+const buyLeadsSelectFormat = ['Format Local', 'Format International']
 
 const validatorSelectCountry = Object.keys(areasOfCountry)
-const validatorSelectSmsVoice = ['SMS (Price 15$ for 1000)', 'Voice (Price 0$ for 1000)']
+const validatorSelectSmsVoice = ['SMS (Prix 20$ pour 1000)', 'Voix (Prix 0$ pour 1000)']
 const validatorSelectCarrier = country => carriersOf[country]
 const validatorSelectCnam = yesNo
 const validatorSelectAmount = ['ALL', '1000', '2000', '3000', '4000', '5000']
-const validatorSelectFormat = ['Local Format', 'International Format']
+const validatorSelectFormat = ['Format Local', 'Format International']
+
+const selectFormatOf = {
+  'Format Local': 'Local Format',
+  'Format International': 'International Format',
+}
 
 //redSelectRandomCustom
 
@@ -639,8 +702,9 @@ const adminKeyboard = {
 const userKeyboard = {
   reply_markup: {
     keyboard: [
-      [user.cPanelWebHostingPlans],
-      [user.pleskWebHostingPlans],
+      // [user.cPanelWebHostingPlans],
+      // [user.pleskWebHostingPlans],
+      // [user.vpsPlans],
       [user.joinChannel, user.wallet],
       [user.phoneNumberLeads],
       HIDE_SMS_APP === 'true' ? [user.domainNames] : [user.freeTrialAvailable, user.domainNames],
@@ -695,9 +759,7 @@ const l = {
   viewTermsAgainButton: '🔄 Revoir les termes',
   exitSetupButton: '❌ Quitter le setup',
   acceptedTermsMsg: `✅ Vous avez accepté avec succès les conditions générales ! 🎉
-  Vous êtes prêt à commencer à utiliser ${CHAT_BOT_NAME}. Passons à la partie amusante ! 🎯
-  
-  Vous pouvez revoir les conditions générales à tout moment dans les paramètres de votre profil.`,
+  Vous êtes prêt à commencer à utiliser ${CHAT_BOT_NAME}. Passons à la partie amusante ! 🎯`,
   declinedTermsMsg: `⚠️ Vous devez accepter les conditions générales pour continuer à utiliser ${CHAT_BOT_NAME}. 
   Veuillez les revoir quand vous serez prêt.`,
   userExitMsg: 'L’utilisateur a appuyé sur le bouton de sortie.',
@@ -845,7 +907,7 @@ const plans = hostingType => {
       duration: '30 jours',
       storage: '10 Go SSD',
       bandwidth: '100 Go',
-      domains: '1 domaine',
+      domains: 'Domaines illimités',
       emailAccounts: '5 comptes email',
       databases: '1 base de données MySQL',
       features: `Accès complet à ${hostingType} pour gérer les fichiers, bases de données, emails, etc.`,
@@ -857,7 +919,7 @@ const plans = hostingType => {
       duration: '30 jours',
       storage: '50 Go SSD',
       bandwidth: '500 Go',
-      domains: '5 domaines',
+      domains: 'Domaines illimités',
       emailAccounts: '25 comptes email',
       databases: '10 bases de données MySQL',
       features: `Accès complet à ${hostingType} avec des outils avancés pour les sauvegardes, la sécurité et les analyses.`,
@@ -984,6 +1046,540 @@ Cordialement,
 ${CHAT_BOT_NAME}`,
 }
 
+const vpsBC = ['🔙 Retour', 'Annuler']
+
+const vpsOptionsOf = list => ({
+  reply_markup: {
+    // Handle if there are multiples buttons in a row
+    keyboard: [
+      ...list.map(a => (Array.isArray(a) ? a : [a])),
+      ...(list.some(
+        a => Array.isArray(a) && a.some(item => typeof item === 'string' && item.includes(t.goBackToCoupon)),
+      )
+        ? []
+        : [vpsBC]),
+    ],
+  },
+  parse_mode: 'HTML',
+})
+
+const vpsPlans = {
+  hourly: "À l'heure",
+  monthly: 'Mensuel',
+  quaterly: 'Trimestriel',
+  annually: 'Annuel',
+}
+
+const vpsPlanOf = {
+  "À l'heure": 'hourly',
+  Mensuel: 'monthly',
+  Trimestriel: 'quaterly',
+  Annuel: 'annually',
+}
+
+const vpsPlanMenu = ["À l'heure", 'Mensuel', 'Trimestriel', 'Annuel']
+const vpsConfigurationMenu = ['De base', 'Standard', 'Premium', 'Entreprise']
+const vpsCpanelOptional = ['WHM', 'Plesk', '❌ Passer le panneau de contrôle']
+
+const vp = {
+  of: vpsOptionsOf,
+  back: '🔙 Retour',
+  skip: '❌ Passer',
+  cancel: '❌ Annuler',
+
+  askCountryForUser: `🌍 Choisissez la meilleure région pour des performances optimales et une faible latence.
+
+💡 Moins de latence = Temps de réponse plus rapides. Choisissez une région proche de vos utilisateurs pour de meilleures performances.`,
+  chooseValidCountry: 'Veuillez choisir un pays dans la liste :',
+  askRegionForUser: country =>
+    `📍 Sélectionnez un centre de données dans ${country} (Les prix peuvent varier selon l’emplacement.)`,
+  chooseValidRegion: 'Veuillez choisir une région valide dans la liste :',
+  askZoneForUser: region => `📍 Choisissez la zone dans ${region}.`,
+
+  chooseValidZone: 'Veuillez choisir une zone valide dans la liste :',
+  confirmZone: (region, zone) => `✅  Vous avez sélectionné ${region} (${zone}). Voulez-vous continuer avec ce choix ?`,
+  failedFetchingData: 'Erreur lors de la récupération, veuillez réessayer dans quelques instants.',
+  confirmBtn: `✅ Confirmer la sélection`,
+
+  askVpsDiskType: list => `💾 Choisissez votre type de stockage en fonction des performances et du budget :
+
+${list?.map(item => `• ${item.description}`).join('\n')}`,
+
+  chooseValidDiskType: 'Veuillez choisir un type de disque valide',
+
+  askPlanType: plans => `💳 Choisissez un cycle de facturation :
+
+${plans
+  .map(
+    item =>
+      `<strong>• ${item.type === 'Hourly' ? '⏳' : '📅'} ${item.type} –</strong> $${item.originalPrice} ${
+        item.discount === 0 ? '(Aucune réduction)' : `(Inclut ${item.discount}% de réduction)`
+      }`,
+  )
+  .join('\n')}`,
+  planTypeMenu: vpsOptionsOf(vpsPlanMenu),
+  hourlyBillingMessage: `⚠️ Un dépôt remboursable de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD est requis pour la facturation horaire. Cela garantit un service ininterrompu et est remboursé s'il n'est pas utilisé.
+  
+✅ La facturation est déduite du solde de votre portefeuille chaque heure.
+🔹 Les licences mensuelles (Windows/WHM/Plesk) sont facturées à l'avance.`,
+
+  askVpsConfig:
+    list => `⚙️ Choisissez un plan VPS en fonction de vos besoins (Facturation à l'heure ou au mois disponible) :
+  
+${list
+  .map(
+    config =>
+      `<strong>• ${config.name} -</strong>  ${config.specs.vCPU} vCPU, ${config.specs.RAM}GB RAM, ${config.specs.disk}GB Disque`,
+  )
+  .join('\n')}`,
+
+  validVpsConfig: 'Veuillez sélectionner une configuration VPS valide :',
+
+  configMenu: vpsOptionsOf(vpsConfigurationMenu),
+
+  askForCoupon:
+    '🎟️ Vous avez un code promo ? Entrez-le pour une réduction supplémentaire si applicable, ou passez cette étape. Les réductions du cycle de facturation sont déjà incluses.',
+  couponInvalid: `❌ Invalide : Code expiré, non applicable ou incorrect. Veuillez réessayer.`,
+  couponValid: amt => `✅ Valide : réduction appliquée : -$${amt}.`,
+  skipCouponwarning: `⚠️ Passer cette étape signifie que vous ne pourrez pas appliquer de réduction plus tard.`,
+  confirmSkip: "✅ Confirmer l'ignorance",
+  goBackToCoupon: '❌ Retourner et appliquer le coupon',
+
+  askVpsOS: price => `💡 Système d'exploitation par défaut : Ubuntu (Linux) (si aucune sélection n'est effectuée).
+💻 Sélectionnez un système d'exploitation (Windows Server ajoute ${price} $/mois).
+
+<strong>💡 Recommandé : </strong>
+<strong>• Ubuntu –</strong> Idéal pour un usage général et le développement
+<strong>• CentOS –</strong> Stable pour les applications d'entreprise
+<strong>• Windows Server –</strong> Pour les applications basées sur Windows (+${price} $/mois)`,
+  chooseValidOS: `Veuillez sélectionner un OS valide dans la liste disponible :`,
+  skipOSBtn: "❌ Passer la sélection de l'OS",
+  skipOSwarning:
+    '⚠️ Votre VPS sera lancé sans OS. Vous devrez en installer un manuellement via SSH ou en mode de récupération.',
+
+  askVpsCpanel: `🛠️ Sélectionnez un panneau de contrôle pour une gestion plus facile du serveur (optionnel).
+
+<strong>• ⚙️ WHM –</strong> Recommandé pour l'hébergement de plusieurs sites web
+<strong>• ⚙️ Plesk –</strong> Idéal pour gérer des sites et applications individuels
+<strong>• ❌ Ignorer –</strong> Aucun panneau de contrôle`,
+
+  cpanelMenu: vpsOptionsOf(vpsCpanelOptional),
+  noControlPanel: vpsCpanelOptional[2],
+  skipPanelMessage: '⚠️ Aucun panneau de contrôle ne sera installé. Vous pourrez en ajouter un manuellement plus tard.',
+  validCpanel: 'Veuillez choisir un panneau de contrôle valide ou l’ignorer.',
+
+  askCpanelOtions: (name, list) => `⚙️ Choisissez une ${
+    name == 'whm' ? 'WHM' : 'Plesk Web Host Edition'
+  } licence ou sélectionnez un essai gratuit (valable ${name == 'whm' ? '15' : '7'} jours).
+
+💰 Tarification de la licence ${name == 'whm' ? 'WHM' : 'Plesk'} :
+
+${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : ''}${item.label}`).join('\n')}`,
+
+  trialCpanelMessage: panel =>
+    `✅ ${panel.name == 'whm' ? 'WHM' : 'Plesk'} Essai gratuit (${
+      panel.duration
+    } jours) activé. Vous pouvez passer à une version payante à tout moment en contactant le support.`,
+
+  vpsWaitingTime: "⚙️ Récupération des détails... Cela ne prendra qu'un instant.",
+  failedCostRetrieval: 'Échec de la récupération des informations de coût... Veuillez réessayer après un moment.',
+
+  errorPurchasingVPS: plan => `Une erreur est survenue lors de la configuration de votre plan VPS ${plan}.
+
+Veuillez contacter le support ${SUPPORT_USERNAME}.
+Découvrez-en plus sur ${TG_HANDLE}.`,
+
+  generateBillSummary: vpsDetails => `<strong>📋 Détail final des coûts :</strong>
+
+<strong>•📅 Type de disque –</strong> ${vpsDetails.diskType}
+<strong>•🖥️ Plan VPS :</strong> ${vpsDetails.config.name}
+<strong>•📅 Cycle de facturation (${vpsDetails.plan} Plan) –</strong> $${vpsDetails.plantotalPrice} USD
+<strong>•💻 Licence OS (${vpsDetails.os ? vpsDetails.os.name : 'Non sélectionné'}) –</strong> $${
+    vpsDetails.selectedOSPrice
+  } USD
+<strong>•🛠️ Panneau de contrôle (${
+    vpsDetails.panel
+      ? `${vpsDetails.panel.name == 'whm' ? 'WHM' : 'Plesk'} ${vpsDetails.panel.licenseName}`
+      : 'Non sélectionné'
+  }) –</strong> $${vpsDetails.selectedCpanelPrice} USD
+<strong>•🎟️ Remise coupon –</strong> -$${vpsDetails.couponDiscount} USD
+<strong>•🔄 Renouvellement automatique –</strong>  ${
+    vpsDetails.plan === 'Hourly' ? '⏳ Horaire' : vpsDetails.autoRenewalPlan ? '✅ Activé' : '❌ Désactivé'
+  }
+
+${
+  vpsDetails.plan === 'Hourly'
+    ? `Remarque : Un dépôt de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD est inclus dans votre total. Après la première déduction horaire, le reste du dépôt sera crédité sur votre portefeuille.`
+    : ''
+}
+
+<strong>💰 Total :</strong> $${
+    vpsDetails.plan === 'Hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      : vpsDetails.totalPrice
+  } USD
+
+<strong>✅ Procéder à la commande ?</strong>`,
+
+  no: '❌ Annuler la commande',
+  yes: '✅ Confirmer la commande',
+
+  askPaymentMethod: 'Choisissez une méthode de paiement :',
+
+  showDepositCryptoInfoVps: (priceCrypto, tickerView, address, vpsDetails) =>
+    `Veuillez envoyer ${priceCrypto} ${tickerView} à\n\n<code>${address}</code>
+
+Veuillez noter que les transactions en crypto-monnaie peuvent prendre jusqu'à 30 minutes pour être confirmées. Une fois la transaction confirmée, vous serez rapidement notifié et votre plan VPS sera activé.
+
+Cordialement,
+${CHAT_BOT_NAME}`,
+
+  extraMoney: 'Le montant restant pour votre plan horaire a été déposé dans votre portefeuille.',
+  paymentRecieved: `✅ Paiement réussi ! Votre VPS est en cours de configuration. Les détails seront bientôt disponibles et envoyés à votre adresse email pour votre commodité.`,
+  paymentFailed: `❌ Échec du paiement. Veuillez vérifier votre méthode de paiement ou réessayer.`,
+
+  lowWalletBalance: vpsName => `
+Votre plan VPS pour l'instance ${vpsName} a été arrêté en raison d'un solde insuffisant.
+
+Veuillez recharger votre portefeuille pour continuer à utiliser votre plan VPS.`,
+
+  vpsBoughtSuccess: (vpsDetails, response) =>
+    `<strong>🎉 VPS [${response.label}] est actif !</strong>
+
+<strong>🔑 Informations de connexion:</strong>
+  <strong>• IP:</strong> ${response.host}
+  <strong>• OS:</strong> ${vpsDetails.os ? vpsDetails.os.name : 'Non sélectionné'}
+  <strong>• Nom d'utilisateur:</strong> ${credentials.username}
+  <strong>• Mot de passe:</strong> ${credentials.password} (changez immédiatement).
+    
+📧 Ces détails ont également été envoyés à votre email enregistré. Veuillez les garder en sécurité.
+
+⚙️ Installation du panneau de contrôle (WHM/Plesk)
+Si vous avez commandé WHM ou Plesk, l'installation est en cours. Vos identifiants de connexion au panneau de contrôle vous seront envoyés séparément une fois l'installation terminée.
+
+Merci d'avoir choisi notre service
+${CHAT_BOT_NAME}
+`,
+  vpsHourlyPlanRenewed: (vpsName, price) => `
+Votre plan VPS pour l'instance ${vpsName} a été renouvelé avec succès.
+${price}$ ont été débités de votre portefeuille.`,
+
+  bankPayVPS: (
+    priceNGN,
+    plan,
+  ) => `Veuillez envoyer ${priceNGN} NGN en cliquant sur "Effectuer le paiement" ci-dessous. Une fois la transaction confirmée, vous serez rapidement notifié et votre ${plan} plan VPS sera activé.
+
+Cordialement,
+${CHAT_BOT_NAME}`,
+
+  askAutoRenewal: `🔄 Activer le renouvellement automatique pour un service ininterrompu ?  
+
+🛑 Vous recevrez un rappel avant le renouvellement. Vous pouvez le désactiver à tout moment.`,
+  enable: '✅ Activer',
+  skipAutoRenewalWarming: expiresAt =>
+    `⚠️ Votre VPS expirera le ${new Date(expiresAt).toLocaleDateString('fr-FR').replace(/\//g, '-')} à ${new Date(
+      expiresAt,
+    ).toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })}, et le service pourrait être interrompu.`,
+
+  generateSSHKeyBtn: '✅ Générer une nouvelle clé',
+  linkSSHKeyBtn: '🗂️ Lier une clé existante',
+  skipSSHKeyBtn: '❌ Ignorer (Utiliser la connexion par mot de passe)',
+  noExistingSSHMessage:
+    '🔑 Aucune clé SSH détectée. Souhaitez-vous générer une nouvelle clé SSH pour un accès sécurisé, ou utiliser la connexion par mot de passe (moins sécurisée) ?',
+  existingSSHMessage: '🔑 Vous avez des clés SSH existantes. Choisissez une option :',
+  confirmSkipSSHMsg: `⚠️ Avertissement : Les connexions par mot de passe sont moins sécurisées et vulnérables aux attaques.
+  🔹 Nous vous recommandons fortement d'utiliser des clés SSH. Êtes-vous sûr de vouloir continuer ?`,
+  confirmSkipSSHBtn: '✅ Continuer quand même',
+  setUpSSHBtn: '🔄 Configurer la clé SSH',
+  sshLinkingSkipped: '❌ Liaison de clé SSH ignorée. Aucun changement effectué.',
+  newSSHKeyGeneratedMsg: name => `✅ Clé SSH (${name}) créée.
+⚠️ Enregistrez cette clé en toute sécurité – elle peut être récupérée plus tard.`,
+  selectSSHKey: '🗂️ Sélectionnez une clé SSH existante à lier à votre VPS :',
+  uploadNewKeyBtn: '➕ Télécharger une nouvelle clé',
+  cancelLinkingSSHKey: `❌ Liaison de clé SSH annulée. Aucun changement effectué.`,
+  selectValidSShKey: 'Veuillez sélectionner une clé SSH valide dans la liste.',
+  sshKeySavedForVPS: name => `✅ La clé SSH (${name}) sera liée au nouveau VPS.`,
+  askToUploadSSHKey: `📤 Téléchargez votre clé publique SSH (.pub) ou collez la clé ci-dessous.`,
+  failedGeneratingSSHKey:
+    'Échec de la génération d’une nouvelle clé SSH. Veuillez réessayer ou utiliser une autre méthode.',
+  newSSHKeyUploadedMsg: name => `✅ Clé SSH (${name}) téléchargée avec succès et sera liée au VPS.`,
+  fileTypePub: 'Le type de fichier doit être .pub',
+
+  vpsList: list => `<strong>🖥️ Instances VPS actives :</strong>
+
+${list
+  .map(vps => `<strong>• ${vps.name} :</strong> ${vps.status === 'RUNNING' ? '🟢' : '🔴'} ${vps.status}`)
+  .join('\n')}
+`,
+  noVPSfound: "Aucune instance VPS active n'existe. Créez-en une nouvelle.",
+  selectCorrectOption: 'Veuillez sélectionner une option dans la liste',
+  selectedVpsData: data => `<strong>🖥️ ID du VPS :</strong> ${data.name}
+
+<strong>• Plan :</strong> ${data.planDetails.name}
+<strong>• vCPUs :</strong> ${data.planDetails.specs.vCPU} | RAM : ${data.planDetails.specs.RAM} Go | Disque : ${
+    data.planDetails.specs.disk
+  } Go (${data.diskTypeDetails.type})
+<strong>• OS :</strong> ${data.osDetails.name}
+<strong>• Panneau de contrôle :</strong> ${
+    data.cPanelPlanDetails && data.cPanelPlanDetails.type ? data.cPanelPlanDetails.type : 'Aucun'
+  }
+<strong>• Statut :</strong> ${data.status === 'RUNNING' ? '🟢' : '🔴'} ${data.status}
+<strong>• Renouvellement automatique :</strong> ${data.autoRenewable ? 'Activé' : 'Désactivé'}
+<strong>• Adresse IP :</strong> ${data.host}`,
+  stopVpsBtn: '⏹️ Arrêter',
+  startVpsBtn: '▶️ Démarrer',
+  restartVpsBtn: '🔄 Redémarrer',
+  deleteVpsBtn: '🗑️ Supprimer',
+  subscriptionBtn: '🔄 Abonnements',
+  VpsLinkedKeysBtn: '🔑 Clés SSH',
+  confirmChangeBtn: '✅ Confirmer',
+
+  confirmStopVpstext: name => `⚠️ Êtes-vous sûr de vouloir arrêter le VPS <strong>${name}</strong> ?`,
+  vpsBeingStopped: name => `⚙️ Veuillez patienter pendant que votre VPS (${name}) est en cours d\'arrêt`,
+  vpsStopped: name => `✅ Le VPS (${name}) a été arrêté.`,
+  failedStoppingVPS: name => `❌ Échec de l\'arrêt du VPS (${name}).
+
+Veuillez réessayer après un certain temps.`,
+  vpsBeingStarted: name => `⚙️ Veuillez patienter pendant que votre VPS (${name}) est en cours de démarrage`,
+  vpsStarted: name => `✅ Le VPS (${name}) est maintenant en cours d\'exécution.`,
+  failedStartedVPS: name => `❌ Échec du démarrage du VPS (${name}).
+
+Veuillez réessayer après un certain temps.`,
+  vpsBeingRestarted: name => `⚙️ Veuillez patienter pendant que votre VPS (${name}) est en cours de redémarrage`,
+  vpsRestarted: name => `✅ Le VPS (${name}) a été redémarré avec succès.`,
+  failedRestartingVPS: name => `❌ Échec du redémarrage du VPS (${name}).
+
+Veuillez réessayer après un certain temps.`,
+  confirmDeleteVpstext: name =>
+    `⚠️ Avertissement : La suppression de ce VPS ${name} est permanente et toutes les données seront perdues.
+    • Aucun remboursement pour le temps d'abonnement non utilisé.
+    • Le renouvellement automatique sera annulé et aucun frais supplémentaire ne s'appliquera.
+    
+  Voulez-vous continuer ?`,
+  vpsBeingDeleted: name => `⚙️ Veuillez patienter pendant que votre VPS (${name}) est en cours de suppression`,
+  vpsDeleted: name => `✅ Le VPS (${name}) a été supprimé de manière permanente.`,
+  failedDeletingVPS: name => `❌ Échec de la suppression du VPS (${name}).
+
+Veuillez réessayer après un certain temps.`,
+
+  upgradeVpsBtn: '⬆️ Mettre à niveau',
+  upgradeVpsPlanBtn: '⬆️ Plan VPS',
+  upgradeVpsDiskBtn: '📀 Type de disque',
+  upgradeVpsDiskTypeBtn: '💾 Mettre à niveau le type de disque',
+  upgradeVPS: 'Choisissez le type de mise à niveau',
+  upgradeOptionVPSBtn: to => {
+    return `🔼 Mettre à niveau vers ${to}`
+  },
+  upgradeVpsPlanMsg: options => `⚙️ Choisissez un nouveau plan pour augmenter les ressources de votre VPS.
+💡 La mise à niveau augmente les vCPUs, la RAM et le stockage, mais elle ne peut pas être annulée.
+
+📌 Mises à niveau disponibles :
+${options
+  .map(
+    planDetails =>
+      `<strong>• ${planDetails.from} ➡ ${planDetails.to} –</strong> $${planDetails.monthlyPrice}/mois ($${planDetails.hourlyPrice}/heure)`,
+  )
+  .join('\n')}
+
+💰 Avis de facturation : Votre plan actuel sera crédité pour les jours inutilisés, et le nouveau tarif s'appliquera pour le reste du cycle de facturation (ajustement au prorata).`,
+
+  alreadyEnterprisePlan:
+    "⚠️ Vous êtes déjà sur le plan le plus élevé (Entreprise). Aucune autre mise à niveau n'est possible.",
+
+  alreadyHighestDisk: vpsData =>
+    `⚠️ Vous êtes déjà sur le disque le plus élevé disponible (${vpsData.diskTypeDetails.type}). Aucune autre mise à niveau n\'est possible.`,
+  newVpsDiskBtn: type => `Mettre à niveau vers ${type}`,
+  upgradeVpsDiskMsg: upgrades => `💾 Mettez à niveau votre type de stockage pour de meilleures performances.
+⚠️ Les mises à niveau de disque sont permanentes et ne peuvent pas être rétrogradées.
+
+📌 Options disponibles :
+${upgrades.map(val => `<strong>• ${val.from} ➡ ${val.to} –</strong> +$${val.price}/${val.duration}`).join('\n')}
+
+💰 Avis de facturation : Si la mise à niveau est appliquée en cours de cycle, un ajustement au prorata sera appliqué pour la portion inutilisée de votre période de facturation actuelle.`,
+  upgradePlanSummary: (newData, vpsDetails, lowBal) => `<strong>📜 Résumé de la commande :</strong>
+
+<strong>• ID VPS : </strong> ${vpsDetails.name}
+<strong>• Ancien plan : </strong> ${newData.upgradeOption.from}
+<strong>• Nouveau plan : </strong> ${newData.upgradeOption.to}
+<strong>• Cycle de facturation : </strong> ${newData.billingCycle}
+<strong>• Nouveau tarif de facturation : </strong> $${newData.totalPrice} USD${
+    newData.billingCycle === 'Hourly' ? '/heure' : ' (ajustement proratisé appliqué)'
+  }
+<strong>• Date d'effet : </strong> Immédiatement
+${
+  lowBal
+    ? `
+💡 Remarque : Un dépôt de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD est inclus dans votre total. Après la première déduction du tarif horaire, le dépôt restant sera crédité sur votre portefeuille.
+`
+    : ''
+}
+<strong>• Prix total : </strong> $${lowBal ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE : newData.totalPrice} USD
+
+<strong>✅ Confirmer la commande ?</strong>`,
+
+  vpsSubscriptionData: (vpsData, planExpireDate, panelExpireDate) => `<strong>🗂️ Vos abonnements actifs :</strong>
+
+<strong>• VPS ${vpsData.name} </strong> – Expire le : ${planExpireDate}  (Renouvellement automatique : ${
+    vpsData.autoRenewable ? 'Activé' : 'Désactivé'
+  })
+<strong>• Panneau de contrôle ${
+    vpsData?.cPanelPlanDetails ? vpsData.cPanelPlanDetails.type : ': Non sélectionné'
+  } </strong> ${
+    vpsData?.cPanelPlanDetails
+      ? `${vpsData?.cPanelPlanDetails.status === 'active' ? '- Expire le : ' : '- Expiré le : '}${panelExpireDate}`
+      : ''
+  } `,
+
+  manageVpsSubBtn: "🖥️ Gérer l'abonnement VPS",
+  manageVpsPanelBtn: "🛠️ Gérer l'abonnement au panneau de contrôle",
+
+  vpsSubDetails: (data, date) => `<strong>📅 Détails de l\'abonnement VPS :</strong>
+
+<strong>• VPS ID :</strong> ${data.name}
+<strong>• Plan :</strong> ${data.planDetails.name}
+<strong>• Date d\'expiration actuelle :</strong> ${date}
+<strong>• Renouvellement automatique :</strong> ${data.autoRenewable ? 'Activé' : 'Désactivé'}`,
+
+  vpsCPanelDetails: (data, date) => `<strong>📅 Détails de l'abonnement au panneau de contrôle :</strong>
+
+<strong>• ID VPS lié :</strong> ${data.name}
+<strong>• Type de panneau de contrôle :</strong> ${data.cPanelPlanDetails.type} (${data.cPanelPlanDetails.name})
+<strong>• Date d'expiration actuelle :</strong> ${date}
+<strong>• Renouvellement automatique :</strong> ${data.autoRenewable ? 'Activé' : 'Désactivé'}
+`,
+
+  vpsEnableRenewalBtn: '🔄 Activer le renouvellement automatique',
+  vpsDisableRenewalBtn: '❌ Désactiver le renouvellement automatique',
+  vpsPlanRenewBtn: '📅 Renouveler maintenant',
+  unlinkVpsPanelBtn: '❌ Dissocier du VPS',
+  bankPayVPSUpgradePlan: (priceNGN, vpsDetails) =>
+    `Veuillez effectuer un paiement de ${priceNGN} NGN en cliquant sur "Effectuer le paiement" ci-dessous. Une fois la transaction confirmée, vous serez immédiatement informé, et votre nouveau plan VPS ${vpsDetails.upgradeOption.to} sera activé sans interruption.`,
+
+  bankPayVPSUpgradeDisk: (priceNGN, vpsDetails) =>
+    `Veuillez verser ${priceNGN} NGN en cliquant sur “Effectuer le paiement” ci-dessous. Une fois la transaction confirmée, vous serez rapidement informé, et votre plan VPS avec le nouveau type de disque ${vpsDetails.upgradeOption.toType} sera activé sans problème.`,
+
+  showDepositCryptoInfoVpsUpgrade: (priceCrypto, tickerView, address) =>
+    `Veuillez verser ${priceCrypto} ${tickerView} à\n\n<code>${address}</code>
+
+Veuillez noter que les transactions en crypto-monnaie peuvent prendre jusqu'à 30 minutes pour être complétées. Une fois la transaction confirmée, vous serez rapidement informé, et votre nouveau plan VPS sera activé sans problème.
+
+Cordialement,
+${CHAT_BOT_NAME}`,
+
+  linkVpsSSHKeyBtn: '➕ Lier une nouvelle clé',
+  unlinkSSHKeyBtn: '❌ Dissocier la clé',
+  downloadSSHKeyBtn: '⬇️ Télécharger la clé',
+
+  noLinkedKey: name => `⚠️ Il n\'y a actuellement aucune clé SSH associée à ce VPS [${name}]. 
+
+Veuillez lier une clé SSH à votre compte pour permettre un accès sécurisé.`,
+
+  linkedKeyList: (list, name) => `🗂️ Clés SSH liées au VPS ${name} :
+
+${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
+
+  unlinkSSHKeyList: name => `🗂️ Sélectionnez une clé SSH à supprimer du VPS [${name}] :`,
+  confirmUnlinkKey: data => `⚠️ Êtes-vous sûr de vouloir dissocier [${data.keyForUnlink}] du VPS [${data.name}] ?`,
+  confirmUnlinkBtn: '✅ Confirmer la dissociation',
+  keyUnlinkedMsg: data => `✅ La clé SSH [${data.keyForUnlink}] a été dissociée du VPS [${data.name}].`,
+  failedUnlinkingKey: data => `❌ Échec de la dissociation de la clé SSH du VPS (${data.name}). 
+
+Veuillez réessayer plus tard.`,
+
+  userSSHKeyList: name => `🗂️ Sélectionnez une clé SSH à lier au VPS [${name}] :`,
+  noUserKeyList: `🔑 Aucune clé SSH détectée. Voulez-vous en télécharger une nouvelle ?`,
+  linkKeyToVpsSuccess: (key, name) => `✅ La clé SSH [${key}] a été liée avec succès au VPS [${name}].`,
+  failedLinkingSSHkeyToVps: (key, name) => `❌ Échec de la liaison de la clé SSH [${key}] au VPS (${name}). 
+
+Veuillez réessayer plus tard.`,
+
+  selectSSHKeyToDownload: '🗂️ Sélectionnez la clé SSH que vous souhaitez télécharger :',
+
+  disabledAutoRenewal: (
+    data,
+    expiryDate,
+  ) => `⚠️ Le renouvellement automatique est désactivé. Votre VPS expirera le ${expiryDate} à moins d'un renouvellement manuel.
+✅ Renouvellement automatique désactivé avec succès.`,
+
+  enabledAutoRenewal: (data, expiryDate) =>
+    `✅ Renouvellement automatique activé. Votre VPS sera automatiquement renouvelé le ${expiryDate}.`,
+
+  renewVpsPlanConfirmMsg: (data, vpsDetails, expiryDate, lowBal) => `<strong>📜 Résumé de la facture</strong>
+
+<strong>• ID VPS :</strong> ${vpsDetails.name}
+<strong>• Plan :</strong> ${vpsDetails.planDetails.name}
+<strong>• Cycle de facturation :</strong> ${vpsDetails.billingCycleDetails.type}
+<strong>• Date d'expiration actuelle :</strong> ${expiryDate}
+<strong>• Montant dû :</strong> ${data.totalPrice} USD
+
+${
+  lowBal
+    ? `Remarque : Un dépôt de $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD est inclus dans votre total. Après la déduction du premier tarif horaire, le reste du dépôt sera crédité sur votre portefeuille.`
+    : ''
+}
+
+<strong>• Prix total :</strong> $${
+    lowBal
+      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      : data.totalPrice
+  } USD
+
+<strong>💳 Procéder au renouvellement du VPS ?</strong>`,
+
+  payNowBtn: '✅ Payer maintenant',
+
+  vpsChangePaymentRecieved: `✅ Paiement réussi ! Votre VPS est en cours de configuration. Les détails seront bientôt disponibles.`,
+
+  bankPayVPSRenewPlan: priceNGN =>
+    `Veuillez envoyer ${priceNGN} NGN en cliquant sur "Effectuer le paiement" ci-dessous. Une fois la transaction confirmée, vous serez immédiatement notifié et votre plan VPS sera activé et renouvelé.`,
+
+  renewVpsPanelConfirmMsg: (
+    data,
+    panelDetails,
+    date,
+  ) => `<strong>💳 Procéder au renouvellement du panneau de contrôle ?</strong>
+
+<strong>📜 Résumé de la facture</strong>
+  <strong>• ID VPS lié :</strong> ${data.name}
+  <strong>• Panneau de contrôle :</strong> ${panelDetails.type}
+  <strong>• Période de renouvellement :</strong> ${panelDetails.durationValue}${' '}Mois
+  <strong>• Date d'expiration actuelle :</strong> ${date}
+  <strong>• Montant dû :</strong> ${data.totalPrice} USD`,
+
+  bankPayVPSRenewCpanel: (priceNGN, vpsDetails) =>
+    `Veuillez envoyer ${priceNGN} NGN en cliquant sur "Effectuer le paiement" ci-dessous. Une fois la transaction confirmée, vous serez immédiatement notifié et votre plan VPS sera activé et le panneau de contrôle ${vpsDetails.cPanelPlanDetails.type} sera renouvelé.`,
+
+  vpsUnlinkCpanelWarning: vpsDetails =>
+    `⚠️ Avertissement : Dissocier supprimera la licence ${vpsDetails.cPanel} du VPS ${vpsDetails.name}, et vous perdrez l'accès à ses fonctionnalités. Voulez-vous continuer ?`,
+
+  unlinkCpanelConfirmed: data => `✅ Panneau de contrôle ${data.cPanel} dissocié avec succès du VPS ${data.name}.`,
+
+  errorUpgradingVPS: vpsName => `Une erreur s'est produite lors de la mise à niveau de votre plan VPS ${vpsName}.
+
+Veuillez contacter le support ${SUPPORT_USERNAME}.
+En savoir plus ${TG_HANDLE}.`,
+
+  vpsUpgradePlanTypeSuccess: vpsDetails => `
+✅ VPS ${vpsDetails.name} mis à niveau vers ${vpsDetails.upgradeOption.to}. Vos nouvelles ressources sont maintenant disponibles.`,
+
+  vpsUpgradeDiskTypeSuccess: vpsDetails =>
+    `✅ Disque mis à niveau vers ${vpsDetails.upgradeOption.to} pour le VPS ${vpsDetails.name}. Votre nouveau type de disque est maintenant actif.`,
+  vpsRenewPlanSuccess: (vpsDetails, expiryDate) =>
+    `✅ L'abonnement VPS pour ${vpsDetails.name} a été renouvelé avec succès !
+
+• Nouvelle date d'expiration : ${expiryDate}
+`,
+  vpsRenewCPanelSuccess: (vpsDetails, expiryDate) =>
+    `✅ Abonnement au panneau de contrôle pour ${vpsDetails.name} renouvelé avec succès !
+
+• Nouvelle date d'expiration : ${expiryDate}
+`,
+}
+
 const fr = {
   k,
   t,
@@ -1040,6 +1636,10 @@ const fr = {
   l,
   termsAndConditionType,
   hP: hostingPlansText,
+  selectFormatOf,
+  vp,
+  vpsPlanOf,
+  vpsCpanelOptional,
 }
 
 module.exports = {
