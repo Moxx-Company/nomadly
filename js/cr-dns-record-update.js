@@ -9,20 +9,22 @@ const { saveServerInDomain } = require('./cr-dns-record-add')
 const updateDNSRecord = async (
   DNSZoneID,
   DNSZoneRecordID,
-  RecordName,
+  domainName,
   RecordType,
   RecordValue,
   domainNameId,
   nsId,
   dnsRecords,
+  hostName
 ) => {
-  if (RecordType === 'NS') return await updateDNSRecordNs(domainNameId, RecordName, RecordValue, nsId, dnsRecords)
+  if (RecordType === 'NS') return await updateDNSRecordNs(domainNameId, domainName, RecordValue, nsId, dnsRecords)
 
   // Custom Requirement fulfilled, if no A record present then show A Record: None, so we are updating it by creating it
-  if (RecordType === 'A' && !DNSZoneID) return await saveServerInDomain(RecordName, RecordValue, 'A')
+  if (RecordType === 'A' && !DNSZoneID) return await saveServerInDomain(domainName, RecordValue, 'A', null, null, null, hostName)
 
   try {
     const apiUrl = 'https://api.connectreseller.com/ConnectReseller/ESHOP/ModifyDNSRecord'
+    const RecordName = hostName ? `${hostName}.${domainName}` : domainName
     const requestData = {
       APIKey,
       DNSZoneID,
