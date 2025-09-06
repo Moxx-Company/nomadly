@@ -65,11 +65,12 @@ const admin = {
   blockUser: '✋ Block User',
   unblockUser: '👌 Unblock User',
   messageUsers: '👋 Message all users',
+  broadcastSettings: '⚙️ Broadcast Settings',
 }
 const user = {
   // main keyboards
-  cPanelWebHostingPlans: 'Private cPanel Hosting Plans 🔒',
-  pleskWebHostingPlans: 'Private Plesk Hosting Plans 🔒',
+  cPanelWebHostingPlans: 'Russia cPanel Hosting Plans 🔒',
+  pleskWebHostingPlans: 'Russia Plesk Hosting Plans 🔒',
   joinChannel: '📢 Join Channel',
   phoneNumberLeads: '📲 HQ SMS Lead',
   wallet: '👛 My Wallet',
@@ -653,8 +654,8 @@ const adminKeyboard = {
 const userKeyboard = {
   reply_markup: {
     keyboard: [
-      [user.cPanelWebHostingPlans],
-      [user.pleskWebHostingPlans],
+      // [user.cPanelWebHostingPlans],
+      // [user.pleskWebHostingPlans],
       [user.joinChannel, user.wallet],
       [user.phoneNumberLeads],
       HIDE_SMS_APP === 'true' ? [user.domainNames] : [user.freeTrialAvailable, user.domainNames],
@@ -761,7 +762,7 @@ const payBank = url => ({
 const html = (text = t.successPayment) => {
   return `
         <html>
-            <body>
+            <body style="background-color: white;">
                 <p style="font-family: 'system-ui';" >${text}</p>
             </body>
         </html>
@@ -772,7 +773,8 @@ const dynopayActions = {
   walletFund: 'walletFund',
   payHosting: 'payHosting',
   payDomain: 'payDomain',
-  payPlan: 'payPlan'
+  payPlan: 'payPlan',
+  payVps: 'payVps'
 }
 
 module.exports = {
