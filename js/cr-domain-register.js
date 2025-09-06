@@ -17,7 +17,7 @@ const buyDomainOnline = async domain => {
       ns2: '8307.dns2.managedns.org',
     }
 
-    const response = await axios.get(apiUrl, { params: requestData })
+    const response = await axios.get(apiUrl, { params: requestData, timeout: 15000 })
     console.log('buyDomain Response:', JSON.stringify(response.data, null, 2))
 
     if (response?.data?.responseMsg?.statusCode === 200) {
