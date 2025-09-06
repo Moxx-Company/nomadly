@@ -31,6 +31,7 @@ const MONTHLY_PLAN_FREE_DOMAINS = Number(process.env.MONTHLY_PLAN_FREE_DOMAINS)
 const HOSTING_STARTER_PLAN_PRICE = parseFloat(process.env.HOSTING_STARTER_PLAN_PRICE)
 const HOSTING_PRO_PLAN_PRICE = parseFloat(process.env.HOSTING_PRO_PLAN_PRICE)
 const HOSTING_BUSINESS_PLAN_PRICE = parseFloat(process.env.HOSTING_BUSINESS_PLAN_PRICE)
+const VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE = parseFloat(process.env.VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE) || 50
 
 const npl = {
   // New Zealand
@@ -66,14 +67,15 @@ const admin = {
 }
 const user = {
   // main keyboards
-  cPanelWebHostingPlans: 'Private cPanel Hosting Plans 🔒',
-  pleskWebHostingPlans: 'Private Plesk Hosting Plans 🔒',
+  cPanelWebHostingPlans: 'Russia cPanel Hosting Plans 🔒',
+  pleskWebHostingPlans: 'Russia Plesk Hosting Plans 🔒',
   joinChannel: '📢 Join Channel',
   phoneNumberLeads: '📲 HQ SMS Lead',
   wallet: '👛 My Wallet',
   urlShortenerMain: '🔗✂️ URL Shortener',
+  vpsPlans: 'Buy Bulletproof VPS🛡️ - Hourly/Monthly',
   buyPlan: '🔔 Subscribe Here',
-  domainNames: '🌐 Domain Names',
+  domainNames: '🌐 Register Domain Names - ❌ DMCA',
   viewPlan: '🔔 My Plan',
   becomeReseller: '💼 Become A Reseller',
   getSupport: '💬 Get Support',
@@ -96,6 +98,11 @@ const user = {
   proPlan: '🔷 Pro Plan',
   businessPlan: '👑 Business Plan',
   contactSupport: '📞 Contact Support',
+
+  // Sub Menu 4: VPS Plans
+  buyVpsPlan: '⚙️ Create New VPS',
+  manageVpsPlan: '🖥️ View/Manage VPS',
+  manageVpsSSH: '🔑 SSH Keys',
 
   // Free Trial
   freeTrialMenuButton: '🚀 Free Trial (12 Hours)',
@@ -140,6 +147,17 @@ const bal = (usd, ngn) =>
     ? `$${view(usd)}
 ₦${view(ngn)}`
     : `$${view(usd)}`
+
+const dnsEntryFormat = `Record Format:
+	•	A Record (Mandatory for website) / CNAME (Optional, cannot coexist with A Record)
+	•	Host Name: Subdomain (e.g., auth) or @ for root (Optional)
+	•	Value: IP Address for A / Hostname for CNAME
+
+Please enter your record using the format provided below:
+
+Examples:
+✅ A Record: A pay 192.0.2.1 (or A 192.0.2.1 if no host name)
+✅ CNAME Record: CNAME pay 0oaawzt7.up.railway.app (or CNAME 0oaawzt7.up.railway.app if no host name)`
 
 const t = {
   yes: 'Yes',
@@ -328,7 +346,36 @@ ${CHAT_BOT_NAME}`,
 
   chooseDomainWithShortener: `Please select or buy the domain name you would like to connect with your shortened link.`,
 
-  viewDnsRecords: `Here are DNS Records for {{domain}}`,
+  viewDnsRecords: (records, domain) => `Here are DNS Records for ${domain}
+
+A Records (Optional, but required for direct IP mapping)
+${
+  records.A && records.A.length
+    ? records.A.map(
+        record => `<strong>${record.index}.	A Record</strong>
+  • Host Name: ${record.recordName}
+  •	A Record Value: ${record.recordContent ? record.recordContent : 'None'}`,
+      ).join('\n')
+    : '  • A Record: NONE'
+}
+
+NS Records (Mandatory – Required for domain resolution)
+${
+  records.NS && records.NS.length
+    ? records.NS.map(record => `<strong>${record.index}.	NS${record.nsId} ${record.recordContent}</strong>`).join('\n\n')
+    : '  • NS Record: NONE'
+}
+
+CNAME Records (Optional, but required if aliasing another domain instead of using an A record)
+${
+  records.CNAME && records.CNAME.length
+    ? records.CNAME.map(
+        record => `<strong>${record.index}.	CNAME Record</strong>
+  • Host Name: ${record.recordName}
+  •	CNAME Record Value: ${record.recordContent ? record.recordContent : 'None'}`,
+      ).join('\n')
+    : '  • CNAME Record: NONE'
+}`,
   addDns: 'Add DNS Record',
   updateDns: 'Update DNS Record',
   deleteDns: 'Delete DNS Record',
@@ -343,21 +390,21 @@ ${CHAT_BOT_NAME}`,
   'CNAME Record': 'CNAME',
   'NS Record': 'NS',
   askDnsContent: {
-    A: `Please provide A record. i.e, 108.0.56.98`,
-    'A Record': `Please provide A record. i.e, 108.0.56.98`,
+    A: dnsEntryFormat,
+    'A Record': dnsEntryFormat,
 
-    CNAME: `Please provide CNAME record. i.e, abc.hello.org`,
-    'CNAME Record': `Please provide CNAME record. i.e, abc.hello.org`,
+    CNAME: dnsEntryFormat,
+    'CNAME Record': dnsEntryFormat,
 
     NS: `Please enter your NS record. i.e., dell.ns.cloudflare.com. A new NS record will be added to the current ones.`,
     'NS Record': `Please enter your NS record. i.e., dell.ns.cloudflare.com .If N1-N4 already exists, please update record instead`,
   },
   askUpdateDnsContent: {
-    A: `Please provide A record. i.e, 108.0.56.98`,
-    'A Record': `Please provide A record. i.e, 108.0.56.98`,
+    A: dnsEntryFormat,
+    'A Record': dnsEntryFormat,
 
-    CNAME: `Please provide CNAME record. i.e, abc.hello.org`,
-    'CNAME Record': `Please provide CNAME record. i.e, abc.hello.org`,
+    CNAME: dnsEntryFormat,
+    'CNAME Record': dnsEntryFormat,
 
     NS: `A new NS record will be updated for the selected id. To Add a new record, please choose “Add DNS Record”`,
     'NS Record': `A new NS record will be updated for the selected id. To Add a new record, please choose “Add DNS Record”`,
@@ -376,7 +423,7 @@ ${CHAT_BOT_NAME}`,
   depositNGN: `Please enter NGN Amount:`,
   askEmailForNGN: `Please provide an email for payment confirmation`,
 
-  depositUSD: `Please enter USD Amount, note that minium value is $6:`,
+  depositUSD: `Please enter USD Amount, note that minimum value is $6:`,
   selectCryptoToDeposit: `Please choose a crypto currency:`,
 
   'bank-pay-plan': (
@@ -538,10 +585,17 @@ ${bal(usd, ngn)}`,
   noShortenedUrlLink: 'You have no shortened links yet.',
   shortenedLinkText: linksText => `Here are your shortened links:\n${linksText}`,
 
-  //////////
-  qrCodeText:'Here is your QR code!',
-  scanQrOrUseChat: (chatId) => `Scan QR with sms marketing app to login. You can also use this code to login: ${chatId}`,
-  domainPurchasedFailed: (domain, buyDomainError) => `Domain purchase fails, try another name. ${domain} ${buyDomainError}`
+  qrCodeText: 'Here is your QR code!',
+  scanQrOrUseChat: chatId => `Scan QR with sms marketing app to login. You can also use this code to login: ${chatId}`,
+  domainPurchasedFailed: (domain, buyDomainError) =>
+    `Domain purchase fails, try another name. ${domain} ${buyDomainError}`,
+
+  noDomainRegistered: 'You have no purchased domains yet.',
+  registeredDomainList: domainsText => `Here are your purchased domains:\n${domainsText}`,
+  comingSoon: `Coming Soon`,
+  goBackToCoupon: '❌ Go Back & Apply Coupon',
+  errorFetchingCryptoAddress: `Error fetching cryptocurrency address. Please try again later.`,
+  paymentSuccessFul: '✅ Payment successful! Your order is being processed. Details will be available shortly.',
 }
 
 const phoneNumberLeads = ['💰📲 Buy PhoneLeads', '✅📲 Validate PhoneLeads']
@@ -565,6 +619,11 @@ const validatorSelectCarrier = country => carriersOf[country]
 const validatorSelectCnam = yesNo
 const validatorSelectAmount = ['ALL', '1000', '2000', '3000', '4000', '5000']
 const validatorSelectFormat = ['Local Format', 'International Format']
+
+const selectFormatOf = {
+  'Local Format': 'Local Format',
+  'International Format': 'International Format',
+}
 
 //redSelectRandomCustom
 
@@ -689,8 +748,9 @@ const adminKeyboard = {
 const userKeyboard = {
   reply_markup: {
     keyboard: [
-      [user.cPanelWebHostingPlans],
-      [user.pleskWebHostingPlans],
+      // [user.cPanelWebHostingPlans],
+      // [user.pleskWebHostingPlans],
+      // [user.vpsPlans],
       [user.joinChannel, user.wallet],
       [user.phoneNumberLeads],
       HIDE_SMS_APP === 'true' ? [user.domainNames] : [user.freeTrialAvailable, user.domainNames],
@@ -748,9 +808,7 @@ Enjoy premium features during your free trial period!
   viewTermsAgainButton: '🔄 View Terms Again',
   exitSetupButton: '❌ Exit Setup',
   acceptedTermsMsg: `✅ You’ve successfully accepted the Terms and Conditions! 🎉
-You’re all set to begin using ${CHAT_BOT_NAME}. Let’s move to the fun part! 🎯
-
-You can revisit the Terms and Conditions anytime in your profile settings`,
+You’re all set to begin using ${CHAT_BOT_NAME}. Let’s move to the fun part! 🎯`,
   declinedTermsMsg: `⚠️ You need to accept the Terms and Conditions to continue using ${CHAT_BOT_NAME}. 
 Please review them again when you’re ready.`,
   userExitMsg: 'User has pressed exit button.',
@@ -895,7 +953,7 @@ const plans = hostingType => {
       duration: '30 days',
       storage: '10 GB SSD',
       bandwidth: '100 GB',
-      domains: '1 domain',
+      domains: 'Unlimited domains',
       emailAccounts: '5 email accounts',
       databases: '1 MySQL database',
       features: `Full access to ${hostingType} for managing files, databases, emails, etc.`,
@@ -907,7 +965,7 @@ const plans = hostingType => {
       duration: '30 days',
       storage: '50 GB SSD',
       bandwidth: '500 GB',
-      domains: '5 domains',
+      domains: 'Unlimited domains',
       emailAccounts: '25 email accounts',
       databases: '10 MySQL databases',
       features: `Full access to ${hostingType} with advanced tools for backups, security, and analytics.`,
@@ -1028,6 +1086,543 @@ Your ${info.hostingType} credentials has been successfully sent to your email ${
   ${CHAT_BOT_NAME}`,
 }
 
+const vpsBC = ['🔙 Back', 'Cancel']
+
+const vpsOptionsOf = list => ({
+  reply_markup: {
+    // Handle if there are multiples buttons in a row
+    keyboard: [
+      ...list.map(a => (Array.isArray(a) ? a : [a])),
+      ...(list.some(
+        a => Array.isArray(a) && a.some(item => typeof item === 'string' && item.includes(t.goBackToCoupon)),
+      )
+        ? []
+        : [vpsBC]),
+    ],
+  },
+  parse_mode: 'HTML',
+})
+
+const vpsPlans = {
+  hourly: 'Hourly',
+  monthly: 'Monthly',
+  quaterly: 'Quaterly',
+  annually: 'Annually',
+}
+
+const vpsPlanMenu = ['Hourly', 'Monthly', 'Quarterly', 'Annually']
+const vpsConfigurationMenu = ['Basic', 'Standard', 'Premium', 'Enterprise']
+const vpsCpanelOptional = ['WHM', 'Plesk', '❌ Skip Control Panel']
+
+const vpsPlanOf = {
+  Hourly: 'hourly',
+  Monthly: 'monthly',
+  Quarterly: 'quaterly',
+  Annually: 'annually',
+}
+
+const vp = {
+  of: vpsOptionsOf,
+  back: '🔙 Back',
+  skip: '❌ Skip',
+  cancel: '❌ Cancel',
+
+  //region selection
+  askCountryForUser: `🌍 Choose the best region for optimal performance and low latency.
+
+💡 Lower latency = Faster response times. Choose a region closest to your users for the best performance.`,
+  chooseValidCountry: 'Please choose country from the list:',
+  askRegionForUser: country => `📍 Select a data center within ${country} (Pricing may vary by location.)`,
+  chooseValidRegion: 'Please choose valid region from the list:',
+  askZoneForUser: region => `📍 Choose the zone within ${region}.`,
+  chooseValidZone: 'Please choose valid zone from the list:',
+  confirmZone: (region, zone) => `✅  You’ve selected the ${region} (${zone}) Do you want to proceed with this choice?`,
+  failedFetchingData: 'Error fetching, Please try again after some time.',
+  confirmBtn: `✅ Confirm Selection`,
+
+  // disk type
+  askVpsDiskType: list => `💾 Choose your storage type based on performance and budget:
+
+${list?.map(item => `• ${item.description}`).join('\n')}`,
+
+  chooseValidDiskType: 'Please choose a valid disk type',
+
+  // plans
+  askPlanType: plans => `💳 Choose a billing cycle:
+
+${plans
+  .map(
+    item =>
+      `<strong>• ${item.type === 'Hourly' ? '⏳' : '📅'} ${item.type} –</strong> $${item.originalPrice} ${
+        item.discount === 0 ? '(No discount)' : `(includes ${item.discount}% off)`
+      }`,
+  )
+  .join('\n')}`,
+
+  planTypeMenu: vpsOptionsOf(vpsPlanMenu),
+  hourlyBillingMessage: `⚠️ A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD refundable deposit is required for hourly billing. This ensures uninterrupted service and is refunded if unused.
+  
+✅ Billing is deducted from your wallet balance every hour.
+🔹 Monthly licenses (Windows/WHM/Plesk) are billed upfront.`,
+
+  // configs
+  askVpsConfig: list => `⚙️ Pick a VPS plan based on your needs (Hourly or Monthly billing available):
+  
+${list
+  .map(
+    config =>
+      `<strong>• ${config.name} -</strong> ${config.specs.vCPU} vCPU, ${config.specs.RAM}GB RAM, ${config.specs.disk}GB Disk`,
+  )
+  .join('\n')}`,
+  validVpsConfig: 'Please select a valid vps configuration:',
+  configMenu: vpsOptionsOf(vpsConfigurationMenu),
+
+  //discount
+  askForCoupon: `🎟️ Have a coupon code? Enter it for an extra discount if applicable, or skip this step. Any billing cycle discounts are already included.`,
+  couponInvalid: `❌ Invalid: Code expired, not applicable, or incorrect. Try again.`,
+  couponValid: amt => `✅ Valid: Discount applied: -$${amt}.`,
+  skipCouponwarning: `⚠️ Skipping means you cannot apply a discount later.`,
+  confirmSkip: '✅ Confirm Skip',
+  goBackToCoupon: '❌ Go Back & Apply Coupon',
+
+  // os
+  askVpsOS: price => `💡 Default OS: Ubuntu (Linux) (if no selection is made).
+💻 Select an OS (Windows Server adds $${price}/month).
+
+<strong>💡 Recommended: </strong>
+<strong>• Ubuntu –</strong> Best for general use and development
+<strong>• CentOS –</strong> Stable for enterprise applications
+<strong>• Windows Server –</strong> For Windows-based applications (+$${price}/month)`,
+  chooseValidOS: `Please select a valid OS from available list:`,
+  skipOSBtn: '❌ Skip OS Selection',
+  skipOSwarning: '⚠️ Your VPS will launch without an OS. You’ll need to install one manually via SSH or recovery mode.',
+
+  // cpanel
+  askVpsCpanel: `🛠️ Select a control panel for easier server management (optional).
+
+<strong>• ⚙️ WHM –</strong> Recommended for hosting multiple websites
+<strong>• ⚙️ Plesk –</strong> Ideal for managing individual websites and applications
+<strong>• ❌ Skip –</strong> No control panel
+`,
+  cpanelMenu: vpsOptionsOf(vpsCpanelOptional),
+  noControlPanel: vpsCpanelOptional[2],
+  skipPanelMessage: '⚠️ No control panel will be installed. You can install one manually later.',
+  validCpanel: 'Please choose a valid control panel or skip it.',
+  askCpanelOtions: (name, list) => `⚙️ Choose a ${
+    name == 'whm' ? 'WHM' : 'Plesk Web Host Edition'
+  } license or select a free trial (valid for ${name == 'whm' ? '15' : '7'} days).
+
+💰 ${name == 'whm' ? 'WHM' : 'Plesk'} License Pricing:
+
+${list.map(item => `${name == 'whm' ? `<strong>• ${item.name} - </strong>` : ''}${item.label}`).join('\n')}`,
+  trialCpanelMessage: panel =>
+    `✅ ${panel.name == 'whm' ? 'WHM' : 'Plesk'} Free Trial (${
+      panel.duration
+    } days) activated. You can upgrade anytime by reaching out to support.`,
+
+  vpsWaitingTime: '⚙️ Retrieving Details... This will only take a moment.',
+  failedCostRetrieval: 'Failied in retrieving cost information... Please try again after some time.',
+
+  errorPurchasingVPS: plan => `Something went wrong while setting up your ${plan} VPS Plan.
+
+  Please contact support ${SUPPORT_USERNAME}.
+  Discover more ${TG_HANDLE}.`,
+
+  generateBillSummary: vpsDetails => `<strong>📋 Final Cost Breakdown:</strong>
+
+<strong>•📅 Disk Type –</strong> ${vpsDetails.diskType}
+<strong>•🖥️ VPS Plan:</strong> ${vpsDetails.config.name}
+<strong>•📅 Billing Cycle (${vpsDetails.plan} Plan) –</strong> $${vpsDetails.plantotalPrice} USD
+<strong>•💻 OS License (${vpsDetails.os ? vpsDetails.os.name : 'Not Selected'}) –</strong> $${
+    vpsDetails.selectedOSPrice
+  } USD
+<strong>•🛠️ Control Panel (${
+    vpsDetails.panel
+      ? `${vpsDetails.panel.name == 'whm' ? 'WHM' : 'Plesk'} ${vpsDetails.panel.licenseName}`
+      : 'Not Selected'
+  }) –</strong> $${vpsDetails.selectedCpanelPrice} USD
+<strong>•🎟️ Coupon Discount –</strong> -$${vpsDetails.couponDiscount} USD
+<strong>•🔄 Auto-Renewal –</strong>  ${
+    vpsDetails.plan === 'Hourly' ? '⏳ Hourly' : vpsDetails.autoRenewalPlan ? '✅ Enabled' : '❌ Disabled'
+  }
+
+${
+  vpsDetails.plan === 'Hourly'
+    ? `Note: A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD deposit is included in your total. After the first hourly rate is deducted, the remaining deposit will be credited to your wallet.`
+    : ''
+}
+
+<strong>💰 Total:</strong> $${
+    vpsDetails.plan === 'Hourly' && vpsDetails.totalPrice < VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE
+      : vpsDetails.totalPrice
+  } USD
+
+<strong>✅ Proceed with the order?</strong>`,
+
+  no: '❌ Cancel Order',
+  yes: '✅ Confirm Order',
+
+  askPaymentMethod: 'Choose a payment method:',
+
+  showDepositCryptoInfoVps: (priceCrypto, tickerView, address) =>
+    `Please remit ${priceCrypto} ${tickerView} to\n\n<code>${address}</code>
+
+Please note, crypto transactions can take up to 30 minutes to complete. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan will be seamlessly activated.
+
+Best regards,
+${CHAT_BOT_NAME}`,
+
+  extraMoney: 'The remaining amount for your hourly plan has been deposited to wallet.',
+  paymentRecieved: `✅ Payment successful! Your VPS is being set up. Details will be available shortly and sent to your email for your convenience.`,
+  paymentFailed: `❌ Payment failed. Please check your payment method or try again.`,
+
+  lowWalletBalance: vpsName => `
+Your VPS Plan for instance ${vpsName} has been stopped due to low balance.
+
+Please top up your wallet to continue using your VPS Plan.
+`,
+
+  vpsBoughtSuccess: (vpsDetails, response, credentials) =>
+    `<strong>🎉 VPS [${response.label}] is active!</strong>
+
+<strong>🔑 Login Credentials:</strong>
+  <strong>• IP:</strong> ${response.host}
+  <strong>• OS:</strong> ${vpsDetails.os ? vpsDetails.os.name : 'Not Selected'}
+  <strong>• Username:</strong> ${credentials.username}
+  <strong>• Password:</strong> ${credentials.password} (change immediately).
+
+📧 These details have also been sent to your registered email. Please keep them secure.
+
+⚙️ Control Panel Installation (WHM/Plesk)
+If you ordered WHM or Plesk, installation is in progress. Your control panel login details will be sent separately once setup is complete.
+
+Thank you for choosing our service
+${CHAT_BOT_NAME}
+`,
+  vpsHourlyPlanRenewed: (vpsName, price) => `
+Your VPS Plan for instance ${vpsName} has been renewed successfully.
+${price}$ has been deducted from your wallet.`,
+
+  bankPayVPS: (
+    priceNGN,
+    plan,
+  ) => `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your  ${plan} VPS plan will be seamlessly activated.
+
+Best regards,
+${CHAT_BOT_NAME}`,
+
+  askAutoRenewal: `🔄 Enable auto-renewal for uninterrupted service?
+  
+🛑 You will receive a reminder before renewal. You can disable this anytime.`,
+  enable: '✅ Enable',
+  skipAutoRenewalWarming: expiresAt =>
+    `⚠️ Your VPS will expire on ${new Date(expiresAt).toLocaleDateString('en-GB').replace(/\//g, '-')} ${new Date(
+      expiresAt,
+    ).toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })}, and service may be interrupted.`,
+
+  generateSSHKeyBtn: '✅ Generate New Key',
+  linkSSHKeyBtn: '🗂️ Link Existing Key',
+  skipSSHKeyBtn: '❌ Skip (Use Password Login)',
+  noExistingSSHMessage:
+    '🔑 No SSH keys detected. Would you like to generate a new SSH key for secure access, or use password login (less secure)?',
+  existingSSHMessage: '🔑 You have existing SSH keys. Choose an option:',
+  confirmSkipSSHMsg: `⚠️ Warning: Password logins are less secure and vulnerable to attacks.
+🔹 We strongly recommend using SSH keys. Are you sure you want to proceed?`,
+  confirmSkipSSHBtn: '✅ Proceed Anyway',
+  setUpSSHBtn: '🔄 Set Up SSH Key',
+  sshLinkingSkipped: '❌ SSH key linking skipped. No changes were made.',
+  newSSHKeyGeneratedMsg: name => `✅ SSH key (${name}) created.
+⚠️ Save this key securely – it can be retrieved later also.`,
+  selectSSHKey: '🗂️ Select an existing SSH key to link with your VPS:',
+  uploadNewKeyBtn: '➕ Upload New Key',
+  cancelLinkingSSHKey: `❌ SSH key linking canceled. No changes were made.`,
+  selectValidSShKey: 'Please select a valid SSH key from the list.',
+  sshKeySavedForVPS: name => `✅ SSH key ( ${name} ) will be linked to New VPS.`,
+  askToUploadSSHKey: `📤 Upload your SSH public key (.pub file) or paste the key below.`,
+  failedGeneratingSSHKey: 'Failed to generate new SSH key. Please try again or different method.',
+  newSSHKeyUploadedMsg: name => `✅ SSH key (${name}) successfully uploaded and will be linked to VPS.`,
+  fileTypePub: 'File type should be .pub',
+
+  // VPS Management
+  vpsList: list => `<strong>🖥️ Active VPS Instances:</strong>
+
+${list
+  .map(vps => `<strong>• ${vps.name} :</strong> ${vps.status === 'RUNNING' ? '🟢' : '🔴'} ${vps.status}`)
+  .join('\n')}
+`,
+  noVPSfound: 'No Active VPS instance exists. Create a new one.',
+  selectCorrectOption: 'Please select a option from the list',
+  selectedVpsData: data => `<strong>🖥️ VPS ID:</strong> ${data.name}
+
+<strong>• Plan:</strong> ${data.planDetails.name}
+<strong>• vCPUs:</strong> ${data.planDetails.specs.vCPU} | RAM: ${data.planDetails.specs.RAM} GB | Disk: ${
+    data.planDetails.specs.disk
+  } GB (${data.diskTypeDetails.type})
+<strong>• OS:</strong> ${data.osDetails.name}
+<strong>• Control Panel:</strong> ${
+    data.cPanelPlanDetails && data.cPanelPlanDetails.type ? data.cPanelPlanDetails.type : 'None'
+  }
+<strong>• Status:</strong> ${data.status === 'RUNNING' ? '🟢' : '🔴'} ${data.status}
+<strong>• Auto-Renewal:</strong> ${data.autoRenewable ? 'Enabled' : 'Disabled'}
+<strong>• IP Address:</strong> ${data.host}`,
+  stopVpsBtn: '⏹️ Stop',
+  startVpsBtn: '▶️ Start',
+  restartVpsBtn: '🔄 Restart',
+  deleteVpsBtn: '🗑️ Delete',
+  subscriptionBtn: '🔄 Subscriptions',
+  VpsLinkedKeysBtn: '🔑 SSH Keys',
+  confirmChangeBtn: '✅ Confirm',
+
+  confirmStopVpstext: name => `⚠️ Are you sure you want to stop VPS <strong>${name}</strong>?`,
+  vpsBeingStopped: name => `⚙️ Please wait while your VPS (${name}) is being stopped`,
+  vpsStopped: name => `✅ VPS (${name}) has been stopped.`,
+  failedStoppingVPS: name => `❌ Failed to stop VPS (${name}). 
+
+Please Try again after sometime.`,
+  vpsBeingStarted: name => `⚙️ Please wait while your VPS (${name}) is being started`,
+  vpsStarted: name => `✅ VPS (${name}) his now running.`,
+  failedStartedVPS: name => `❌ Failed to start VPS (${name}). 
+
+Please Try again after sometime.`,
+  vpsBeingRestarted: name => `⚙️ Please wait while your VPS (${name}) is being restarted`,
+  vpsRestarted: name => `✅ VPS (${name}) has been successfully restarted.`,
+  failedRestartingVPS: name => `❌ Failed to restart VPS (${name}). 
+
+Please Try again after sometime.`,
+  confirmDeleteVpstext: name =>
+    `⚠️ Warning: Deleting this VPS ${name} is permanent, and all data will be lost.
+	•	No refund for unused subscription time.
+	•	Auto-renewal will be canceled, and no further charges will apply.
+
+Do you want to proceed?`,
+  vpsBeingDeleted: name => `⚙️ Please wait while your VPS (${name}) is being deleted`,
+  vpsDeleted: name => `✅ VPS (${name}) has been permanently deleted.`,
+  failedDeletingVPS: name => `❌ Failed to delete VPS (${name}). 
+
+Please Try again after sometime.`,
+  upgradeVpsBtn: '⬆️ Upgrade',
+  upgradeVpsPlanBtn: '⬆️ VPS Plan',
+  upgradeVpsDiskBtn: '📀 Disk Type',
+  upgradeVpsDiskTypeBtn: '💾 Upgrade Disk Type',
+  upgradeVPS: 'Choose upgrade type',
+  upgradeOptionVPSBtn: to => {
+    return `🔼 Upgrade to ${to}`
+  },
+  upgradeVpsPlanMsg: options => `⚙️ Choose a new plan to scale your VPS resources.
+💡 Upgrading increases vCPUs, RAM, and storage but cannot be reversed.
+
+📌 Available Upgrades:
+${options
+  .map(
+    planDetails =>
+      `<strong>• ${planDetails.from} ➡ ${planDetails.to} –</strong> $${planDetails.monthlyPrice}/month ($${planDetails.hourlyPrice}/hour)`,
+  )
+  .join('\n')}
+  
+💰 Billing Notice: Your current plan will be credited for unused days, and the new rate will apply for the remainder of the billing cycle (prorated adjustment).`,
+
+  alreadyEnterprisePlan:
+    '⚠️ You are already on the highest available plan (Enterprise). No further upgrades are possible.',
+
+  alreadyHighestDisk: vpsData =>
+    `⚠️ You are already on the highest available disk (${vpsData.diskTypeDetails.type}). No further upgrades are possible.`,
+  newVpsDiskBtn: type => `Upgrade to ${type}`,
+  upgradeVpsDiskMsg: upgrades => `💾 Upgrade your storage type for better performance.
+⚠️ Disk upgrades are permanent and cannot be downgraded.
+
+📌 Available Options:
+${upgrades.map(val => `<strong>• ${val.from} ➡ ${val.to} –</strong> +$${val.price}/${val.duration}`).join('\n')}
+  
+💰 Billing Notice: If the upgrade is applied mid-cycle, a prorated adjustment will be applied for the unused portion of your current billing period.`,
+  upgradePlanSummary: (newData, vpsDetails, lowBal) => `<strong>📜 Order Summary:</strong>
+
+<strong>• VPS ID: </strong> ${vpsDetails.name}
+<strong>• Old Plan: </strong> ${newData.upgradeOption.from}
+<strong>• New Plan: </strong> ${newData.upgradeOption.to}
+<strong>• Billing Cycle: </strong> ${newData.billingCycle}
+<strong>• New Billing Rate: </strong> $${newData.totalPrice} USD${
+    newData.billingCycle === 'Hourly' ? '/hour' : ' (prorated adjustment applied)'
+  }
+<strong>• Effective Date: </strong> Immediately
+${
+  lowBal
+    ? `
+Note: A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD deposit is included in your total. After the first hourly rate is deducted, the remaining deposit will be credited to your wallet.
+`
+    : ''
+}
+<strong>• Total Price: </strong> $${lowBal ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE : newData.totalPrice} USD
+
+<strong>✅ Proceed with the order?</strong>`,
+  upgradeDiskSummary: (newData, vpsDetails, lowBal) => `<strong>📜 Order Summary:</strong>
+
+<strong>• VPS ID: </strong> ${vpsDetails.name}
+<strong>• Old Disk Type: </strong> ${newData.upgradeOption.from}
+<strong>• New Disk type: </strong> ${newData.upgradeOption.to}
+<strong>• Billing Cycle: </strong> ${newData.billingCycle}
+<strong>• New Billing Rate: </strong> $${newData.totalPrice} USD${
+    newData.billingCycle === 'Hourly' ? '/hour' : ' (prorated adjustment applied)'
+  }
+${
+  lowBal
+    ? `
+Note: A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD deposit is included in your total. After the first hourly rate is deducted, the remaining deposit will be credited to your wallet.
+`
+    : ''
+}
+<strong>• Total Price: </strong> $${lowBal ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE : newData.totalPrice} USD
+
+<strong>✅ Proceed with the order?</strong>`,
+
+  vpsSubscriptionData: (vpsData, planExpireDate, panelExpireDate) => `<strong>🗂️ Your Active Subscriptions:</strong>
+
+<strong>• VPS ${vpsData.name} </strong>– Expires: ${planExpireDate}  (Auto-Renew: ${
+    vpsData.autoRenewable ? 'Enabled' : 'Disabled'
+  })
+<strong>• Control Panel ${vpsData?.cPanelPlanDetails ? vpsData.cPanelPlanDetails.type : ': Not Selected'} </strong> ${
+    vpsData?.cPanelPlanDetails
+      ? `${vpsData?.cPanelPlanDetails.status === 'active' ? '- Expires: ' : '- Expired: '}${panelExpireDate}`
+      : ''
+  } `,
+
+  manageVpsSubBtn: '🖥️ Manage VPS Subscription',
+  manageVpsPanelBtn: '🛠️ Manage Control Panel Subscription',
+
+  vpsSubDetails: (data, date) => `<strong>📅 VPS Subscription Details:</strong>
+
+<strong>• VPS ID:</strong> ${data.name}
+<strong>• Plan:</strong> ${data.planDetails.name}
+<strong>• Current Expiry Date:</strong> ${date}
+<strong>• Auto-Renewal:</strong> ${data.autoRenewable ? 'Enabled' : 'Disabled'}`,
+
+  vpsCPanelDetails: (data, date) => `<strong>📅 Control Panel Subscription Details:</strong>
+
+<strong>• Linked VPS ID:</strong> ${data.name}
+<strong>• Control Panel Type:</strong> ${data.cPanelPlanDetails.type} (${data.cPanelPlanDetails.name})
+<strong>• Current Expiry Date:</strong> ${date}
+<strong>• Auto-Renewal:</strong> ${data.autoRenewable ? 'Enabled' : 'Disabled'}
+`,
+
+  vpsEnableRenewalBtn: '🔄 Enable Auto-Renew',
+  vpsDisableRenewalBtn: '❌ Disable Auto-Renew',
+  vpsPlanRenewBtn: '📅 Renew Now',
+  unlinkVpsPanelBtn: '❌ Unlink from VPS',
+  bankPayVPSUpgradePlan: (priceNGN, vpsDetails) =>
+    `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your new ${vpsDetails.upgradeOption.to} VPS plan will be seamlessly activated.`,
+
+  bankPayVPSUpgradeDisk: (priceNGN, vpsDetails) =>
+    `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan with new disk type ${vpsDetails.upgradeOption.toType} config will be seamlessly activated.`,
+
+  showDepositCryptoInfoVpsUpgrade: (priceCrypto, tickerView, address) =>
+    `Please remit ${priceCrypto} ${tickerView} to\n\n<code>${address}</code>
+
+Please note, crypto transactions can take up to 30 minutes to complete. Once the transaction has been confirmed, you will be promptly notified, and your new VPS plan will be seamlessly activated.
+
+Best regards,
+${CHAT_BOT_NAME}`,
+
+  linkVpsSSHKeyBtn: '➕ Link New Key',
+  unlinkSSHKeyBtn: '❌ Unlink Key',
+  downloadSSHKeyBtn: '⬇️ Download Key',
+
+  noLinkedKey: name => `⚠️ There is currently no SSH key associated with this VPS [${name}]. 
+  
+Please link an SSH key to your account to enable secure access.`,
+  linkedKeyList: (list, name) => `🗂️ SSH Keys Linked to VPS ${name}:
+
+${list.map(val => `<strong>• ${val}</strong>`).join('\n')}`,
+
+  unlinkSSHKeyList: name => `🗂️ Select an SSH key to remove from VPS [${name}]:`,
+  confirmUnlinkKey: data => `⚠️ Are you sure you want to unlink [${data.keyForUnlink}] from VPS [${data.name}]?`,
+  confirmUnlinkBtn: '✅ Confirm Unlink',
+  keyUnlinkedMsg: data => `✅ SSH key [${data.keyForUnlink}] has been unlinked from VPS [${data.name}].`,
+  failedUnlinkingKey: data => `❌ Failed to unlink SSH key form VPS (${data.name}). 
+
+Please Try again after sometime.`,
+
+  userSSHKeyList: name => `🗂️ Select an SSH key to link to VPS [${name}]:`,
+  noUserKeyList: `🔑 No SSH keys detected. Would you like to upload a new SSH key?`,
+  linkKeyToVpsSuccess: (key, name) => `✅ SSH key [${key}] successfully linked to VPS [${name}].`,
+  failedLinkingSSHkeyToVps: (key, name) => `❌ Failed to link SSH key [${key}] to VPS (${name}). 
+
+Please Try again after sometime.`,
+  selectSSHKeyToDownload: '🗂️ Select the SSH key you want to download:',
+  disabledAutoRenewal: (
+    data,
+    expiryDate,
+  ) => `⚠️ Auto-renewal disabled. Your VPS will expire on ${expiryDate} unless manually renewed.
+✅ Auto-renewal successfully disabled.`,
+  enabledAutoRenewal: (data, expiryDate) =>
+    `✅ Auto-renewal enabled. Your VPS will automatically renew on ${expiryDate}.`,
+
+  renewVpsPlanConfirmMsg: (data, vpsDetails, expiryDate, lowBal) => `<strong>📜 Invoice Summary</strong>
+
+<strong>• VPS ID:</strong> ${vpsDetails.name}
+<strong>• Plan:</strong> ${vpsDetails.planDetails.name}
+<strong>• Billing Cycle:</strong> ${vpsDetails.billingCycleDetails.type}
+<strong>• Current Expiry Date:</strong> ${expiryDate}
+<strong>• Amount Due:</strong> ${data.totalPrice} USD
+
+${
+  lowBal
+    ? `Note: A $${VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE} USD deposit is included in your total. After the first hourly rate is deducted, the remaining deposit will be credited to your wallet.`
+    : ''
+}
+
+<strong>• Total Price: </strong> $${lowBal ? VPS_HOURLY_PLAN_MINIMUM_AMOUNT_PAYABLE : data.totalPrice} USD
+
+<strong>💳 Proceed with VPS renewal?</strong>`,
+
+  payNowBtn: '✅ Pay now',
+
+  vpsChangePaymentRecieved: `✅ Payment successful! Your VPS is being set up. Details will be available shortly.`,
+
+  bankPayVPSRenewPlan: priceNGN =>
+    `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan be seamlessly activated and renewed.`,
+
+  renewVpsPanelConfirmMsg: (data, panelDetails, date) => `<strong>💳 Proceed with Control Panel renewal?</strong>
+
+<strong>📜 Invoice Summary</strong>
+  <strong>• Linked VPS ID:</strong> ${data.name}
+  <strong>• Control Panel:</strong> ${panelDetails.type}
+  <strong>• Renewal Period:</strong> ${panelDetails.durationValue}${' '}Month
+  <strong>• Current Expiry Date:</strong> ${date}
+  <strong>• Amount Due:</strong> ${data.totalPrice} USD`,
+
+  bankPayVPSRenewCpanel: (priceNGN, vpsDetails) =>
+    `Please remit ${priceNGN} NGN by clicking “Make Payment” below. Once the transaction has been confirmed, you will be promptly notified, and your VPS plan be seamlessly activated and ${vpsDetails.cPanelPlanDetails.type} Control Panel will be renewed.`,
+  vpsUnlinkCpanelWarning: vpsDetails =>
+    `⚠️ Warning: Unlinking will remove the ${vpsDetails.cPanel} license from VPS ${vpsDetails.name}, and you will lose access to its features. Do you want to proceed?`,
+  unlinkCpanelConfirmed: data => `✅ Control Panel ${data.cPanel} successfully unlinked from VPS ${data.name}.`,
+
+  errorUpgradingVPS: vpsName => `Something went wrong while upgrading your VPS Plan ${vpsName}.
+
+  Please contact support ${SUPPORT_USERNAME}.
+  Discover more ${TG_HANDLE}.`,
+
+  vpsUpgradePlanTypeSuccess: vpsDetails => `
+  ✅ VPS ${vpsDetails.name} upgraded to ${vpsDetails.upgradeOption.to}. Your new resources are now available.`,
+
+  vpsUpgradeDiskTypeSuccess: vpsDetails =>
+    `✅ Disk upgraded to ${vpsDetails.upgradeOption.to} for VPS ${vpsDetails.name}. Your updated disk type is now active.`,
+
+  vpsRenewPlanSuccess: (vpsDetails, expiryDate) =>
+    `✅ VPS subscription for ${vpsDetails.name} successfully renewed!
+
+• New Expiry Date: ${expiryDate}
+`,
+  vpsRenewCPanelSuccess: (vpsDetails, expiryDate) =>
+    `✅ Control Panel subscription for ${vpsDetails.name} successfully renewed!
+
+• New Expiry Date: ${expiryDate}
+`,
+}
+
 const en = {
   k,
   t,
@@ -1084,6 +1679,10 @@ const en = {
   termsAndConditionType,
   planOptionsOf,
   hP: hostingPlansText,
+  selectFormatOf,
+  vp,
+  vpsPlanOf,
+  vpsCpanelOptional,
 }
 
 module.exports = {
