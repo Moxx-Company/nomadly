@@ -18,6 +18,10 @@ const validatePhoneAws = async phone => {
   })
   const res = await client.send(command)
 
+  if (!res || typeof res !== 'object') {
+    throw new Error('Invalid AWS API response')
+  }
+
   return res
 
   // return res?.NumberValidateResponse?.PhoneType !== 'INVALID'
