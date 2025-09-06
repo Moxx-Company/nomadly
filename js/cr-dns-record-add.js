@@ -6,7 +6,8 @@ const { updateDNSRecordNs } = require('./cr-dns-record-update-ns')
 
 const API_KEY = process.env.API_KEY_CONNECT_RESELLER
 
-const saveServerInDomain = async (domainName, server, RecordType = 'CNAME', domainNameId, nsId, dnsRecords) => {
+const saveServerInDomain = async (domainName, server, RecordType = 'CNAME', domainNameId, nsId, dnsRecords, hostName) => {
+  console.log('#########saveServerInDomain', { domainName, server, RecordType, domainNameId, nsId, dnsRecords, hostName })
   if (RecordType === 'NS') return await updateDNSRecordNs(domainNameId, domainName, server, nsId, dnsRecords)
 
   log(`saveServerInDomain ${domainName} ${server} ${RecordType}`)
@@ -33,7 +34,7 @@ const saveServerInDomain = async (domainName, server, RecordType = 'CNAME', doma
     return { error: e }
   }
 
-  {
+  try {
     const params = {
       APIKey: API_KEY,
       WebsiteId: websiteId,
@@ -41,7 +42,11 @@ const saveServerInDomain = async (domainName, server, RecordType = 'CNAME', doma
     const url = `https://api.connectreseller.com/ConnectReseller/ESHOP/ManageDNSRecords`
     const dnsMgmtRes = await axios.get(url, { params }) // Enable DNS Management
     console.log({ dnsMgmtRes: dnsMgmtRes?.data })
-  }
+  } catch (error) {
+    const e = `${error?.message} ${JSON.stringify(error?.response?.data)}`
+    console.error('Error saveServerInDomain - ManageDNSRecords', e)
+    return { error: e }
+  }  
 
   try {
     const url = `https://api.connectreseller.com/ConnectReseller/ESHOP/ViewDomain`
@@ -63,7 +68,7 @@ const saveServerInDomain = async (domainName, server, RecordType = 'CNAME', doma
     return { error: e }
   }
 
-  const RECORD_NAME = domainName
+  const RECORD_NAME = hostName ? `${hostName}.${domainName}` : domainName
   const RECORD_VALUE = server
   const RECORD_TTL = 30
 
@@ -77,6 +82,7 @@ const saveServerInDomain = async (domainName, server, RecordType = 'CNAME', doma
       RecordValue: RECORD_VALUE,
       RecordTTL: RECORD_TTL,
     }
+    console.log(params)
     const response = await axios.get(url, { params })
     const success = 200 === response?.data?.responseData?.statusCode
     return success ? { success } : { error: response?.data?.responseData?.message }
